@@ -1,0 +1,25 @@
+name: bian_app
+description: Bienestar Animal - App
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: ">=2.18.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.0.0
+  http: ^1.2.2
+  flutter_secure_storage: ^8.0.0
+  google_fonts: ^6.2.1
+  provider: ^6.0.0
+  json_annotation: ^4.8.0
+  intl: ^0.18.0
+  shared_preferences: ^2.1.0
+  validators: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  json_serializable: ^6.6.0
