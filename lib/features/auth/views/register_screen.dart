@@ -13,13 +13,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _presenter = AuthPresenter();
   final _formKey = GlobalKey<FormState>();
 
-  String name = '', email = '', password = '', phone = '', cedula = '';
+  String name = '', email = '', password = '', phone = '', document = '';
   bool loading = false;
 
   void doRegister() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => loading = true);
-    final ok = await _presenter.register(name, email, password, phone, cedula);
+    final ok = await _presenter.register(name, email, password, phone, document);
     setState(() => loading = false);
 
     if (ok && mounted) {
@@ -61,7 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 15),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Cédula', prefixIcon: Icon(Icons.badge_outlined)),
-                onChanged: (v) => cedula = v,
+                onChanged: (v) => document = v,
               ),
               const SizedBox(height: 15),
               TextFormField(

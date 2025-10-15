@@ -7,7 +7,7 @@ class AuthPresenter {
     return _service.login(email, password);
   }
 
-  Future<bool> register(String name, String email, String password, String phone, String cedula) async {
-    return _service.register(name, email, password, phone, cedula);
+  Future<bool> register(String name, String email, String password, String phone, String document) async {
+    return _service.register(name, email, password, phone, document);
   }
 }
