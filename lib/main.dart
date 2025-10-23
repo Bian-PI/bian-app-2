@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'splash/splash_screen.dart';
 import 'features/auth/views/login_screen.dart';
 import 'features/home/views/home_screen.dart';
+import 'utils/app_constants.dart';
 
 void main() {
   runApp(const BianApp());
@@ -14,27 +15,27 @@ class BianApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BIAN - Bienestar Animal',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         textTheme: GoogleFonts.poppinsTextTheme(),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00A896)),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppConstants.primaryColor),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+        scaffoldBackgroundColor: AppConstants.backgroundColor,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00A896),
+            backgroundColor: AppConstants.primaryColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
             ),
-            minimumSize: const Size(double.infinity, 50),
+            minimumSize: Size(double.infinity, AppConstants.buttonHeight),
             textStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ),
       routes: {
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const HomeScreen(),
+        AppConstants.loginRoute: (_) => const LoginScreen(),
+        AppConstants.homeRoute: (_) => const HomeScreen(),
       },
       home: const SplashScreen(),
     );
