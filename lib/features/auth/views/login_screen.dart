@@ -18,24 +18,26 @@ class _LoginScreenState extends State<LoginScreen> {
   String email = '', password = '';
   bool loading = false;
 
-  // void doLogin() async {
-  //   if (!_formKey.currentState!.validate()) return;
-  //   setState(() => loading = true);
-  //   final ok = await _presenter.login(email, password);
-  //   setState(() => loading = false);
-  //
-  //   if (ok && mounted) {
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const HomeScreen()),
-  //     );
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Credenciales incorrectas')),
-  //     );
-  //   }
-  // }
+  void doLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => loading = true);
+    final ok = await _presenter.login(email, password);
+    setState(() => loading = false);
+  
+    if (ok && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Credenciales incorrectas')),
+      );
+    }
+  }
 
+  /*
+  // Simulación de login, comentar el método anterior y usar este para pruebas sin backend
   void doLogin() async {
     setState(() => loading = true);
     await Future.delayed(const Duration(seconds: 1)); // simula espera de login
@@ -48,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  */
 
   @override
   Widget build(BuildContext context) {
