@@ -1,12 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'splash/splash_screen.dart';
-import 'features/auth/views/login_screen.dart';
-import 'features/home/views/home_screen.dart';
-import 'utils/app_constants.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/providers/language_provider.dart';
+import 'core/localization/app_localizations.dart';
+import 'core/theme/bian_theme.dart';
+import 'features/splash/splash_screen.dart';
 
-void main() {
-  runApp(const BianApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Forzar orientación vertical
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // Configurar StatusBar
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+      ],
+      child: const BianApp(),
+    ),
+  );
 }
 
 class BianApp extends StatelessWidget {
@@ -14,30 +41,32 @@ class BianApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        textTheme: GoogleFonts.poppinsTextTheme(),
-        colorScheme: ColorScheme.fromSeed(seedColor: AppConstants.primaryColor),
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppConstants.backgroundColor,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primaryColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            ),
-            minimumSize: Size(double.infinity, AppConstants.buttonHeight),
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-      routes: {
-        AppConstants.loginRoute: (_) => const LoginScreen(),
-        AppConstants.homeRoute: (_) => const HomeScreen(),
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return MaterialApp(
+          title: 'BIAN - Bienestar Animal',
+          debugShowCheckedModeBanner: false,
+          
+          // Configuración de idioma
+          locale: languageProvider.locale,
+          supportedLocales: const [
+            Locale('es', 'ES'),
+            Locale('en', 'US'),
+          ],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          
+          // Tema
+          theme: BianTheme.lightTheme,
+          
+          // Pantalla inicial
+          home: const SplashScreen(),
+        );
       },
-      home: const SplashScreen(),
     );
   }
 }

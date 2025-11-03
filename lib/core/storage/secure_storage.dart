@@ -1,76 +1,106 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import '../models/user_model.dart';
 
 class SecureStorage {
+  static final SecureStorage _instance = SecureStorage._internal();
+  factory SecureStorage() => _instance;
+  SecureStorage._internal();
+
   final _storage = const FlutterSecureStorage();
 
   // Keys
-  static const String _keyToken = 'token';
-  static const String _keyUserName = 'user_name';
-  static const String _keyUserEmail = 'user_email';
-  static const String _keyUserRole = 'user_role';
+  static const String _keyToken = 'jwt_token';
+  static const String _keyUser = 'user_data';
   static const String _keyUserId = 'user_id';
+  static const String _keyIsVerified = 'is_verified';
 
-  /// Guarda el token JWT
+  // ========== TOKEN ==========
+  
   Future<void> saveToken(String token) async {
     await _storage.write(key: _keyToken, value: token);
   }
 
-  /// Obtiene el token JWT
   Future<String?> getToken() async {
-    return _storage.read(key: _keyToken);
+    return await _storage.read(key: _keyToken);
   }
 
-  /// Guarda los datos del usuario
-  Future<void> saveUserData({
-    required String name,
-    required String email,
-    String? role,
-    String? id,
-  }) async {
-    await _storage.write(key: _keyUserName, value: name);
-    await _storage.write(key: _keyUserEmail, value: email);
-    if (role != null) await _storage.write(key: _keyUserRole, value: role);
-    if (id != null) await _storage.write(key: _keyUserId, value: id);
+  Future<void> deleteToken() async {
+    await _storage.delete(key: _keyToken);
   }
 
-  /// Obtiene el nombre del usuario
-  Future<String?> getUserName() async {
-    return _storage.read(key: _keyUserName);
+  // ========== USER DATA ==========
+  
+  Future<void> saveUser(User user) async {
+    final userJson = jsonEncode(user.toJson());
+    await _storage.write(key: _keyUser, value: userJson);
+    if (user.id != null) {
+      await _storage.write(key: _keyUserId, value: user.id.toString());
+    }
+    await _storage.write(
+      key: _keyIsVerified,
+      value: user.isActiveSession.toString(),
+    );
   }
 
-  /// Obtiene el email del usuario
-  Future<String?> getUserEmail() async {
-    return _storage.read(key: _keyUserEmail);
+  Future<User?> getUser() async {
+    final userJson = await _storage.read(key: _keyUser);
+    if (userJson == null) return null;
+    
+    try {
+      final userMap = jsonDecode(userJson) as Map<String, dynamic>;
+      return User.fromJson(userMap);
+    } catch (e) {
+      return null;
+    }
   }
 
-  /// Obtiene el rol del usuario
-  Future<String?> getUserRole() async {
-    return _storage.read(key: _keyUserRole);
+  Future<int?> getUserId() async {
+    final id = await _storage.read(key: _keyUserId);
+    if (id == null) return null;
+    return int.tryParse(id);
   }
 
-  /// Obtiene el ID del usuario
-  Future<String?> getUserId() async {
-    return _storage.read(key: _keyUserId);
+  Future<bool> isUserVerified() async {
+    final verified = await _storage.read(key: _keyIsVerified);
+    return verified == 'true';
   }
 
-  /// Obtiene todos los datos del usuario
-  Future<Map<String, String?>> getAllUserData() async {
-    return {
-      'name': await getUserName(),
-      'email': await getUserEmail(),
-      'role': await getUserRole(),
-      'id': await getUserId(),
-    };
+  Future<void> setUserVerified(bool verified) async {
+    await _storage.write(key: _keyIsVerified, value: verified.toString());
   }
 
-  /// Verifica si hay una sesión activa
+  // ========== SESSION ==========
+  
   Future<bool> hasActiveSession() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
   }
 
-  /// Limpia todos los datos almacenados
-  Future<void> clear() async {
+  Future<void> clearAll() async {
     await _storage.deleteAll();
+  }
+
+  // ========== COMPLETE SESSION DATA ==========
+  
+  Future<void> saveSession({
+    required String token,
+    required User user,
+  }) async {
+    await saveToken(token);
+    await saveUser(user);
+  }
+
+  Future<Map<String, dynamic>> getSessionData() async {
+    final token = await getToken();
+    final user = await getUser();
+    final isVerified = await isUserVerified();
+    
+    return {
+      'token': token,
+      'user': user,
+      'isVerified': isVerified,
+      'hasSession': token != null,
+    };
   }
 }
