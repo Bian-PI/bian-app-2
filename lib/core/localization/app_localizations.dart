@@ -139,6 +139,18 @@ class AppLocalizations {
       // Profile extras
       'optional': 'opcional',
       'leave_blank_keep_current': 'Dejar en blanco para mantener actual',
+      
+      // Email verification steps
+      'step_1_title': 'Revisa tu bandeja',
+      'step_1_description': 'Te enviamos un correo con el enlace de verificación',
+      'step_2_title': 'Haz clic en el enlace',
+      'step_2_description': 'Abre el correo y presiona el botón de verificación',
+      'step_3_title': 'Inicia sesión',
+      'step_3_description': 'Una vez verificado, podrás acceder a tu cuenta',
+      'check_spam_folder': 'Si no encuentras el correo, revisa tu carpeta de spam o correo no deseado',
+      'resend_in': 'Reenviar en',
+      'seconds': 's',
+      'go_to_login': 'Ir a Iniciar Sesión',
     },
     'en': {
       // General
@@ -267,6 +279,18 @@ class AppLocalizations {
       // Profile extras
       'optional': 'optional',
       'leave_blank_keep_current': 'Leave blank to keep current',
+      
+      // Email verification steps
+      'step_1_title': 'Check your inbox',
+      'step_1_description': 'We sent you an email with the verification link',
+      'step_2_title': 'Click the link',
+      'step_2_description': 'Open the email and press the verification button',
+      'step_3_title': 'Sign in',
+      'step_3_description': 'Once verified, you can access your account',
+      'check_spam_folder': 'If you can\'t find the email, check your spam or junk folder',
+      'resend_in': 'Resend in',
+      'seconds': 's',
+      'go_to_login': 'Go to Login',
     },
   };
 

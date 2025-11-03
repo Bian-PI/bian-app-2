@@ -5,6 +5,7 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../core/localization/app_localizations.dart';
 import 'login_screen.dart';
+import 'email_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -59,8 +60,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final loc = AppLocalizations.of(context);
 
       if (result['success'] == true) {
-        // Mostrar diálogo de verificación
-        _showVerificationDialog();
+        // Navegar a pantalla de verificación
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(
+              email: _emailController.text.trim(),
+              userId: result['user']?['id'],
+            ),
+          ),
+        );
       } else {
         final message = result['message'] ?? 'server_error';
         _showSnackBar(loc.translate(message), isError: true);
@@ -70,60 +79,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final loc = AppLocalizations.of(context);
       _showSnackBar(loc.translate('connection_error'), isError: true);
     }
-  }
-
-  void _showVerificationDialog() {
-    final loc = AppLocalizations.of(context);
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.mark_email_read, color: BianTheme.primaryRed),
-            SizedBox(width: 12),
-            Text(loc.translate('verify_account_title')),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.email_outlined,
-              size: 64,
-              color: BianTheme.secondaryTeal,
-            ),
-            SizedBox(height: 16),
-            Text(
-              loc.translate('verify_account_message'),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 8),
-            Text(
-              _emailController.text,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: BianTheme.primaryRed,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Cerrar diálogo
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-            child: Text(loc.translate('accept')),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
