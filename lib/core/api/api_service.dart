@@ -24,6 +24,7 @@ class ApiService {
           .timeout(ApiConfig.receiveTimeout);
       return response;
     } catch (e) {
+      print('❌ Error en GET $endpoint: $e');
       throw Exception('Error en GET $endpoint: $e');
     }
   }
@@ -46,14 +47,21 @@ class ApiService {
     }
     
     try {
+      print('📤 POST $endpoint');
+      print('📦 Body: $body');
+      
       final response = await http.post(
         url,
         headers: headers,
         body: jsonEncode(body),
       ).timeout(ApiConfig.receiveTimeout);
       
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+      
       return response;
     } catch (e) {
+      print('❌ Error en POST $endpoint: $e');
       throw Exception('Error en POST $endpoint: $e');
     }
   }
@@ -154,6 +162,9 @@ class ApiService {
     try {
       final response = await post(ApiConfig.register, userData);
       
+      print('📥 Status Code: ${response.statusCode}');
+      print('📥 Body: ${response.body}');
+      
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return {
@@ -162,10 +173,18 @@ class ApiService {
           'token': data['token'],
         };
       } else if (response.statusCode == 409) {
+        // Conflict - usuario ya existe
         final data = jsonDecode(response.body);
         return {
           'success': false,
           'message': data['error'] ?? 'user_exists',
+        };
+      } else if (response.statusCode == 400) {
+        // Bad request - validación fallida
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['error'] ?? data['message'] ?? 'validation_error',
         };
       } else {
         return {
@@ -174,6 +193,7 @@ class ApiService {
         };
       }
     } catch (e) {
+      print('💥 Exception en register: $e');
       if (e.toString().contains('TimeoutException')) {
         return {'success': false, 'message': 'timeout_error'};
       }

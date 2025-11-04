@@ -40,11 +40,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _doRegister() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validar formulario
+    if (!_formKey.currentState!.validate()) {
+      _showSnackBar('Por favor completa todos los campos correctamente', isError: true);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
+      // Imprimir datos que se envían (debug)
+      print('📤 Enviando registro:');
+      print('  - Name: ${_nameController.text.trim()}');
+      print('  - Email: ${_emailController.text.trim()}');
+      print('  - Document: ${_documentController.text.trim()}');
+      print('  - Phone: ${_phoneController.text.trim()}');
+
       final result = await _apiService.register({
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
@@ -59,25 +70,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final loc = AppLocalizations.of(context);
 
+      // Debug: imprimir respuesta completa
+      print('📥 Respuesta del servidor:');
+      print('  - Success: ${result['success']}');
+      print('  - Message: ${result['message']}');
+      print('  - User: ${result['user']}');
+
       if (result['success'] == true) {
-        // Navegar a pantalla de verificación
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmailVerificationScreen(
-              email: _emailController.text.trim(),
-              userId: result['user']?['id'],
+        // Extraer userId de manera segura
+        int? userId;
+        if (result['user'] != null) {
+          if (result['user'] is Map) {
+            userId = result['user']['id'];
+          }
+        }
+        
+        print('✅ Registro exitoso. UserID: $userId');
+        
+        // Mostrar mensaje de éxito
+        _showSnackBar(loc.translate('register_success'), isError: false);
+        
+        // Esperar un poco antes de navegar
+        await Future.delayed(const Duration(milliseconds: 800));
+        
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(
+                email: _emailController.text.trim(),
+                userId: userId,
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
+        // Mapear errores del backend a mensajes claros
+        String errorMessage;
         final message = result['message'] ?? 'server_error';
-        _showSnackBar(loc.translate(message), isError: true);
+        
+        print('❌ Error en registro: $message');
+        
+        if (message.toLowerCase().contains('email')) {
+          errorMessage = 'El correo ya está registrado';
+        } else if (message.toLowerCase().contains('documento') || message.toLowerCase().contains('document')) {
+          errorMessage = 'El documento ya está registrado';
+        } else if (message.toLowerCase().contains('telefono') || message.toLowerCase().contains('phone')) {
+          errorMessage = 'El teléfono ya está registrado';
+        } else if (message.toLowerCase().contains('user_exists')) {
+          errorMessage = 'Este usuario ya existe en el sistema';
+        } else {
+          errorMessage = loc.translate(message);
+        }
+        
+        _showSnackBar(errorMessage, isError: true);
       }
     } catch (e) {
       setState(() => _isLoading = false);
       final loc = AppLocalizations.of(context);
-      _showSnackBar(loc.translate('connection_error'), isError: true);
+      
+      // Debug: imprimir el error
+      print('💥 Exception en registro: $e');
+      
+      String errorMessage;
+      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+        errorMessage = 'No se puede conectar al servidor. Verifica tu conexión.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = loc.translate('timeout_error');
+      } else {
+        errorMessage = loc.translate('connection_error');
+      }
+      
+      _showSnackBar(errorMessage, isError: true);
     }
   }
 
@@ -95,6 +159,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
         backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
+        duration: Duration(seconds: isError ? 4 : 2),
       ),
     );
   }
