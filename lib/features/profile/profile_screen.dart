@@ -18,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _documentController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   
@@ -41,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _documentController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -55,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user != null) {
       _nameController.text = user.name;
       _emailController.text = user.email;
+      _documentController.text = user.document ?? '';
       _phoneController.text = user.phone ?? '';
     }
     
@@ -76,10 +79,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'email': _emailController.text.trim(),
       };
       
+      // Solo incluir documento si cambió o tiene valor
+      if (_documentController.text.isNotEmpty) {
+        updateData['document'] = _documentController.text.trim();
+      }
+      
+      // Solo incluir teléfono si cambió o tiene valor
       if (_phoneController.text.isNotEmpty) {
         updateData['phone'] = _phoneController.text.trim();
       }
       
+      // Solo incluir password si el usuario escribió uno nuevo
       if (_passwordController.text.isNotEmpty) {
         updateData['password'] = _passwordController.text;
       }
@@ -100,7 +110,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final updatedUser = _currentUser!.copyWith(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
+          document: _documentController.text.trim().isEmpty 
+              ? _currentUser!.document 
+              : _documentController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty 
+              ? _currentUser!.phone 
+              : _phoneController.text.trim(),
         );
         await _storage.saveUser(updatedUser);
         
@@ -112,16 +127,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loc.translate('profile_updated')),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(loc.translate('profile_updated'))),
+              ],
+            ),
             backgroundColor: BianTheme.successGreen,
           ),
         );
       } else {
         final message = result['message'] ?? 'server_error';
+        
+        // Mensajes más específicos
+        String errorMsg;
+        if (message.contains('email') || message == 'user_exists') {
+          errorMsg = 'El correo ya está en uso';
+        } else if (message.contains('document')) {
+          errorMsg = 'El documento ya está en uso';
+        } else if (message.contains('phone')) {
+          errorMsg = 'El teléfono ya está en uso';
+        } else {
+          errorMsg = loc.translate(message);
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loc.translate(message)),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(errorMsg)),
+              ],
+            ),
             backgroundColor: BianTheme.errorRed,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -301,6 +342,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               
               TextFormField(
+                controller: _documentController,
+                enabled: _isEditing && !_isSaving,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(Validators.documentMaxLength),
+                ],
+                decoration: InputDecoration(
+                  labelText: loc.translate('document'),
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  helperText: _isEditing ? loc.translate('optional') : null,
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              TextFormField(
                 controller: _phoneController,
                 enabled: _isEditing && !_isSaving,
                 keyboardType: TextInputType.phone,
@@ -311,6 +369,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: InputDecoration(
                   labelText: loc.translate('phone'),
                   prefixIcon: const Icon(Icons.phone_outlined),
+                  helperText: _isEditing ? loc.translate('optional') : null,
                 ),
                 validator: _isEditing
                     ? (value) {
@@ -328,8 +387,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   enabled: !_isSaving,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    labelText: '${loc.translate('password')} (${loc.translate('optional', [])})',
-                    hintText: loc.translate('leave_blank_keep_current', []),
+                    labelText: '${loc.translate('password')} (${loc.translate('optional')})',
+                    hintText: loc.translate('leave_blank_keep_current'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -395,13 +454,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               
               // Información adicional (solo lectura)
               if (!_isEditing) ...[
-                _buildInfoCard(
-                  context,
-                  icon: Icons.badge_outlined,
-                  title: loc.translate('document'),
-                  value: _currentUser?.document ?? 'N/A',
-                ),
-                const SizedBox(height: 12),
                 _buildInfoCard(
                   context,
                   icon: Icons.admin_panel_settings_outlined,

@@ -71,7 +71,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     try {
       final result = await _apiService.resendVerificationEmail(
-        _currentUser!.id!,
         _currentUser!.email,
       );
       

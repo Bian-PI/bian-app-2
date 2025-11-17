@@ -138,7 +138,24 @@ class ApiService {
           'token': data['token'],
           'user': data['user'],
         };
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
+      } else if (response.statusCode == 403) {
+        // Usuario no verificado
+        try {
+          final data = jsonDecode(response.body);
+          if (data['code'] == 'USER_NOT_VERIFIED') {
+            return {
+              'success': false,
+              'message': 'user_not_verified',
+              'email': email,
+            };
+          }
+        } catch (_) {}
+        return {
+          'success': false,
+          'message': 'user_not_verified',
+          'email': email,
+        };
+      } else if (response.statusCode == 401) {
         return {
           'success': false,
           'message': 'invalid_credentials',
@@ -171,6 +188,23 @@ class ApiService {
           'success': true,
           'user': data['user'],
           'token': data['token'],
+        };
+      } else if (response.statusCode == 403) {
+        // Usuario registrado pero no verificado
+        try {
+          final data = jsonDecode(response.body);
+          if (data['code'] == 'USER_NOT_VERIFIED') {
+            return {
+              'success': true,
+              'user_not_verified': true,
+              'email': userData['email'],
+            };
+          }
+        } catch (_) {}
+        return {
+          'success': true,
+          'user_not_verified': true,
+          'email': userData['email'],
         };
       } else if (response.statusCode == 409) {
         // Conflict - usuario ya existe
@@ -224,20 +258,30 @@ class ApiService {
     }
   }
 
-  /// GET /auth/verify?id={id}  (Este es llamado desde el email)
-  /// Para reenviar el email de verificación
-  Future<Map<String, dynamic>> resendVerificationEmail(int userId, String email) async {
-    // Nota: Este endpoint no existe en tu backend, pero podríamos usar
-    // el endpoint del microservicio de mail directamente si fuera necesario
-    // Por ahora retornamos un placeholder
+  /// Reenviar email de verificación
+  Future<Map<String, dynamic>> resendVerificationEmail(String email) async {
     try {
-      // Simular llamada exitosa
-      await Future.delayed(const Duration(milliseconds: 500));
-      return {
-        'success': true,
-        'message': 'verification_sent',
-      };
+      final url = Uri.parse('${ApiConfig.mailServiceUrl}/api/email/resend?email=$email');
+      
+      print('📤 Reenviando email de verificación a: $url');
+      
+      final response = await http.post(url).timeout(ApiConfig.receiveTimeout);
+      
+      print('📥 Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': 'verification_sent',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'server_error',
+        };
+      }
     } catch (e) {
+      print('❌ Error reenviando email: $e');
       return {'success': false, 'message': 'connection_error'};
     }
   }

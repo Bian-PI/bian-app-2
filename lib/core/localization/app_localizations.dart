@@ -64,6 +64,7 @@ class AppLocalizations {
       
       // Auth Errors
       'invalid_credentials': 'Credenciales incorrectas',
+      'user_not_verified': 'Tu cuenta no está verificada. Te hemos enviado un correo de verificación.',
       'user_exists': 'El usuario ya existe',
       'connection_error': 'Error de conexión',
       'timeout_error': 'Tiempo de espera agotado. Verifica tu conexión',
@@ -204,6 +205,7 @@ class AppLocalizations {
       
       // Auth Errors
       'invalid_credentials': 'Invalid credentials',
+      'user_not_verified': 'Your account is not verified. We have sent you a verification email.',
       'user_exists': 'User already exists',
       'connection_error': 'Connection error',
       'timeout_error': 'Request timeout. Check your connection',

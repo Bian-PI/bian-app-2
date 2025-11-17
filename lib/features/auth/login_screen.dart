@@ -5,6 +5,7 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
 import 'register_screen.dart';
+import 'email_verification_screen.dart';
 import '../home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -86,7 +87,24 @@ class _LoginScreenState extends State<LoginScreen>
         final loc = AppLocalizations.of(context);
         final message = result['message'] ?? 'invalid_credentials';
         
-        _showSnackBar(loc.translate(message), isError: true);
+        // Si el usuario no está verificado, redirigir a EmailVerificationScreen
+        if (message == 'user_not_verified') {
+          final email = result['email'] ?? _emailController.text.trim();
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(
+                  email: email,
+                  userId: result['userId'],
+                ),
+              ),
+            );
+          }
+        } else {
+          _showSnackBar(loc.translate(message), isError: true);
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);

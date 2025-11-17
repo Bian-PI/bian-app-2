@@ -62,7 +62,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
     try {
       final result = await _apiService.resendVerificationEmail(
-        widget.userId!,
         widget.email,
       );
 

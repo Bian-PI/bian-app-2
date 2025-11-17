@@ -49,7 +49,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Imprimir datos que se envían (debug)
       print('📤 Enviando registro:');
       print('  - Name: ${_nameController.text.trim()}');
       print('  - Email: ${_emailController.text.trim()}');
@@ -70,39 +69,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final loc = AppLocalizations.of(context);
 
-      // Debug: imprimir respuesta completa
       print('📥 Respuesta del servidor:');
       print('  - Success: ${result['success']}');
+      print('  - user_not_verified: ${result['user_not_verified']}');
       print('  - Message: ${result['message']}');
-      print('  - User: ${result['user']}');
 
       if (result['success'] == true) {
-        // Extraer userId de manera segura
-        int? userId;
-        if (result['user'] != null) {
-          if (result['user'] is Map) {
-            userId = result['user']['id'];
-          }
-        }
-        
-        print('✅ Registro exitoso. UserID: $userId');
-        
-        // Mostrar mensaje de éxito
-        _showSnackBar(loc.translate('register_success'), isError: false);
-        
-        // Esperar un poco antes de navegar
-        await Future.delayed(const Duration(milliseconds: 800));
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(
-                email: _emailController.text.trim(),
-                userId: userId,
+        // Verificar si el usuario necesita verificación
+        if (result['user_not_verified'] == true) {
+          print('✅ Registro exitoso pero usuario no verificado');
+          
+          final email = result['email'] ?? _emailController.text.trim();
+          
+          // Mostrar mensaje de éxito
+          _showSnackBar(loc.translate('register_success'), isError: false);
+          
+          // Esperar un poco antes de navegar
+          await Future.delayed(const Duration(milliseconds: 800));
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(
+                  email: email,
+                  userId: result['userId'],
+                ),
               ),
-            ),
-          );
+            );
+          }
+        } else {
+          // Usuario registrado y verificado (caso poco común)
+          print('✅ Registro exitoso y verificado');
+          
+          _showSnackBar(loc.translate('register_success'), isError: false);
+          
+          await Future.delayed(const Duration(milliseconds: 800));
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          }
         }
       } else {
         // Mapear errores del backend a mensajes claros
@@ -129,7 +138,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = false);
       final loc = AppLocalizations.of(context);
       
-      // Debug: imprimir el error
       print('💥 Exception en registro: $e');
       
       String errorMessage;

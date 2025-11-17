@@ -7,6 +7,7 @@ class ApiConfig {
   static const String register = "/auth/register";
   static const String refresh = "/auth/refresh";
   static const String verify = "/auth/verify";
+  static const String mailServiceUrl = "";
   
   // User Endpoints (requieren JWT)
   static const String users = "/users";
