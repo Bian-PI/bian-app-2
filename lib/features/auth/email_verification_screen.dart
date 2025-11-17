@@ -55,68 +55,68 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
-  Future<void> _resendEmail() async {
-    if (!_canResend || _isResending || widget.userId == null) return;
+Future<void> _resendEmail() async {
+  if (!_canResend || _isResending || widget.userId == null) return;
 
-    setState(() => _isResending = true);
+  setState(() => _isResending = true);
 
-    try {
-      final result = await _apiService.resendVerificationEmail(
-        widget.email,
-      );
+  try {
+    final result = await _apiService.resendVerificationEmail(
+      widget.userId!,
+      widget.email,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      final loc = AppLocalizations.of(context);
+    final loc = AppLocalizations.of(context);
 
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(loc.translate('verification_sent')),
-                ),
-              ],
-            ),
-            backgroundColor: BianTheme.successGreen,
-          ),
-        );
-        _startCountdown();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(loc.translate('server_error')),
-                ),
-              ],
-            ),
-            backgroundColor: BianTheme.errorRed,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final loc = AppLocalizations.of(context);
+    if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(loc.translate('connection_error')),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(loc.translate('verification_sent')),
+              ),
+            ],
+          ),
+          backgroundColor: BianTheme.successGreen,
+        ),
+      );
+      _startCountdown();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(loc.translate('server_error')),
+              ),
+            ],
+          ),
           backgroundColor: BianTheme.errorRed,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isResending = false);
-      }
+    }
+  } catch (e) {
+    if (!mounted) return;
+    final loc = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(loc.translate('connection_error')),
+        backgroundColor: BianTheme.errorRed,
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _isResending = false);
     }
   }
-
+}
   void _goToLogin() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -250,7 +250,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   // Botón reenviar
                   ElevatedButton.icon(
-                    onPressed: _canResend && !_isResending ? _resendEmail : null,
+                    onPressed: _resendEmail,
                     icon: _isResending
                         ? const SizedBox(
                             width: 20,

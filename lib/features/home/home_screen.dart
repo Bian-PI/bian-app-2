@@ -57,50 +57,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _isLoading = false;
     });
   }
-
-  Future<void> _resendVerificationEmail() async {
-    if (_currentUser == null) return;
-    
-    final loc = AppLocalizations.of(context);
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+Future<void> _resendVerificationEmail() async {
+  if (_currentUser == null) return;
+  
+  final loc = AppLocalizations.of(context);
+  
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+  
+  try {
+    final result = await _apiService.resendVerificationEmail(
+      _currentUser!.id!,
+      _currentUser!.email,
     );
     
-    try {
-      final result = await _apiService.resendVerificationEmail(
-        _currentUser!.email,
-      );
-      
-      if (!mounted) return;
-      Navigator.pop(context);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['success'] 
-              ? loc.translate('verification_sent')
-              : loc.translate('server_error')
-          ),
-          backgroundColor: result['success'] 
-            ? BianTheme.successGreen 
-            : BianTheme.errorRed,
+    if (!mounted) return;
+    Navigator.pop(context);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result['success'] 
+            ? loc.translate('verification_sent')
+            : loc.translate('server_error')
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).translate('connection_error')),
-          backgroundColor: BianTheme.errorRed,
-        ),
-      );
-    }
+        backgroundColor: result['success'] 
+          ? BianTheme.successGreen 
+          : BianTheme.errorRed,
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).translate('connection_error')),
+        backgroundColor: BianTheme.errorRed,
+      ),
+    );
   }
-
+}
   Future<void> _logout() async {
     final loc = AppLocalizations.of(context);
     

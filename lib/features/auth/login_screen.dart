@@ -49,70 +49,67 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  Future<void> _doLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _doLogin() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final result = await _apiService.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+  try {
+    final result = await _apiService.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      if (result['success'] == true) {
-        // Guardar sesión
-        await _storage.saveToken(result['token']);
+    if (result['success'] == true) {
+      // Guardar token
+      await _storage.saveToken(result['token']);
+      
+      // Guardar usuario
+      if (result['user'] != null) {
+        final user = User.fromJson(result['user']);
+        await _storage.saveUser(user);
+      }
+
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } else {
+      setState(() => _isLoading = false);
+      
+      final loc = AppLocalizations.of(context);
+      final message = result['message'] ?? 'invalid_credentials';
+      
+      if (message == 'user_not_verified') {
+        final email = result['email'] ?? _emailController.text.trim();
         
-        // Guardar usuario si viene en la respuesta
-        if (result['user'] != null) {
-          final user = User.fromJson(result['user']);
-          await _storage.saveUser(user);
-        }
-
-        setState(() => _isLoading = false);
-
-        // Navegar al home
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(
+                email: email,
+                userId: result['userId'],
+              ),
+            ),
           );
         }
       } else {
-        setState(() => _isLoading = false);
-        
-        final loc = AppLocalizations.of(context);
-        final message = result['message'] ?? 'invalid_credentials';
-        
-        // Si el usuario no está verificado, redirigir a EmailVerificationScreen
-        if (message == 'user_not_verified') {
-          final email = result['email'] ?? _emailController.text.trim();
-          
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EmailVerificationScreen(
-                  email: email,
-                  userId: result['userId'],
-                ),
-              ),
-            );
-          }
-        } else {
-          _showSnackBar(loc.translate(message), isError: true);
-        }
+        _showSnackBar(loc.translate(message), isError: true);
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      final loc = AppLocalizations.of(context);
-      _showSnackBar(loc.translate('connection_error'), isError: true);
     }
+  } catch (e) {
+    setState(() => _isLoading = false);
+    final loc = AppLocalizations.of(context);
+    _showSnackBar(loc.translate('connection_error'), isError: true);
   }
-
+}
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

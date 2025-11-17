@@ -39,120 +39,93 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _doRegister() async {
-    // Validar formulario
-    if (!_formKey.currentState!.validate()) {
-      _showSnackBar('Por favor completa todos los campos correctamente', isError: true);
-      return;
-    }
+Future<void> _doRegister() async {
+  if (!_formKey.currentState!.validate()) {
+    _showSnackBar('Por favor completa todos los campos correctamente', isError: true);
+    return;
+  }
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      print('📤 Enviando registro:');
-      print('  - Name: ${_nameController.text.trim()}');
-      print('  - Email: ${_emailController.text.trim()}');
-      print('  - Document: ${_documentController.text.trim()}');
-      print('  - Phone: ${_phoneController.text.trim()}');
+  try {
+    final result = await _apiService.register({
+      'name': _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'document': _documentController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'password': _passwordController.text,
+    });
 
-      final result = await _apiService.register({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'document': _documentController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'password': _passwordController.text,
-      });
+    if (!mounted) return;
 
-      if (!mounted) return;
+    setState(() => _isLoading = false);
 
-      setState(() => _isLoading = false);
+    final loc = AppLocalizations.of(context);
 
-      final loc = AppLocalizations.of(context);
-
-      print('📥 Respuesta del servidor:');
-      print('  - Success: ${result['success']}');
-      print('  - user_not_verified: ${result['user_not_verified']}');
-      print('  - Message: ${result['message']}');
-
-      if (result['success'] == true) {
-        // Verificar si el usuario necesita verificación
-        if (result['user_not_verified'] == true) {
-          print('✅ Registro exitoso pero usuario no verificado');
-          
-          final email = result['email'] ?? _emailController.text.trim();
-          
-          // Mostrar mensaje de éxito
-          _showSnackBar(loc.translate('register_success'), isError: false);
-          
-          // Esperar un poco antes de navegar
-          await Future.delayed(const Duration(milliseconds: 800));
-          
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EmailVerificationScreen(
-                  email: email,
-                  userId: result['userId'],
-                ),
+    if (result['success'] == true) {
+      if (result['user_not_verified'] == true) {
+        final email = result['email'] ?? _emailController.text.trim();
+        final userId = result['user']?['id'];
+        
+        _showSnackBar(loc.translate('register_success'), isError: false);
+        await Future.delayed(const Duration(milliseconds: 800));
+        
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(
+                email: email,
+                userId: userId,
               ),
-            );
-          }
-        } else {
-          // Usuario registrado y verificado (caso poco común)
-          print('✅ Registro exitoso y verificado');
-          
-          _showSnackBar(loc.translate('register_success'), isError: false);
-          
-          await Future.delayed(const Duration(milliseconds: 800));
-          
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          }
+            ),
+          );
         }
       } else {
-        // Mapear errores del backend a mensajes claros
-        String errorMessage;
-        final message = result['message'] ?? 'server_error';
+        _showSnackBar(loc.translate('register_success'), isError: false);
+        await Future.delayed(const Duration(milliseconds: 800));
         
-        print('❌ Error en registro: $message');
-        
-        if (message.toLowerCase().contains('email')) {
-          errorMessage = 'El correo ya está registrado';
-        } else if (message.toLowerCase().contains('documento') || message.toLowerCase().contains('document')) {
-          errorMessage = 'El documento ya está registrado';
-        } else if (message.toLowerCase().contains('telefono') || message.toLowerCase().contains('phone')) {
-          errorMessage = 'El teléfono ya está registrado';
-        } else if (message.toLowerCase().contains('user_exists')) {
-          errorMessage = 'Este usuario ya existe en el sistema';
-        } else {
-          errorMessage = loc.translate(message);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
         }
-        
-        _showSnackBar(errorMessage, isError: true);
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      final loc = AppLocalizations.of(context);
-      
-      print('💥 Exception en registro: $e');
-      
+    } else {
       String errorMessage;
-      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
-        errorMessage = 'No se puede conectar al servidor. Verifica tu conexión.';
-      } else if (e.toString().contains('TimeoutException')) {
-        errorMessage = loc.translate('timeout_error');
+      final message = result['message'] ?? 'server_error';
+      
+      if (message.toLowerCase().contains('email')) {
+        errorMessage = 'El correo ya está registrado';
+      } else if (message.toLowerCase().contains('documento') || message.toLowerCase().contains('document')) {
+        errorMessage = 'El documento ya está registrado';
+      } else if (message.toLowerCase().contains('telefono') || message.toLowerCase().contains('phone')) {
+        errorMessage = 'El teléfono ya está registrado';
+      } else if (message.toLowerCase().contains('user_exists')) {
+        errorMessage = 'Este usuario ya existe en el sistema';
       } else {
-        errorMessage = loc.translate('connection_error');
+        errorMessage = loc.translate(message);
       }
       
       _showSnackBar(errorMessage, isError: true);
     }
+  } catch (e) {
+    setState(() => _isLoading = false);
+    final loc = AppLocalizations.of(context);
+    
+    String errorMessage;
+    if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+      errorMessage = 'No se puede conectar al servidor. Verifica tu conexión.';
+    } else if (e.toString().contains('TimeoutException')) {
+      errorMessage = loc.translate('timeout_error');
+    } else {
+      errorMessage = loc.translate('connection_error');
+    }
+    
+    _showSnackBar(errorMessage, isError: true);
   }
-
+}
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

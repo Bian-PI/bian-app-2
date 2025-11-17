@@ -1,13 +1,13 @@
 class ApiConfig {
   // Base URL
   static const String baseUrl = "http://10.0.2.2:8081";
+  static const String mailServiceUrl = "http://10.0.2.2:8082";
   
   // Auth Endpoints
   static const String login = "/auth/login";
   static const String register = "/auth/register";
   static const String refresh = "/auth/refresh";
   static const String verify = "/auth/verify";
-  static const String mailServiceUrl = "";
   
   // User Endpoints (requieren JWT)
   static const String users = "/users";

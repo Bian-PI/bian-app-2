@@ -259,9 +259,9 @@ class ApiService {
   }
 
   /// Reenviar email de verificación
-  Future<Map<String, dynamic>> resendVerificationEmail(String email) async {
+  Future<Map<String, dynamic>> resendVerificationEmail(int userId, String email) async {
     try {
-      final url = Uri.parse('${ApiConfig.mailServiceUrl}/api/email/resend?email=$email');
+      final url = Uri.parse('${ApiConfig.mailServiceUrl}/api/email/send/$userId?email=$email');
       
       print('📤 Reenviando email de verificación a: $url');
       
