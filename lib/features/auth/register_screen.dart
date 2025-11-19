@@ -65,7 +65,7 @@ Future<void> _doRegister() async {
     if (result['success'] == true) {
       if (result['user_not_verified'] == true) {
         final email = result['email'] ?? _emailController.text.trim();
-        final userId = result['user']?['id'];
+        final userId = result['userId']; // ✅ Capturar userId
         
         _showSnackBar(loc.translate('register_success'), isError: false);
         await Future.delayed(const Duration(milliseconds: 800));
@@ -76,7 +76,7 @@ Future<void> _doRegister() async {
             MaterialPageRoute(
               builder: (_) => EmailVerificationScreen(
                 email: email,
-                userId: userId,
+                userId: userId, // ✅ Pasar userId
               ),
             ),
           );
@@ -126,6 +126,7 @@ Future<void> _doRegister() async {
     _showSnackBar(errorMessage, isError: true);
   }
 }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

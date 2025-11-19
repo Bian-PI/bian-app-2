@@ -88,6 +88,7 @@ Future<void> _doLogin() async {
       
       if (message == 'user_not_verified') {
         final email = result['email'] ?? _emailController.text.trim();
+        final userId = result['userId']; // ✅ Capturar userId
         
         if (mounted) {
           Navigator.pushReplacement(
@@ -95,7 +96,7 @@ Future<void> _doLogin() async {
             MaterialPageRoute(
               builder: (_) => EmailVerificationScreen(
                 email: email,
-                userId: result['userId'],
+                userId: userId, // ✅ Pasar userId
               ),
             ),
           );
@@ -110,6 +111,7 @@ Future<void> _doLogin() async {
     _showSnackBar(loc.translate('connection_error'), isError: true);
   }
 }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

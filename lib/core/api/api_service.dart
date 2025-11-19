@@ -147,6 +147,7 @@ class ApiService {
               'success': false,
               'message': 'user_not_verified',
               'email': email,
+              'userId': data['userId'], // ✅ Capturar userId del backend
             };
           }
         } catch (_) {}
@@ -198,6 +199,7 @@ class ApiService {
               'success': true,
               'user_not_verified': true,
               'email': userData['email'],
+              'userId': data['userId'], // ✅ Capturar userId del backend
             };
           }
         } catch (_) {}

@@ -55,68 +55,92 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
-Future<void> _resendEmail() async {
-  if (!_canResend || _isResending || widget.userId == null) return;
+  Future<void> _resendEmail() async {
+    if (!_canResend || _isResending) return;
 
-  setState(() => _isResending = true);
-
-  try {
-    final result = await _apiService.resendVerificationEmail(
-      widget.userId!,
-      widget.email,
-    );
-
-    if (!mounted) return;
-
-    final loc = AppLocalizations.of(context);
-
-    if (result['success']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(loc.translate('verification_sent')),
-              ),
-            ],
-          ),
-          backgroundColor: BianTheme.successGreen,
-        ),
+    // ✅ Validar que tenemos userId
+    if (widget.userId == null) {
+      _showToast(
+        'Error: No se pudo reenviar el email. Intenta registrarte nuevamente.',
+        isError: true,
       );
-      _startCountdown();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(loc.translate('server_error')),
-              ),
-            ],
-          ),
-          backgroundColor: BianTheme.errorRed,
-        ),
-      );
+      return;
     }
-  } catch (e) {
-    if (!mounted) return;
-    final loc = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(loc.translate('connection_error')),
-        backgroundColor: BianTheme.errorRed,
-      ),
-    );
-  } finally {
-    if (mounted) {
-      setState(() => _isResending = false);
+
+    setState(() => _isResending = true);
+
+    try {
+      final result = await _apiService.resendVerificationEmail(
+        widget.userId!,
+        widget.email,
+      );
+
+      if (!mounted) return;
+
+      final loc = AppLocalizations.of(context);
+
+      if (result['success']) {
+        // ✅ Toast de éxito
+        _showToast(
+          loc.translate('verification_sent'),
+          isError: false,
+        );
+        _startCountdown();
+      } else {
+        // ✅ Toast de error
+        _showToast(
+          loc.translate('server_error'),
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final loc = AppLocalizations.of(context);
+      _showToast(
+        loc.translate('connection_error'),
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
     }
   }
-}
+
+  // ✅ Método mejorado para mostrar toasts/snackbars
+  void _showToast(String message, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
+        duration: Duration(seconds: isError ? 4 : 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   void _goToLogin() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -250,7 +274,7 @@ Future<void> _resendEmail() async {
 
                   // Botón reenviar
                   ElevatedButton.icon(
-                    onPressed: _resendEmail,
+                    onPressed: (_canResend && !_isResending) ? _resendEmail : null,
                     icon: _isResending
                         ? const SizedBox(
                             width: 20,
@@ -262,12 +286,14 @@ Future<void> _resendEmail() async {
                           )
                         : const Icon(Icons.refresh),
                     label: Text(
-                      _canResend
-                          ? loc.translate('resend_verification')
-                          : '${loc.translate('resend_in')} $_countdown${loc.translate('seconds')}',
+                      _isResending
+                          ? 'Reenviando...'
+                          : _canResend
+                              ? loc.translate('resend_verification')
+                              : '${loc.translate('resend_in')} $_countdown${loc.translate('seconds')}',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _canResend
+                      backgroundColor: (_canResend && !_isResending)
                           ? BianTheme.primaryRed
                           : BianTheme.mediumGray,
                       minimumSize: const Size(double.infinity, 52),
