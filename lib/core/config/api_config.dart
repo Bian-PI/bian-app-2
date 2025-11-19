@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URL
   static const String baseUrl = "http://10.0.2.2:8081";
-  static const String mailServiceUrl = "http://10.0.2.2:8082";
+  static const String mailServiceUrl = "http://10.0.2.2:8080";
   
   // Auth Endpoints
   static const String login = "/auth/login";

@@ -97,6 +97,7 @@ Future<void> _doLogin() async {
               builder: (_) => EmailVerificationScreen(
                 email: email,
                 userId: userId, // ✅ Pasar userId
+                fromLogin: true,
               ),
             ),
           );

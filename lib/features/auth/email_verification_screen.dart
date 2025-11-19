@@ -8,11 +8,13 @@ import 'login_screen.dart';
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
   final int? userId;
+  final bool fromLogin;
 
   const EmailVerificationScreen({
     super.key,
     required this.email,
     this.userId,
+    this.fromLogin = false,
   });
 
   @override
@@ -26,10 +28,19 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   int _countdown = 60;
   Timer? _timer;
 
-  @override
+   @override
   void initState() {
     super.initState();
-    _startCountdown();
+    if (widget.fromLogin) {
+      // ✅ Viene de login → Habilitar botón de una
+      setState(() {
+        _canResend = true;
+        _countdown = 0;
+      });
+    } else {
+      // ✅ Viene de registro → Countdown de 60s
+      _startCountdown();
+    }
   }
 
   @override

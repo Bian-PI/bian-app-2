@@ -146,7 +146,7 @@ class ApiService {
             return {
               'success': false,
               'message': 'user_not_verified',
-              'email': email,
+              'email': data['email'],
               'userId': data['userId'], // ✅ Capturar userId del backend
             };
           }
