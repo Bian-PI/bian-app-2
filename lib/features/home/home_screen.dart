@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/api/api_service.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
+import '../../core/models/species_model.dart';
 import '../../core/providers/language_provider.dart';
 import '../../core/utils/role_helper.dart';
 import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
-
+import '../evaluation/evaluation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -136,40 +138,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-void _showLanguageDialog() {
-  final loc = AppLocalizations.of(context);
-  final provider = Provider.of<LanguageProvider>(context, listen: false);
+  void _showLanguageDialog() {
+    final loc = AppLocalizations.of(context);
+    final provider = Provider.of<LanguageProvider>(context, listen: false);
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(loc.translate('select_language')),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Text('🇪🇸', style: TextStyle(fontSize: 24)),
-              title: Text(loc.translate('spanish')),
-              onTap: () async {
-                await provider.setLocale(const Locale('es'));
-                if (mounted) Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
-              title: Text(loc.translate('english')),
-              onTap: () async {
-                await provider.setLocale(const Locale('en'));
-                if (mounted) Navigator.pop(context);
-              },
-            ),
-          ],
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(loc.translate('select_language')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Text('🇪🇸', style: TextStyle(fontSize: 24)),
+                title: Text(loc.translate('spanish')),
+                onTap: () async {
+                  await provider.setLocale(const Locale('es'));
+                  if (mounted) Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
+                title: Text(loc.translate('english')),
+                onTap: () async {
+                  await provider.setLocale(const Locale('en'));
+                  if (mounted) Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  void _navigateToEvaluation(Species species) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EvaluationScreen(species: species),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,121 +265,121 @@ void _showLanguageDialog() {
     );
   }
 
-Widget _buildDrawer(BuildContext context) {
-  final loc = AppLocalizations.of(context);
+  Widget _buildDrawer(BuildContext context) {
+    final loc = AppLocalizations.of(context);
 
-  return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        DrawerHeader(
-          decoration: const BoxDecoration(gradient: BianTheme.primaryGradient),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.person, size: 40, color: BianTheme.primaryRed),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _currentUser?.name ?? 'Usuario',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(gradient: BianTheme.primaryGradient),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.person, size: 40, color: BianTheme.primaryRed),
                         ),
-                      ),
-                      Text(
-                        RoleHelper.translateRole(context, _currentUser?.role),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                        const SizedBox(height: 12),
+                        Text(
+                          _currentUser?.name ?? 'Usuario',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _isVerified
-                              ? Colors.green.withOpacity(0.3)
-                              : Colors.orange.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
+                        Text(
+                          RoleHelper.translateRole(context, _currentUser?.role),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isVerified ? Icons.check_circle : Icons.warning,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _isVerified
-                                  ? loc.translate('verified')
-                                  : loc.translate('not_verified'),
-                              style: const TextStyle(
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isVerified
+                                ? Colors.green.withOpacity(0.3)
+                                : Colors.orange.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isVerified ? Icons.check_circle : Icons.warning,
                                 color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                size: 14,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                _isVerified
+                                    ? loc.translate('verified')
+                                    : loc.translate('not_verified'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                );
+              },
+            ),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.home_rounded, color: BianTheme.primaryRed),
+            title: Text(loc.translate('home')),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline, color: BianTheme.primaryRed),
+            title: Text(loc.translate('profile')),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             },
           ),
-        ),
-
-        ListTile(
-          leading: const Icon(Icons.home_rounded, color: BianTheme.primaryRed),
-          title: Text(loc.translate('home')),
-          onTap: () => Navigator.pop(context),
-        ),
-        ListTile(
-          leading: const Icon(Icons.person_outline, color: BianTheme.primaryRed),
-          title: Text(loc.translate('profile')),
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            );
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
-          title: Text(loc.translate('language')),
-          onTap: () {
-            Navigator.pop(context);
-            _showLanguageDialog();
-          },
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.logout_rounded, color: BianTheme.errorRed),
-          title: Text(loc.translate('logout')),
-          onTap: () {
-            Navigator.pop(context);
-            _logout();
-          },
-        ),
-      ],
-    ),
-  );
-}
+          ListTile(
+            leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
+            title: Text(loc.translate('language')),
+            onTap: () {
+              Navigator.pop(context);
+              _showLanguageDialog();
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: BianTheme.errorRed),
+            title: Text(loc.translate('logout')),
+            onTap: () {
+              Navigator.pop(context);
+              _logout();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildWelcomeCard(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -429,42 +440,27 @@ Widget _buildDrawer(BuildContext context) {
   }
 
   Widget _buildSpeciesCards(BuildContext context) {
-    final loc = AppLocalizations.of(context);
+    
+    final birds = Species.birds();
+    final pigs = Species.pigs();
     
     return Column(
       children: [
         _buildSpeciesCard(
-          title: loc.translate('birds'),
-          subtitle: loc.translate('birds_subtitle'),
-          icon: Icons.flight,
-          gradient: const [Color(0xFF4A90E2), Color(0xFF357ABD)],
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(loc.translate('coming_soon', ['Aves']))),
-            );
-          },
+          species: birds,
+          onTap: () => _navigateToEvaluation(birds),
         ),
         const SizedBox(height: 16),
         _buildSpeciesCard(
-          title: loc.translate('pigs'),
-          subtitle: loc.translate('pigs_subtitle'),
-          icon: Icons.cruelty_free,
-          gradient: const [Color(0xFFE85D75), Color(0xFFD84A64)],
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(loc.translate('coming_soon', ['Cerdos']))),
-            );
-          },
+          species: pigs,
+          onTap: () => _navigateToEvaluation(pigs),
         ),
       ],
     );
   }
 
   Widget _buildSpeciesCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradient,
+    required Species species,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -476,12 +472,15 @@ Widget _buildDrawer(BuildContext context) {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: gradient,
+            colors: [
+              Color(int.parse(species.gradientColors[0])),
+              Color(int.parse(species.gradientColors[1])),
+            ],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: gradient[0].withOpacity(0.3),
+              color: Color(int.parse(species.gradientColors[0])).withOpacity(0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -495,7 +494,15 @@ Widget _buildDrawer(BuildContext context) {
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, size: 40, color: Colors.white),
+              child: SvgPicture.asset(
+                species.iconPath,
+                width: 40,
+                height: 40,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+              ),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -503,7 +510,7 @@ Widget _buildDrawer(BuildContext context) {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    species.namePlural,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -512,7 +519,7 @@ Widget _buildDrawer(BuildContext context) {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    'Evaluación de bienestar',
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
@@ -541,7 +548,7 @@ Widget _buildDrawer(BuildContext context) {
             Expanded(
               child: _buildStatCard(
                 title: loc.translate('evaluations'),
-                value: '24',
+                value: '0',
                 icon: Icons.assignment_turned_in_rounded,
                 color: BianTheme.successGreen,
               ),
@@ -549,10 +556,10 @@ Widget _buildDrawer(BuildContext context) {
             const SizedBox(width: 16),
             Expanded(
               child: _buildStatCard(
-                title: loc.translate('alerts'),
-                value: '3',
-                icon: Icons.warning_amber_rounded,
-                color: BianTheme.warningYellow,
+                title: 'Granjas',
+                value: '0',
+                icon: Icons.home_work_rounded,
+                color: BianTheme.infoBlue,
               ),
             ),
           ],
