@@ -1,6 +1,8 @@
 // lib/core/models/evaluation_model.dart
 
 import 'package:bian_app/core/models/species_model.dart';
+import 'package:bian_app/core/models/user_model.dart';
+import 'package:bian_app/core/storage/secure_storage.dart';
 
 class Evaluation {
   final String id;
@@ -17,6 +19,10 @@ class Evaluation {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final User? user;
+
+  final SecureStorage _storage = SecureStorage();
+
   Evaluation({
     required this.id,
     required this.speciesId,
@@ -27,10 +33,11 @@ class Evaluation {
     required this.responses,
     this.overallScore,
     this.categoryScores,
-    this.status = 'draft',
-    this.language = 'es',
+    required this.status,
+    required this.language,
     required this.createdAt,
     required this.updatedAt,
+    this.user,
   });
 
   factory Evaluation.fromJson(Map<String, dynamic> json) {
@@ -50,6 +57,7 @@ class Evaluation {
       language: json['language'] ?? 'es',
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      user: null, // si quieres luego cargarlo, hazlo fuera
     );
   }
 
@@ -85,6 +93,7 @@ class Evaluation {
     String? language,
     DateTime? createdAt,
     DateTime? updatedAt,
+    User? user,
   }) {
     return Evaluation(
       id: id ?? this.id,
@@ -100,6 +109,7 @@ class Evaluation {
       language: language ?? this.language,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      user: user ?? this.user,
     );
   }
 
@@ -134,13 +144,17 @@ class Evaluation {
     return true;
   }
 
-  // ✅ JSON ESTRUCTURADO POR CATEGORÍAS
-  Map<String, dynamic> generateStructuredJSON(
+  // 🔥 JSON estructurado, ahora async
+  Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
     List<String> translatedRecommendations,
-  ) {
+  ) async {
+
+    final user = await _storage.getUser();
+
     final structuredJson = <String, dynamic>{
+      'user_id': user?.id,
       'evaluation_id': id,
       'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,
@@ -154,31 +168,25 @@ class Evaluation {
       'categories': {},
     };
 
-    // ✅ Agregar categorías con sus datos
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
-      
-      // Agregar score de la categoría
-      if (results['category_scores'] != null && 
+
+      if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
         categoryData['score'] = results['category_scores'][category.id];
       }
-      
-      // Agregar todos los campos de la categoría
+
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
         final value = responses[key];
         categoryData[field.id] = value;
       }
-      
+
       structuredJson['categories'][category.id] = categoryData;
     }
 
-    // Puntos críticos y fuertes
     structuredJson['critical_points'] = results['critical_points'];
     structuredJson['strong_points'] = results['strong_points'];
-    
-    // Recomendaciones traducidas
     structuredJson['recommendations'] = translatedRecommendations;
 
     return structuredJson;

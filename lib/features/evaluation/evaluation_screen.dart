@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -525,9 +524,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     };
   }
 
-  Map<String, String> _translateRecommendations(List recommendationKeys) {
-    final loc = AppLocalizations.of(context);
-    
+  List<String> _translateRecommendations(List recommendationKeys) {
     final translations = <String, String>{
       'immediate_attention_required': widget.currentLanguage == 'es' 
           ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
@@ -556,14 +553,10 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       }
     }
 
-    return {
-      'recommendations': translatedRecommendations.cast<String, List<String>>(),
-    };
+    return translatedRecommendations;
   }
 
-// En evaluation_screen.dart - Método _completeEvaluation actualizado
-
-Future<void> _completeEvaluation() async {
+  Future<void> _completeEvaluation() async {
     final loc = AppLocalizations.of(context);
     
     if (!_evaluation.isComplete(widget.species)) {
@@ -601,11 +594,12 @@ Future<void> _completeEvaluation() async {
       final results = _calculateResults();
       final translatedRecommendations = _translateRecommendations(results['recommendations']);
       
-      final structuredJson = _evaluation.generateStructuredJSON(
+      final structuredJson = await _evaluation.generateStructuredJSON(
         widget.species,
         results,
         translatedRecommendations,
       );
+
 
       // ✅ IMPRIMIR JSON ESTRUCTURADO EN CONSOLA
       _logEvaluationResults(structuredJson);
@@ -637,9 +631,27 @@ Future<void> _completeEvaluation() async {
       }
     }
   }
+void printJson(dynamic data, {String indent = ''}) {
+  if (data is Map) {
+    data.forEach((key, value) {
+      print('$indent$key:');
+      printJson(value, indent: '$indent  ');
+    });
+  } else if (data is List) {
+    for (int i = 0; i < data.length; i++) {
+      print('$indent[$i]:');
+      printJson(data[i], indent: '$indent  ');
+    }
+  } else {
+    print('$indent$data');
+  }
+}
+
 
   // ✅ LOGGER ESTRUCTURADO PARA LA CONSOLA
   void _logEvaluationResults(Map<String, dynamic> json) {
+    print('\n');
+    printJson(json);
     print('\n');
     print('╔═══════════════════════════════════════════════════════════════╗');
     print('║              EVALUACIÓN COMPLETADA - BIAN                     ║');
@@ -660,7 +672,7 @@ Future<void> _completeEvaluation() async {
     print('');
     print('📊 PUNTUACIONES POR CATEGORÍA:');
     
-    final categories = json['categories'] as Map<String, dynamic>;
+    final categories = Map<String, dynamic>.from(json['categories']);
     categories.forEach((categoryId, categoryData) {
       final data = categoryData as Map<String, dynamic>;
       final score = data['score'];
@@ -707,37 +719,6 @@ Future<void> _completeEvaluation() async {
     print('');
   }
 
-  List<String> _translateRecommendations(List recommendationKeys) {
-    final translations = <String, String>{
-      'immediate_attention_required': widget.currentLanguage == 'es' 
-          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
-          : 'Immediate attention required to improve animal welfare conditions',
-      'improve_feeding_practices': widget.currentLanguage == 'es'
-          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
-          : 'Improve feeding practices and ensure constant access to quality water and food',
-      'strengthen_health_program': widget.currentLanguage == 'es'
-          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
-          : 'Strengthen animal health program, including vaccination and disease control',
-      'improve_infrastructure': widget.currentLanguage == 'es'
-          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
-          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': widget.currentLanguage == 'es'
-          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
-          : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': widget.currentLanguage == 'es'
-          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
-          : 'Maintain current good practices and continue monitoring animal welfare',
-    };
-
-    final translatedRecommendations = <String>[];
-    for (var key in recommendationKeys) {
-      if (translations.containsKey(key)) {
-        translatedRecommendations.add(translations[key]!);
-      }
-    }
-
-    return translatedRecommendations;
-  }
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);

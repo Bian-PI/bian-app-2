@@ -34,7 +34,12 @@ class ResultsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.share),
-            onPressed: null, // ✅ Sin acción por ahora
+            onPressed: () {
+              // TODO: Implementar compartir
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Función de compartir próximamente')),
+              );
+            },
           ),
         ],
       ),

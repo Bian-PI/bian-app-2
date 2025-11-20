@@ -221,16 +221,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadAllData();
   }
 
-  void _viewReport(Evaluation report) {
+  void _viewReport(Evaluation report) async {
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     
     // Recalcular resultados para mostrar
     final results = _recalculateResults(report, species);
+
     final translatedRecommendations = _translateRecommendations(
       results['recommendations'],
       report.language,
     );
-    final flatJson = report.generateFlatJSON(species, results, translatedRecommendations);
+
+    final structuredJson = await report.generateStructuredJSON(
+      species,
+      results,
+      translatedRecommendations,
+    );
     
     Navigator.push(
       context,
@@ -239,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           evaluation: report,
           species: species,
           results: results,
-          flatJson: flatJson,
+          structuredJson: structuredJson,
         ),
       ),
     );
@@ -339,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     };
   }
 
-  Map<String, String> _translateRecommendations(List recommendationKeys, String language) {
+  List<String> _translateRecommendations(List recommendationKeys, String language) {
     final translations = <String, String>{
       'immediate_attention_required': language == 'es' 
           ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
@@ -368,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     }
 
-    return {'recommendations': translatedRecommendations};
+    return translatedRecommendations;
   }
 
   Future<void> _deleteDraft(String id) async {
@@ -984,8 +990,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildReportCard(BuildContext context, Evaluation report) {
-    final loc = AppLocalizations.of(context);
-    final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     
     Color scoreColor;
     if (report.overallScore! >= 80) {
