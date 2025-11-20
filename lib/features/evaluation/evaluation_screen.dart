@@ -4,16 +4,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/models/species_model.dart';
 import '../../core/models/evaluation_model.dart';
+import '../../core/storage/drafts_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
+  final Evaluation? draftToEdit; // ✅ NUEVO: Recibir borrador si existe
 
   const EvaluationScreen({
     super.key,
     required this.species,
+    this.draftToEdit, // ✅ NUEVO
   });
 
   @override
@@ -33,6 +36,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   final Map<String, TextEditingController> _textControllers = {};
   
   bool _showInfoDialog = true;
+  bool _hasUnsavedChanges = false; // ✅ NUEVO
 
   @override
   void initState() {
@@ -40,7 +44,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _initializeEvaluation();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_showInfoDialog) {
+      // ✅ Si es borrador, no mostrar diálogo inicial
+      if (widget.draftToEdit == null && _showInfoDialog) {
         _showWelcomeDialog();
       }
     });
@@ -56,18 +61,41 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   }
 
   void _initializeEvaluation() {
-    _evaluation = Evaluation(
-      id: _uuid.v4(),
-      speciesId: widget.species.id,
-      farmName: '',
-      farmLocation: '',
-      evaluationDate: DateTime.now(),
-      evaluatorName: '',
-      responses: {},
-      status: 'draft',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    if (widget.draftToEdit != null) {
+      // ✅ Cargar desde borrador
+      _evaluation = widget.draftToEdit!;
+      _farmNameController.text = _evaluation.farmName;
+      _farmLocationController.text = _evaluation.farmLocation;
+      _evaluatorNameController.text = _evaluation.evaluatorName;
+      _showInfoDialog = false;
+      
+      // Pre-cargar controladores de texto
+      for (var category in widget.species.categories) {
+        for (var field in category.fields) {
+          final key = '${category.id}_${field.id}';
+          final value = _evaluation.responses[key];
+          if (value != null && (field.type == FieldType.number || 
+              field.type == FieldType.percentage || 
+              field.type == FieldType.text)) {
+            _textControllers[key] = TextEditingController(text: value.toString());
+          }
+        }
+      }
+    } else {
+      // ✅ Nueva evaluación
+      _evaluation = Evaluation(
+        id: _uuid.v4(),
+        speciesId: widget.species.id,
+        farmName: '',
+        farmLocation: '',
+        evaluationDate: DateTime.now(),
+        evaluatorName: '',
+        responses: {},
+        status: 'draft',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
   }
 
   void _showWelcomeDialog() {
@@ -262,6 +290,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   farmLocation: _farmLocationController.text,
                   evaluatorName: _evaluatorNameController.text,
                 );
+                _hasUnsavedChanges = true;
               });
               
               Navigator.pop(context);
@@ -296,6 +325,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       _evaluation = _evaluation.copyWith(
         updatedAt: DateTime.now(),
       );
+      _hasUnsavedChanges = true;
     });
   }
 
@@ -323,73 +353,65 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     return true;
   }
 
+  // ✅ NUEVO: Guardar borrador
   Future<void> _saveDraft() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.save, color: Colors.white),
-            SizedBox(width: 12),
-            Text(AppLocalizations.of(context).translate('draft_saved')),
-          ],
-        ),
-        backgroundColor: BianTheme.successGreen,
-      ),
-    );
-  }
-
-  Map<String, dynamic> _generateEvaluationJSON() {
     final loc = AppLocalizations.of(context);
     
-    final jsonData = <String, dynamic>{
-      'id': _evaluation.id,
-      'fecha_evaluacion': _evaluation.evaluationDate.toIso8601String(),
-      'especie': widget.species.namePlural,
-      'granja': {
-        'nombre': _evaluation.farmName,
-        'ubicacion': _evaluation.farmLocation,
-      },
-      'evaluador': _evaluation.evaluatorName,
-      'categorias': {},
-    };
-
-    for (var category in widget.species.categories) {
-      final categoryData = <String, dynamic>{};
-      
-      for (var field in category.fields) {
-        final key = '${category.id}_${field.id}';
-        final value = _evaluation.responses[key];
-        
-        String processedValue;
-        if (value == null) {
-          processedValue = 'No respondido';
-        } else if (value is bool) {
-          processedValue = value ? loc.translate('yes') : loc.translate('no');
-        } else if (value is num) {
-          if (field.type == FieldType.percentage || 
-              (field.unit != null && !field.unit!.contains('cm') && !field.unit!.contains('m'))) {
-            processedValue = value.toString();
-          } else {
-            processedValue = value.toInt().toString();
-          }
-          if (field.unit != null) {
-            processedValue += ' ${field.unit}';
-          }
-        } else {
-          processedValue = value.toString();
-        }
-        
-        categoryData[field.id] = processedValue;
+    // Verificar si hay espacio para guardar
+    if (widget.draftToEdit == null) {
+      final canAdd = await DraftsStorage.canAddNewDraft();
+      if (!canAdd) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Límite de borradores'),
+            content: Text('Ya tienes 2 borradores guardados. Se eliminará el más antiguo para guardar este.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(loc.translate('cancel')),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(loc.translate('accept')),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
       }
-      
-      jsonData['categorias'][category.id] = categoryData;
     }
-
-    return jsonData;
+    
+    final success = await DraftsStorage.saveDraft(_evaluation);
+    
+    if (!mounted) return;
+    
+    if (success) {
+      setState(() => _hasUnsavedChanges = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.save, color: Colors.white),
+              SizedBox(width: 12),
+              Text(loc.translate('draft_saved')),
+            ],
+          ),
+          backgroundColor: BianTheme.successGreen,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar borrador'),
+          backgroundColor: BianTheme.errorRed,
+        ),
+      );
+    }
   }
 
   Map<String, dynamic> _calculateResults() {
-    final loc = AppLocalizations.of(context);
     int totalQuestions = 0;
     int positiveResponses = 0;
     final categoryScores = <String, double>{};
@@ -435,7 +457,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               categoryPositive++;
               positiveResponses++;
             } else {
-              criticalPoints.add(loc.translate(field.id));
+              criticalPoints.add(field.id); // ✅ Nombre técnico
             }
           }
         }
@@ -446,7 +468,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         categoryScores[category.id] = score;
         
         if (score >= 80) {
-          strongPoints.add(loc.translate(category.id));
+          strongPoints.add(category.id); // ✅ Nombre técnico
         }
       }
     }
@@ -455,50 +477,51 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
     String complianceLevel;
     if (overallScore >= 90) {
-      complianceLevel = loc.translate('excellent');
+      complianceLevel = 'excellent';
     } else if (overallScore >= 75) {
-      complianceLevel = loc.translate('good');
+      complianceLevel = 'good';
     } else if (overallScore >= 60) {
-      complianceLevel = loc.translate('acceptable');
+      complianceLevel = 'acceptable';
     } else if (overallScore >= 40) {
-      complianceLevel = loc.translate('needs_improvement');
+      complianceLevel = 'needs_improvement';
     } else {
-      complianceLevel = loc.translate('critical');
+      complianceLevel = 'critical';
     }
 
     final recommendations = <String>[];
     
     if (overallScore < 60) {
-      recommendations.add('Se requiere atención inmediata en los puntos críticos identificados.');
+      recommendations.add('immediate_attention_required');
     }
     
     if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendations.add('Mejorar las prácticas de alimentación y acceso al agua.');
+      recommendations.add('improve_feeding_practices');
     }
     
     if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendations.add('Fortalecer el programa sanitario y de vacunación.');
+      recommendations.add('strengthen_health_program');
     }
     
     if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendations.add('Realizar mejoras en la infraestructura del galpón/corral.');
+      recommendations.add('improve_infrastructure');
     }
     
     if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendations.add('Capacitar al personal en manejo y bienestar animal.');
+      recommendations.add('train_staff_welfare');
     }
 
     if (recommendations.isEmpty) {
-      recommendations.add('Mantener las buenas prácticas actuales y realizar monitoreo continuo.');
+      recommendations.add('maintain_current_practices');
     }
 
     return {
-      'puntuacion_general': overallScore.toStringAsFixed(1),
-      'nivel_cumplimiento': complianceLevel,
-      'puntuaciones_por_categoria': categoryScores.map((key, value) => MapEntry(key, value.toStringAsFixed(1))),
-      'puntos_criticos': criticalPoints.take(5).toList(),
-      'puntos_fuertes': strongPoints,
-      'recomendaciones': recommendations,
+      'overall_score': overallScore,
+      'overall_score_formatted': overallScore.toStringAsFixed(1),
+      'compliance_level': complianceLevel,
+      'category_scores': categoryScores,
+      'critical_points': criticalPoints.take(10).toList(),
+      'strong_points': strongPoints,
+      'recommendations': recommendations,
     };
   }
 
@@ -537,24 +560,38 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
 
     if (confirm == true) {
-      final evaluationJSON = _generateEvaluationJSON();
+      // ✅ Generar JSON técnico (nombres en inglés)
+      final technicalJSON = _evaluation.generateTechnicalJSON(widget.species);
+      
+      // Calcular resultados
       final results = _calculateResults();
       
-      evaluationJSON['resultados'] = results;
+      // Agregar resultados al JSON
+      technicalJSON['results'] = results;
 
+      // ✅ Imprimir JSON COMPLETO con nombres técnicos en inglés
       print('═══════════════════════════════════════════════════════════');
-      print('REPORTE COMPLETO DE EVALUACIÓN - BIAN');
+      print('COMPLETE EVALUATION REPORT - BIAN');
       print('═══════════════════════════════════════════════════════════');
-      print(JsonEncoder.withIndent('  ').convert(evaluationJSON));
+      print(JsonEncoder.withIndent('  ').convert(technicalJSON));
       print('═══════════════════════════════════════════════════════════');
 
+      // También imprimir resumen legible
+      print(_evaluation.generateReadableSummary(widget.species));
+
+      // Actualizar estado
       setState(() {
         _evaluation = _evaluation.copyWith(
           status: 'completed',
-          overallScore: double.parse(results['puntuacion_general']),
+          overallScore: results['overall_score'],
+          categoryScores: Map<String, double>.from(results['category_scores']),
           updatedAt: DateTime.now(),
         );
+        _hasUnsavedChanges = false;
       });
+      
+      // ✅ Eliminar borrador si existe
+      await DraftsStorage.deleteDraft(_evaluation.id);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -574,7 +611,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         await Future.delayed(Duration(milliseconds: 800));
         
         if (mounted) {
-          Navigator.pop(context);
+          Navigator.pop(context, true); // ✅ Retornar true para indicar que se completó
         }
       }
     }
@@ -588,28 +625,39 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
     return WillPopScope(
       onWillPop: () async {
-        if (_evaluation.responses.isNotEmpty) {
-          final confirm = await showDialog<bool>(
+        if (_hasUnsavedChanges) {
+          final confirm = await showDialog<String>(
             context: context,
             builder: (context) => AlertDialog(
               title: Text(loc.translate('exit_without_saving')),
               content: Text(loc.translate('data_will_be_lost')),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(context, 'cancel'),
                   child: Text(loc.translate('cancel')),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(context, 'discard'),
                   style: TextButton.styleFrom(
                     foregroundColor: BianTheme.errorRed,
                   ),
                   child: Text(loc.translate('exit')),
                 ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, 'save'),
+                  child: Text(loc.translate('save_draft')),
+                ),
               ],
             ),
           );
-          return confirm ?? false;
+          
+          if (confirm == 'save') {
+            await _saveDraft();
+            return true;
+          } else if (confirm == 'discard') {
+            return true;
+          }
+          return false;
         }
         return true;
       },
@@ -633,6 +681,21 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ],
           ),
           actions: [
+            // ✅ Indicador de cambios sin guardar
+            if (_hasUnsavedChanges)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Center(
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: BianTheme.warningYellow,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
             IconButton(
               icon: Icon(Icons.save_outlined),
               onPressed: _saveDraft,
@@ -678,12 +741,41 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BianTheme.mediumGray,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: BianTheme.mediumGray,
+                        ),
+                      ),
+                      // ✅ Mostrar si es borrador
+                      if (widget.draftToEdit != null)
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: BianTheme.infoBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_note, size: 14, color: BianTheme.infoBlue),
+                              SizedBox(width: 4),
+                              Text(
+                                'Borrador',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: BianTheme.infoBlue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),

@@ -127,4 +127,77 @@ class Evaluation {
     }
     return true;
   }
+
+  // ✅ NUEVO: Generar JSON con nombres de campos en INGLÉS (nombres técnicos)
+  Map<String, dynamic> generateTechnicalJSON(Species species) {
+    final jsonData = <String, dynamic>{
+      'evaluation_id': id,
+      'evaluation_date': evaluationDate.toIso8601String(),
+      'species': speciesId, // 'birds' o 'pigs'
+      'farm': {
+        'name': farmName,
+        'location': farmLocation,
+      },
+      'evaluator_name': evaluatorName,
+      'status': status,
+      'categories': {},
+    };
+
+    // Recorrer todas las categorías y campos
+    for (var category in species.categories) {
+      final categoryData = <String, dynamic>{};
+      
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = responses[key];
+        
+        // Usar el ID del campo (nombre técnico en inglés)
+        dynamic processedValue;
+        if (value == null) {
+          processedValue = null;
+        } else if (value is bool) {
+          processedValue = value; // true/false directo
+        } else if (value is num) {
+          processedValue = value;
+        } else {
+          processedValue = value.toString();
+        }
+        
+        categoryData[field.id] = processedValue;
+      }
+      
+      jsonData['categories'][category.id] = categoryData;
+    }
+
+    return jsonData;
+  }
+
+  // ✅ NUEVO: Generar resumen legible (para mostrar al usuario)
+  String generateReadableSummary(Species species) {
+    final buffer = StringBuffer();
+    buffer.writeln('═══════════════════════════════════════════════════════════');
+    buffer.writeln('EVALUATION REPORT - BIAN');
+    buffer.writeln('═══════════════════════════════════════════════════════════');
+    buffer.writeln('ID: $id');
+    buffer.writeln('Species: $speciesId');
+    buffer.writeln('Farm: $farmName ($farmLocation)');
+    buffer.writeln('Evaluator: $evaluatorName');
+    buffer.writeln('Date: ${evaluationDate.toIso8601String()}');
+    buffer.writeln('Status: $status');
+    buffer.writeln('Progress: ${(getProgress(species) * 100).toStringAsFixed(1)}%');
+    buffer.writeln('───────────────────────────────────────────────────────────');
+    
+    for (var category in species.categories) {
+      buffer.writeln('');
+      buffer.writeln('${category.name.toUpperCase()} (${category.id}):');
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = responses[key];
+        buffer.writeln('  - ${field.id}: ${value ?? "null"}');
+      }
+    }
+    
+    buffer.writeln('═══════════════════════════════════════════════════════════');
+    return buffer.toString();
+  }
 }
