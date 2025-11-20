@@ -13,7 +13,6 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'es': {
-      // General
       'app_name': 'BIAN - Bienestar Animal',
       'welcome': 'Bienvenido',
       'loading': 'Cargando...',
@@ -31,7 +30,6 @@ class AppLocalizations {
       'yes': 'Sí',
       'no': 'No',
       
-      // Auth
       'login': 'Iniciar Sesión',
       'register': 'Registrarse',
       'email': 'Correo Electrónico',
@@ -51,7 +49,6 @@ class AppLocalizations {
       'login_subtitle': 'Inicia sesión para continuar',
       'register_subtitle': 'Únete a nuestra comunidad BIAN',
       
-      // Validation Messages
       'field_required': 'Este campo es requerido',
       'invalid_email': 'Correo electrónico inválido',
       'invalid_password': 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial',
@@ -62,7 +59,6 @@ class AppLocalizations {
       'invalid_document': 'Documento inválido',
       'name_format': 'Ingresa al menos nombre y apellido',
       
-      // Auth Errors
       'invalid_credentials': 'Credenciales incorrectas',
       'user_not_verified': 'Tu cuenta no está verificada. Te hemos enviado un correo de verificación.',
       'user_exists': 'El usuario ya existe',
@@ -70,12 +66,10 @@ class AppLocalizations {
       'timeout_error': 'Tiempo de espera agotado. Verifica tu conexión',
       'server_error': 'Error del servidor. Intenta de nuevo',
       
-      // Auth Success
       'login_success': 'Inicio de sesión exitoso',
       'register_success': 'Registro exitoso',
       'logout_confirm': '¿Estás seguro que deseas cerrar sesión?',
       
-      // Email Verification
       'verify_email': 'Verificar Correo',
       'email_not_verified': 'Correo no verificado',
       'email_verified': 'Correo verificado',
@@ -86,7 +80,6 @@ class AppLocalizations {
       'verify_account_message': 'Tu cuenta no está verificada. Te hemos enviado un correo de verificación.',
       'send_verification_email': 'Enviar correo de verificación',
       
-      // Home
       'home': 'Inicio',
       'dashboard': 'Panel de Control',
       'welcome_user': '¡Bienvenido, {0}!',
@@ -103,7 +96,6 @@ class AppLocalizations {
       'verified': 'Verificado',
       'not_verified': 'No Verificado',
       
-      // Profile
       'profile': 'Perfil',
       'my_profile': 'Mi Perfil',
       'edit_profile': 'Editar Perfil',
@@ -117,7 +109,6 @@ class AppLocalizations {
       'admin': 'Administrador',
       'user': 'Usuario',
       
-      // Drawer Menu
       'history': 'Historial',
       'reports': 'Reportes',
       'help': 'Ayuda',
@@ -127,23 +118,18 @@ class AppLocalizations {
       'spanish': 'Español',
       'english': 'Inglés',
       
-      // Coming Soon
       'coming_soon': '{0} próximamente',
       'feature_coming_soon': 'Esta función estará disponible próximamente',
       
-      // Help
       'need_help': '¿Necesitas ayuda?',
       'contact_support': 'Contacta con soporte técnico en:',
       
-      // Notifications
       'no_notifications': 'No tienes notificaciones nuevas',
       'notifications': 'Notificaciones',
       
-      // Profile extras
       'optional': 'opcional',
       'leave_blank_keep_current': 'Dejar en blanco para mantener actual',
       
-      // Email verification steps
       'step_1_title': 'Revisa tu bandeja',
       'step_1_description': 'Te enviamos un correo con el enlace de verificación',
       'step_2_title': 'Haz clic en el enlace',
@@ -154,9 +140,107 @@ class AppLocalizations {
       'resend_in': 'Reenviar en',
       'seconds': 's',
       'go_to_login': 'Ir a Iniciar Sesión',
+      
+      'evaluation': 'Evaluación',
+      'evaluation_of': 'Evaluación de',
+      'farm_information': 'Información de la Granja',
+      'farm_name': 'Nombre de la Granja',
+      'farm_name_example': 'Ej: Granja El Paraíso',
+      'location': 'Ubicación',
+      'location_example': 'Ej: Ocaña, Norte de Santander',
+      'evaluator_name': 'Nombre del Evaluador',
+      'evaluator_name_hint': 'Tu nombre',
+      'continue': 'Continuar',
+      'start': 'Comenzar',
+      'welcome_evaluation': 'Esta evaluación está basada en la metodología del ICA (2024) y la Resolución 253 de 2020.',
+      'categories_to_evaluate': 'Se evaluarán {0} categorías principales:',
+      'first_enter_farm_data': 'Primero ingresa los datos de la granja, luego completa cada categoría.',
+      'complete_all_fields': 'Por favor completa todos los campos',
+      'previous': 'Anterior',
+      'next': 'Siguiente',
+      'finish': 'Finalizar',
+      'finish_evaluation': 'Finalizar Evaluación',
+      'finish_evaluation_confirm': '¿Estás seguro de finalizar esta evaluación? Se generará un reporte completo.',
+      'evaluation_completed': '¡Evaluación completada!',
+      'complete_required_fields': 'Por favor completa todos los campos obligatorios',
+      'exit_without_saving': '¿Salir sin guardar?',
+      'data_will_be_lost': 'Se perderán los datos no guardados.',
+      'exit': 'Salir',
+      'save_draft': 'Guardar borrador',
+      'draft_saved': 'Borrador guardado',
+      'information': 'Información',
+      'category': 'Categoría',
+      'of': 'de',
+      'indicators': 'indicadores',
+      'required': 'Requerido',
+      'enter_value': 'Ingresa un valor',
+      'write_answer': 'Escribe tu respuesta',
+      
+      'feeding': 'Alimentación',
+      'health': 'Sanidad',
+      'behavior': 'Comportamiento',
+      'infrastructure': 'Infraestructura',
+      'management': 'Manejo',
+      
+      'water_access': '¿Las aves tienen acceso permanente a agua limpia?',
+      'feed_quality': '¿El alimento es de buena calidad y apropiado?',
+      'feeders_sufficient': '¿Los comederos son suficientes para todas las aves?',
+      'feed_frequency': 'Frecuencia de alimentación diaria',
+      'times_per_day': 'veces/día',
+      'general_health': '¿El lote presenta buen estado de salud general?',
+      'mortality_rate': 'Tasa de mortalidad semanal',
+      'injuries': '¿Se observan lesiones o heridas en las aves?',
+      'vaccination': '¿El programa de vacunación está al día?',
+      'diseases': '¿Hay presencia de enfermedades diagnosticadas?',
+      'natural_behavior': '¿Las aves pueden expresar comportamientos naturales?',
+      'aggression': '¿Se observa agresividad o canibalismo?',
+      'stress_signs': '¿Hay signos de estrés en el lote?',
+      'movement': '¿Las aves se mueven con normalidad?',
+      'space_per_bird': 'Espacio disponible por ave',
+      'cm2_per_bird': 'cm²/ave',
+      'ventilation': '¿La ventilación es adecuada?',
+      'temperature': 'Temperatura promedio del galpón',
+      'celsius': '°C',
+      'litter_quality': '¿La cama/piso está en buen estado?',
+      'lighting': '¿La iluminación es apropiada?',
+      'staff_training': '¿El personal está capacitado en bienestar animal?',
+      'records': '¿Se llevan registros actualizados?',
+      'biosecurity': '¿Se aplican medidas de bioseguridad?',
+      'handling': '¿El manejo de las aves es gentil y apropiado?',
+      
+      'water_access_pigs': '¿Los cerdos tienen acceso permanente a agua limpia?',
+      'feed_quality_pigs': '¿El alimento es de buena calidad y balanceado?',
+      'feeders_sufficient_pigs': '¿Los comederos son suficientes para todos los animales?',
+      'general_health_pigs': '¿Los cerdos presentan buen estado de salud general?',
+      'injuries_pigs': '¿Se observan lesiones, cojeras o heridas?',
+      'tail_biting': '¿Se observa mordedura de colas?',
+      'natural_behavior_pigs': '¿Los cerdos pueden expresar comportamientos naturales?',
+      'aggression_pigs': '¿Se observa agresividad excesiva?',
+      'stress_signs_pigs': '¿Hay signos de estrés en los animales?',
+      'movement_pigs': '¿Los cerdos se mueven con normalidad?',
+      'enrichment': '¿Se proporciona enriquecimiento ambiental?',
+      'space_per_pig': 'Espacio disponible por cerdo',
+      'm2_per_pig': 'm²/cerdo',
+      'temperature_facility': 'Temperatura promedio de la instalación',
+      'floor_quality': '¿El piso está en buen estado y es adecuado?',
+      'resting_area': '¿Hay área de descanso limpia y seca?',
+      'handling_pigs': '¿El manejo de los cerdos es gentil y apropiado?',
+      'castration': '¿La castración se realiza con anestesia/analgesia?',
+      
+      'evaluation_results': 'Resultados de la Evaluación',
+      'overall_score': 'Puntuación General',
+      'category_scores': 'Puntuaciones por Categoría',
+      'recommendations': 'Recomendaciones',
+      'critical_points': 'Puntos Críticos',
+      'strong_points': 'Puntos Fuertes',
+      'compliance_level': 'Nivel de Cumplimiento',
+      'excellent': 'Excelente',
+      'good': 'Bueno',
+      'acceptable': 'Aceptable',
+      'needs_improvement': 'Necesita Mejora',
+      'critical': 'Crítico',
     },
     'en': {
-      // General
       'app_name': 'BIAN - Animal Welfare',
       'welcome': 'Welcome',
       'loading': 'Loading...',
@@ -174,7 +258,6 @@ class AppLocalizations {
       'yes': 'Yes',
       'no': 'No',
       
-      // Auth
       'login': 'Login',
       'register': 'Register',
       'email': 'Email',
@@ -194,7 +277,6 @@ class AppLocalizations {
       'login_subtitle': 'Sign in to continue',
       'register_subtitle': 'Join our BIAN community',
       
-      // Validation Messages
       'field_required': 'This field is required',
       'invalid_email': 'Invalid email',
       'invalid_password': 'Password must have at least 8 characters, one uppercase, one lowercase, one number and one special character',
@@ -205,7 +287,6 @@ class AppLocalizations {
       'invalid_document': 'Invalid document',
       'name_format': 'Enter at least first and last name',
       
-      // Auth Errors
       'invalid_credentials': 'Invalid credentials',
       'user_not_verified': 'Your account is not verified. We have sent you a verification email.',
       'user_exists': 'User already exists',
@@ -213,12 +294,10 @@ class AppLocalizations {
       'timeout_error': 'Request timeout. Check your connection',
       'server_error': 'Server error. Try again',
       
-      // Auth Success
       'login_success': 'Login successful',
       'register_success': 'Registration successful',
       'logout_confirm': 'Are you sure you want to logout?',
       
-      // Email Verification
       'verify_email': 'Verify Email',
       'email_not_verified': 'Email not verified',
       'email_verified': 'Email verified',
@@ -229,7 +308,6 @@ class AppLocalizations {
       'verify_account_message': 'Your account is not verified. We have sent you a verification email.',
       'send_verification_email': 'Send verification email',
       
-      // Home
       'home': 'Home',
       'dashboard': 'Dashboard',
       'welcome_user': 'Welcome, {0}!',
@@ -246,7 +324,6 @@ class AppLocalizations {
       'verified': 'Verified',
       'not_verified': 'Not Verified',
       
-      // Profile
       'profile': 'Profile',
       'my_profile': 'My Profile',
       'edit_profile': 'Edit Profile',
@@ -260,7 +337,6 @@ class AppLocalizations {
       'admin': 'Administrator',
       'user': 'User',
       
-      // Drawer Menu
       'history': 'History',
       'reports': 'Reports',
       'help': 'Help',
@@ -270,23 +346,18 @@ class AppLocalizations {
       'spanish': 'Spanish',
       'english': 'English',
       
-      // Coming Soon
       'coming_soon': '{0} coming soon',
       'feature_coming_soon': 'This feature will be available soon',
       
-      // Help
       'need_help': 'Need help?',
       'contact_support': 'Contact technical support at:',
       
-      // Notifications
       'no_notifications': 'No new notifications',
       'notifications': 'Notifications',
       
-      // Profile extras
       'optional': 'optional',
       'leave_blank_keep_current': 'Leave blank to keep current',
       
-      // Email verification steps
       'step_1_title': 'Check your inbox',
       'step_1_description': 'We sent you an email with the verification link',
       'step_2_title': 'Click the link',
@@ -297,6 +368,105 @@ class AppLocalizations {
       'resend_in': 'Resend in',
       'seconds': 's',
       'go_to_login': 'Go to Login',
+      
+      'evaluation': 'Evaluation',
+      'evaluation_of': 'Evaluation of',
+      'farm_information': 'Farm Information',
+      'farm_name': 'Farm Name',
+      'farm_name_example': 'E.g.: Paradise Farm',
+      'location': 'Location',
+      'location_example': 'E.g.: Ocaña, Norte de Santander',
+      'evaluator_name': 'Evaluator Name',
+      'evaluator_name_hint': 'Your name',
+      'continue': 'Continue',
+      'start': 'Start',
+      'welcome_evaluation': 'This evaluation is based on the ICA (2024) methodology and Resolution 253 of 2020.',
+      'categories_to_evaluate': '{0} main categories will be evaluated:',
+      'first_enter_farm_data': 'First enter the farm data, then complete each category.',
+      'complete_all_fields': 'Please complete all fields',
+      'previous': 'Previous',
+      'next': 'Next',
+      'finish': 'Finish',
+      'finish_evaluation': 'Finish Evaluation',
+      'finish_evaluation_confirm': 'Are you sure you want to finish this evaluation? A complete report will be generated.',
+      'evaluation_completed': 'Evaluation completed!',
+      'complete_required_fields': 'Please complete all required fields',
+      'exit_without_saving': 'Exit without saving?',
+      'data_will_be_lost': 'Unsaved data will be lost.',
+      'exit': 'Exit',
+      'save_draft': 'Save draft',
+      'draft_saved': 'Draft saved',
+      'information': 'Information',
+      'category': 'Category',
+      'of': 'of',
+      'indicators': 'indicators',
+      'required': 'Required',
+      'enter_value': 'Enter a value',
+      'write_answer': 'Write your answer',
+      
+      'feeding': 'Feeding',
+      'health': 'Health',
+      'behavior': 'Behavior',
+      'infrastructure': 'Infrastructure',
+      'management': 'Management',
+      
+      'water_access': 'Do birds have permanent access to clean water?',
+      'feed_quality': 'Is the feed of good quality and appropriate?',
+      'feeders_sufficient': 'Are feeders sufficient for all birds?',
+      'feed_frequency': 'Daily feeding frequency',
+      'times_per_day': 'times/day',
+      'general_health': 'Does the flock show good general health?',
+      'mortality_rate': 'Weekly mortality rate',
+      'injuries': 'Are injuries or wounds observed in birds?',
+      'vaccination': 'Is the vaccination program up to date?',
+      'diseases': 'Is there presence of diagnosed diseases?',
+      'natural_behavior': 'Can birds express natural behaviors?',
+      'aggression': 'Is aggression or cannibalism observed?',
+      'stress_signs': 'Are there signs of stress in the flock?',
+      'movement': 'Do birds move normally?',
+      'space_per_bird': 'Available space per bird',
+      'cm2_per_bird': 'cm²/bird',
+      'ventilation': 'Is ventilation adequate?',
+      'temperature': 'Average barn temperature',
+      'celsius': '°C',
+      'litter_quality': 'Is the litter/floor in good condition?',
+      'lighting': 'Is lighting appropriate?',
+      'staff_training': 'Is staff trained in animal welfare?',
+      'records': 'Are updated records kept?',
+      'biosecurity': 'Are biosecurity measures applied?',
+      'handling': 'Is bird handling gentle and appropriate?',
+      
+      'water_access_pigs': 'Do pigs have permanent access to clean water?',
+      'feed_quality_pigs': 'Is the feed of good quality and balanced?',
+      'feeders_sufficient_pigs': 'Are feeders sufficient for all animals?',
+      'general_health_pigs': 'Do pigs show good general health?',
+      'injuries_pigs': 'Are injuries, lameness or wounds observed?',
+      'tail_biting': 'Is tail biting observed?',
+      'natural_behavior_pigs': 'Can pigs express natural behaviors?',
+      'aggression_pigs': 'Is excessive aggression observed?',
+      'stress_signs_pigs': 'Are there signs of stress in the animals?',
+      'movement_pigs': 'Do pigs move normally?',
+      'enrichment': 'Is environmental enrichment provided?',
+      'space_per_pig': 'Available space per pig',
+      'm2_per_pig': 'm²/pig',
+      'temperature_facility': 'Average facility temperature',
+      'floor_quality': 'Is the floor in good condition and adequate?',
+      'resting_area': 'Is there a clean and dry resting area?',
+      'handling_pigs': 'Is pig handling gentle and appropriate?',
+      'castration': 'Is castration performed with anesthesia/analgesia?',
+      
+      'evaluation_results': 'Evaluation Results',
+      'overall_score': 'Overall Score',
+      'category_scores': 'Category Scores',
+      'recommendations': 'Recommendations',
+      'critical_points': 'Critical Points',
+      'strong_points': 'Strong Points',
+      'compliance_level': 'Compliance Level',
+      'excellent': 'Excellent',
+      'good': 'Good',
+      'acceptable': 'Acceptable',
+      'needs_improvement': 'Needs Improvement',
+      'critical': 'Critical',
     },
   };
 
@@ -316,7 +486,6 @@ class AppLocalizations {
     return value!;
   }
 
-  // Shortcuts para los textos más usados
   String get appName => translate('app_name');
   String get welcome => translate('welcome');
   String get loading => translate('loading');

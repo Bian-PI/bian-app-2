@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/models/species_model.dart';
 import '../../core/models/evaluation_model.dart';
@@ -28,6 +30,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   final _farmLocationController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
   
+  final Map<String, TextEditingController> _textControllers = {};
+  
   bool _showInfoDialog = true;
 
   @override
@@ -35,7 +39,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     super.initState();
     _initializeEvaluation();
     
-    // Mostrar dialog de bienvenida
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_showInfoDialog) {
         _showWelcomeDialog();
@@ -48,6 +51,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _farmNameController.dispose();
     _farmLocationController.dispose();
     _evaluatorNameController.dispose();
+    _textControllers.values.forEach((controller) => controller.dispose());
     super.dispose();
   }
 
@@ -67,6 +71,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   }
 
   void _showWelcomeDialog() {
+    final loc = AppLocalizations.of(context);
     
     showDialog(
       context: context,
@@ -96,7 +101,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Evaluación de ${widget.species.namePlural}',
+                '${loc.translate('evaluation_of')} ${widget.species.namePlural}',
                 style: const TextStyle(fontSize: 20),
               ),
             ),
@@ -108,12 +113,12 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Esta evaluación está basada en la metodología del ICA (2024) y la Resolución 253 de 2020.',
+                loc.translate('welcome_evaluation'),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               Text(
-                'Se evaluarán ${widget.species.categories.length} categorías principales:',
+                loc.translate('categories_to_evaluate', [widget.species.categories.length.toString()]),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 12),
@@ -127,7 +132,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                       color: Color(int.parse(widget.species.gradientColors[0])),
                     ),
                     const SizedBox(width: 12),
-                    Text(cat.name),
+                    Text(loc.translate(cat.id)),
                   ],
                 ),
               )),
@@ -151,7 +156,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Primero ingresa los datos de la granja, luego completa cada categoría.',
+                        loc.translate('first_enter_farm_data'),
                         style: TextStyle(
                           fontSize: 12,
                           color: BianTheme.darkGray,
@@ -170,7 +175,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text('Cancelar'),
+            child: Text(loc.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -178,7 +183,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               Navigator.pop(context);
               _showFarmInfoDialog();
             },
-            child: Text('Comenzar'),
+            child: Text(loc.translate('start')),
           ),
         ],
       ),
@@ -186,7 +191,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   }
 
   void _showFarmInfoDialog() {
-    AppLocalizations.of(context);
+    final loc = AppLocalizations.of(context);
     
     showDialog(
       context: context,
@@ -195,7 +200,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text('Información de la Granja'),
+        title: Text(loc.translate('farm_information')),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -203,8 +208,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               TextField(
                 controller: _farmNameController,
                 decoration: InputDecoration(
-                  labelText: 'Nombre de la Granja *',
-                  hintText: 'Ej: Granja El Paraíso',
+                  labelText: '${loc.translate('farm_name')} *',
+                  hintText: loc.translate('farm_name_example'),
                   prefixIcon: Icon(Icons.business),
                 ),
               ),
@@ -212,8 +217,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               TextField(
                 controller: _farmLocationController,
                 decoration: InputDecoration(
-                  labelText: 'Ubicación *',
-                  hintText: 'Ej: Ocaña, Norte de Santander',
+                  labelText: '${loc.translate('location')} *',
+                  hintText: loc.translate('location_example'),
                   prefixIcon: Icon(Icons.location_on),
                 ),
               ),
@@ -221,8 +226,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               TextField(
                 controller: _evaluatorNameController,
                 decoration: InputDecoration(
-                  labelText: 'Nombre del Evaluador *',
-                  hintText: 'Tu nombre',
+                  labelText: '${loc.translate('evaluator_name')} *',
+                  hintText: loc.translate('evaluator_name_hint'),
                   prefixIcon: Icon(Icons.person),
                 ),
               ),
@@ -235,7 +240,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text('Cancelar'),
+            child: Text(loc.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -244,7 +249,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   _evaluatorNameController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Por favor completa todos los campos'),
+                    content: Text(loc.translate('complete_all_fields')),
                     backgroundColor: BianTheme.errorRed,
                   ),
                 );
@@ -261,7 +266,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               
               Navigator.pop(context);
             },
-            child: Text('Continuar'),
+            child: Text(loc.translate('continue')),
           ),
         ],
       ),
@@ -294,15 +299,38 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     });
   }
 
+  bool _validateCurrentCategory() {
+    final loc = AppLocalizations.of(context);
+    final currentCategory = widget.species.categories[_currentCategoryIndex];
+    
+    for (var field in currentCategory.fields) {
+      if (field.required) {
+        final key = '${currentCategory.id}_${field.id}';
+        final value = _evaluation.responses[key];
+        
+        if (value == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(loc.translate('complete_required_fields')),
+              backgroundColor: BianTheme.warningYellow,
+            ),
+          );
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  }
+
   Future<void> _saveDraft() async {
-    // TODO: Implementar guardado local
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(Icons.save, color: Colors.white),
             SizedBox(width: 12),
-            Text('Borrador guardado'),
+            Text(AppLocalizations.of(context).translate('draft_saved')),
           ],
         ),
         backgroundColor: BianTheme.successGreen,
@@ -310,11 +338,177 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
   }
 
+  Map<String, dynamic> _generateEvaluationJSON() {
+    final loc = AppLocalizations.of(context);
+    
+    final jsonData = <String, dynamic>{
+      'id': _evaluation.id,
+      'fecha_evaluacion': _evaluation.evaluationDate.toIso8601String(),
+      'especie': widget.species.namePlural,
+      'granja': {
+        'nombre': _evaluation.farmName,
+        'ubicacion': _evaluation.farmLocation,
+      },
+      'evaluador': _evaluation.evaluatorName,
+      'categorias': {},
+    };
+
+    for (var category in widget.species.categories) {
+      final categoryData = <String, dynamic>{};
+      
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = _evaluation.responses[key];
+        
+        String processedValue;
+        if (value == null) {
+          processedValue = 'No respondido';
+        } else if (value is bool) {
+          processedValue = value ? loc.translate('yes') : loc.translate('no');
+        } else if (value is num) {
+          if (field.type == FieldType.percentage || 
+              (field.unit != null && !field.unit!.contains('cm') && !field.unit!.contains('m'))) {
+            processedValue = value.toString();
+          } else {
+            processedValue = value.toInt().toString();
+          }
+          if (field.unit != null) {
+            processedValue += ' ${field.unit}';
+          }
+        } else {
+          processedValue = value.toString();
+        }
+        
+        categoryData[field.id] = processedValue;
+      }
+      
+      jsonData['categorias'][category.id] = categoryData;
+    }
+
+    return jsonData;
+  }
+
+  Map<String, dynamic> _calculateResults() {
+    final loc = AppLocalizations.of(context);
+    int totalQuestions = 0;
+    int positiveResponses = 0;
+    final categoryScores = <String, double>{};
+    final criticalPoints = <String>[];
+    final strongPoints = <String>[];
+
+    for (var category in widget.species.categories) {
+      int categoryTotal = 0;
+      int categoryPositive = 0;
+
+      for (var field in category.fields) {
+        if (field.type == FieldType.yesNo) {
+          final key = '${category.id}_${field.id}';
+          final value = _evaluation.responses[key];
+          
+          if (value != null) {
+            categoryTotal++;
+            totalQuestions++;
+            
+            bool isPositive = false;
+            if (field.id.contains('access') || 
+                field.id.contains('quality') || 
+                field.id.contains('sufficient') ||
+                field.id.contains('health') ||
+                field.id.contains('vaccination') ||
+                field.id.contains('natural_behavior') ||
+                field.id.contains('movement') ||
+                field.id.contains('ventilation') ||
+                field.id.contains('training') ||
+                field.id.contains('records') ||
+                field.id.contains('biosecurity') ||
+                field.id.contains('handling') ||
+                field.id.contains('lighting') ||
+                field.id.contains('enrichment') ||
+                field.id.contains('resting_area') ||
+                field.id.contains('castration')) {
+              isPositive = value == true;
+            } else {
+              isPositive = value == false;
+            }
+            
+            if (isPositive) {
+              categoryPositive++;
+              positiveResponses++;
+            } else {
+              criticalPoints.add(loc.translate(field.id));
+            }
+          }
+        }
+      }
+
+      if (categoryTotal > 0) {
+        final score = (categoryPositive / categoryTotal) * 100;
+        categoryScores[category.id] = score;
+        
+        if (score >= 80) {
+          strongPoints.add(loc.translate(category.id));
+        }
+      }
+    }
+
+    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+
+    String complianceLevel;
+    if (overallScore >= 90) {
+      complianceLevel = loc.translate('excellent');
+    } else if (overallScore >= 75) {
+      complianceLevel = loc.translate('good');
+    } else if (overallScore >= 60) {
+      complianceLevel = loc.translate('acceptable');
+    } else if (overallScore >= 40) {
+      complianceLevel = loc.translate('needs_improvement');
+    } else {
+      complianceLevel = loc.translate('critical');
+    }
+
+    final recommendations = <String>[];
+    
+    if (overallScore < 60) {
+      recommendations.add('Se requiere atención inmediata en los puntos críticos identificados.');
+    }
+    
+    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
+      recommendations.add('Mejorar las prácticas de alimentación y acceso al agua.');
+    }
+    
+    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
+      recommendations.add('Fortalecer el programa sanitario y de vacunación.');
+    }
+    
+    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+      recommendations.add('Realizar mejoras en la infraestructura del galpón/corral.');
+    }
+    
+    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+      recommendations.add('Capacitar al personal en manejo y bienestar animal.');
+    }
+
+    if (recommendations.isEmpty) {
+      recommendations.add('Mantener las buenas prácticas actuales y realizar monitoreo continuo.');
+    }
+
+    return {
+      'puntuacion_general': overallScore.toStringAsFixed(1),
+      'nivel_cumplimiento': complianceLevel,
+      'puntuaciones_por_categoria': categoryScores.map((key, value) => MapEntry(key, value.toStringAsFixed(1))),
+      'puntos_criticos': criticalPoints.take(5).toList(),
+      'puntos_fuertes': strongPoints,
+      'recomendaciones': recommendations,
+    };
+  }
+
   Future<void> _completeEvaluation() async {
+    final loc = AppLocalizations.of(context);
+    
     if (!_evaluation.isComplete(widget.species)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Por favor completa todos los campos obligatorios'),
+          content: Text(loc.translate('complete_required_fields')),
           backgroundColor: BianTheme.warningYellow,
         ),
       );
@@ -327,32 +521,40 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: Text('Finalizar Evaluación'),
-        content: Text(
-          '¿Estás seguro de finalizar esta evaluación? Se generará un reporte completo.',
-        ),
+        title: Text(loc.translate('finish_evaluation')),
+        content: Text(loc.translate('finish_evaluation_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancelar'),
+            child: Text(loc.translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Finalizar'),
+            child: Text(loc.translate('finish')),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
+      final evaluationJSON = _generateEvaluationJSON();
+      final results = _calculateResults();
+      
+      evaluationJSON['resultados'] = results;
+
+      print('═══════════════════════════════════════════════════════════');
+      print('REPORTE COMPLETO DE EVALUACIÓN - BIAN');
+      print('═══════════════════════════════════════════════════════════');
+      print(JsonEncoder.withIndent('  ').convert(evaluationJSON));
+      print('═══════════════════════════════════════════════════════════');
+
       setState(() {
         _evaluation = _evaluation.copyWith(
           status: 'completed',
+          overallScore: double.parse(results['puntuacion_general']),
           updatedAt: DateTime.now(),
         );
       });
-
-      // TODO: Guardar evaluación completa y navegar a reporte
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -361,7 +563,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text('¡Evaluación completada!'),
+                Text(loc.translate('evaluation_completed')),
               ],
             ),
             backgroundColor: BianTheme.successGreen,
@@ -380,6 +582,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final currentCategory = widget.species.categories[_currentCategoryIndex];
     final progress = _evaluation.getProgress(widget.species);
 
@@ -389,19 +592,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           final confirm = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text('¿Salir sin guardar?'),
-              content: Text('Se perderán los datos no guardados.'),
+              title: Text(loc.translate('exit_without_saving')),
+              content: Text(loc.translate('data_will_be_lost')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: Text('Cancelar'),
+                  child: Text(loc.translate('cancel')),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
                   style: TextButton.styleFrom(
                     foregroundColor: BianTheme.errorRed,
                   ),
-                  child: Text('Salir'),
+                  child: Text(loc.translate('exit')),
                 ),
               ],
             ),
@@ -416,7 +619,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Evaluación ${widget.species.namePlural}',
+                '${loc.translate('evaluation')} ${widget.species.namePlural}',
                 style: TextStyle(fontSize: 18),
               ),
               if (_evaluation.farmName.isNotEmpty)
@@ -433,18 +636,17 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             IconButton(
               icon: Icon(Icons.save_outlined),
               onPressed: _saveDraft,
-              tooltip: 'Guardar borrador',
+              tooltip: loc.translate('save_draft'),
             ),
             IconButton(
               icon: Icon(Icons.info_outline),
               onPressed: _showWelcomeDialog,
-              tooltip: 'Información',
+              tooltip: loc.translate('information'),
             ),
           ],
         ),
         body: Column(
           children: [
-            // Progress Bar
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
@@ -477,7 +679,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Categoría ${_currentCategoryIndex + 1} de ${widget.species.categories.length}',
+                    '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
                     style: TextStyle(
                       fontSize: 12,
                       color: BianTheme.mediumGray,
@@ -487,7 +689,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               ),
             ),
 
-            // Category Header
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -519,7 +720,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          currentCategory.name,
+                          loc.translate(currentCategory.id),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -527,7 +728,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                           ),
                         ),
                         Text(
-                          '${currentCategory.fields.length} indicadores',
+                          '${currentCategory.fields.length} ${loc.translate('indicators')}',
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
@@ -540,7 +741,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               ),
             ),
 
-            // Form Fields
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -560,7 +760,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               ),
             ),
 
-            // Navigation Buttons
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -584,7 +783,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                           });
                         },
                         icon: Icon(Icons.arrow_back),
-                        label: Text('Anterior'),
+                        label: Text(loc.translate('previous')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Color(int.parse(widget.species.gradientColors[0])),
                           side: BorderSide(
@@ -600,9 +799,11 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (_currentCategoryIndex < widget.species.categories.length - 1) {
-                          setState(() {
-                            _currentCategoryIndex++;
-                          });
+                          if (_validateCurrentCategory()) {
+                            setState(() {
+                              _currentCategoryIndex++;
+                            });
+                          }
                         } else {
                           _completeEvaluation();
                         }
@@ -614,8 +815,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                       ),
                       label: Text(
                         _currentCategoryIndex < widget.species.categories.length - 1
-                            ? 'Siguiente'
-                            : 'Finalizar',
+                            ? loc.translate('next')
+                            : loc.translate('finish'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(int.parse(widget.species.gradientColors[0])),
@@ -638,6 +839,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     dynamic value,
     String categoryId,
   ) {
+    final loc = AppLocalizations.of(context);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -667,7 +870,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             children: [
               Expanded(
                 child: Text(
-                  field.label,
+                  loc.translate(field.id),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -683,7 +886,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    'Requerido',
+                    loc.translate('required'),
                     style: TextStyle(
                       fontSize: 10,
                       color: BianTheme.errorRed,
@@ -706,13 +909,15 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     dynamic value,
     String categoryId,
   ) {
+    final loc = AppLocalizations.of(context);
+    
     switch (field.type) {
       case FieldType.yesNo:
         return Row(
           children: [
             Expanded(
               child: _buildYesNoButton(
-                label: 'Sí',
+                label: loc.translate('yes'),
                 icon: Icons.check_circle,
                 isSelected: value == true,
                 color: BianTheme.successGreen,
@@ -722,7 +927,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             SizedBox(width: 12),
             Expanded(
               child: _buildYesNoButton(
-                label: 'No',
+                label: loc.translate('no'),
                 icon: Icons.cancel,
                 isSelected: value == false,
                 color: BianTheme.errorRed,
@@ -734,13 +939,21 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
       case FieldType.number:
       case FieldType.percentage:
+        if (!_textControllers.containsKey(key)) {
+          _textControllers[key] = TextEditingController(text: value?.toString() ?? '');
+        }
+        
         return TextField(
+          controller: _textControllers[key],
           keyboardType: TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+          ],
           decoration: InputDecoration(
             hintText: field.type == FieldType.percentage
                 ? 'Ej: 2.5'
-                : 'Ingresa un valor',
-            suffixText: field.unit,
+                : loc.translate('enter_value'),
+            suffixText: field.unit != null ? loc.translate(field.unit!) : null,
             suffixIcon: Icon(
               field.type == FieldType.percentage
                   ? Icons.percent
@@ -759,20 +972,24 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ),
           ),
           onChanged: (text) {
-            final numValue = double.tryParse(text);
-            _updateResponse(categoryId, field.id, numValue);
+            if (text.isNotEmpty) {
+              final numValue = double.tryParse(text);
+              _updateResponse(categoryId, field.id, numValue);
+            } else {
+              _updateResponse(categoryId, field.id, null);
+            }
           },
-          controller: TextEditingController(
-            text: value?.toString() ?? '',
-          )..selection = TextSelection.fromPosition(
-              TextPosition(offset: value?.toString().length ?? 0),
-            ),
         );
 
       case FieldType.text:
+        if (!_textControllers.containsKey(key)) {
+          _textControllers[key] = TextEditingController(text: value?.toString() ?? '');
+        }
+        
         return TextField(
+          controller: _textControllers[key],
           decoration: InputDecoration(
-            hintText: 'Escribe tu respuesta',
+            hintText: loc.translate('write_answer'),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -786,9 +1003,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           ),
           maxLines: 3,
           onChanged: (text) {
-            _updateResponse(categoryId, field.id, text);
+            _updateResponse(categoryId, field.id, text.isNotEmpty ? text : null);
           },
-          controller: TextEditingController(text: value?.toString() ?? ''),
         );
 
       default:
