@@ -5,18 +5,22 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/models/species_model.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/storage/drafts_storage.dart';
+import '../../core/storage/reports_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
+import 'results_screen.dart';
 import 'package:uuid/uuid.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
-  final Evaluation? draftToEdit; // ✅ NUEVO: Recibir borrador si existe
+  final Evaluation? draftToEdit;
+  final String currentLanguage; // 'es' o 'en'
 
   const EvaluationScreen({
     super.key,
     required this.species,
-    this.draftToEdit, // ✅ NUEVO
+    this.draftToEdit,
+    required this.currentLanguage,
   });
 
   @override
@@ -36,7 +40,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   final Map<String, TextEditingController> _textControllers = {};
   
   bool _showInfoDialog = true;
-  bool _hasUnsavedChanges = false; // ✅ NUEVO
+  bool _hasUnsavedChanges = false;
 
   @override
   void initState() {
@@ -44,7 +48,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _initializeEvaluation();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ✅ Si es borrador, no mostrar diálogo inicial
       if (widget.draftToEdit == null && _showInfoDialog) {
         _showWelcomeDialog();
       }
@@ -62,14 +65,12 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   void _initializeEvaluation() {
     if (widget.draftToEdit != null) {
-      // ✅ Cargar desde borrador
       _evaluation = widget.draftToEdit!;
       _farmNameController.text = _evaluation.farmName;
       _farmLocationController.text = _evaluation.farmLocation;
       _evaluatorNameController.text = _evaluation.evaluatorName;
       _showInfoDialog = false;
       
-      // Pre-cargar controladores de texto
       for (var category in widget.species.categories) {
         for (var field in category.fields) {
           final key = '${category.id}_${field.id}';
@@ -82,7 +83,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         }
       }
     } else {
-      // ✅ Nueva evaluación
       _evaluation = Evaluation(
         id: _uuid.v4(),
         speciesId: widget.species.id,
@@ -92,6 +92,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         evaluatorName: '',
         responses: {},
         status: 'draft',
+        language: widget.currentLanguage,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -289,6 +290,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   farmName: _farmNameController.text,
                   farmLocation: _farmLocationController.text,
                   evaluatorName: _evaluatorNameController.text,
+                  language: widget.currentLanguage,
                 );
                 _hasUnsavedChanges = true;
               });
@@ -353,11 +355,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     return true;
   }
 
-  // ✅ NUEVO: Guardar borrador
   Future<void> _saveDraft() async {
     final loc = AppLocalizations.of(context);
     
-    // Verificar si hay espacio para guardar
     if (widget.draftToEdit == null) {
       final canAdd = await DraftsStorage.canAddNewDraft();
       if (!canAdd) {
@@ -457,7 +457,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               categoryPositive++;
               positiveResponses++;
             } else {
-              criticalPoints.add(field.id); // ✅ Nombre técnico
+              criticalPoints.add('${category.id}_${field.id}');
             }
           }
         }
@@ -468,7 +468,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         categoryScores[category.id] = score;
         
         if (score >= 80) {
-          strongPoints.add(category.id); // ✅ Nombre técnico
+          strongPoints.add(category.id);
         }
       }
     }
@@ -488,30 +488,30 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       complianceLevel = 'critical';
     }
 
-    final recommendations = <String>[];
+    final recommendationKeys = <String>[];
     
     if (overallScore < 60) {
-      recommendations.add('immediate_attention_required');
+      recommendationKeys.add('immediate_attention_required');
     }
     
     if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendations.add('improve_feeding_practices');
+      recommendationKeys.add('improve_feeding_practices');
     }
     
     if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendations.add('strengthen_health_program');
+      recommendationKeys.add('strengthen_health_program');
     }
     
     if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendations.add('improve_infrastructure');
+      recommendationKeys.add('improve_infrastructure');
     }
     
     if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendations.add('train_staff_welfare');
+      recommendationKeys.add('train_staff_welfare');
     }
 
-    if (recommendations.isEmpty) {
-      recommendations.add('maintain_current_practices');
+    if (recommendationKeys.isEmpty) {
+      recommendationKeys.add('maintain_current_practices');
     }
 
     return {
@@ -521,11 +521,49 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'category_scores': categoryScores,
       'critical_points': criticalPoints.take(10).toList(),
       'strong_points': strongPoints,
-      'recommendations': recommendations,
+      'recommendations': recommendationKeys,
     };
   }
 
-  Future<void> _completeEvaluation() async {
+  Map<String, String> _translateRecommendations(List recommendationKeys) {
+    final loc = AppLocalizations.of(context);
+    
+    final translations = <String, String>{
+      'immediate_attention_required': widget.currentLanguage == 'es' 
+          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
+          : 'Immediate attention required to improve animal welfare conditions',
+      'improve_feeding_practices': widget.currentLanguage == 'es'
+          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
+          : 'Improve feeding practices and ensure constant access to quality water and food',
+      'strengthen_health_program': widget.currentLanguage == 'es'
+          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
+          : 'Strengthen animal health program, including vaccination and disease control',
+      'improve_infrastructure': widget.currentLanguage == 'es'
+          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
+          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
+      'train_staff_welfare': widget.currentLanguage == 'es'
+          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
+          : 'Train staff in animal welfare and maintain updated records',
+      'maintain_current_practices': widget.currentLanguage == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
+    };
+
+    final translatedRecommendations = <String>[];
+    for (var key in recommendationKeys) {
+      if (translations.containsKey(key)) {
+        translatedRecommendations.add(translations[key]!);
+      }
+    }
+
+    return {
+      'recommendations': translatedRecommendations.cast<String, List<String>>(),
+    };
+  }
+
+// En evaluation_screen.dart - Método _completeEvaluation actualizado
+
+Future<void> _completeEvaluation() async {
     final loc = AppLocalizations.of(context);
     
     if (!_evaluation.isComplete(widget.species)) {
@@ -560,63 +598,146 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
 
     if (confirm == true) {
-      // ✅ Generar JSON técnico (nombres en inglés)
-      final technicalJSON = _evaluation.generateTechnicalJSON(widget.species);
-      
-      // Calcular resultados
       final results = _calculateResults();
+      final translatedRecommendations = _translateRecommendations(results['recommendations']);
       
-      // Agregar resultados al JSON
-      technicalJSON['results'] = results;
+      final structuredJson = _evaluation.generateStructuredJSON(
+        widget.species,
+        results,
+        translatedRecommendations,
+      );
 
-      // ✅ Imprimir JSON COMPLETO con nombres técnicos en inglés
-      print('═══════════════════════════════════════════════════════════');
-      print('COMPLETE EVALUATION REPORT - BIAN');
-      print('═══════════════════════════════════════════════════════════');
-      print(JsonEncoder.withIndent('  ').convert(technicalJSON));
-      print('═══════════════════════════════════════════════════════════');
+      // ✅ IMPRIMIR JSON ESTRUCTURADO EN CONSOLA
+      _logEvaluationResults(structuredJson);
 
-      // También imprimir resumen legible
-      print(_evaluation.generateReadableSummary(widget.species));
-
-      // Actualizar estado
-      setState(() {
-        _evaluation = _evaluation.copyWith(
-          status: 'completed',
-          overallScore: results['overall_score'],
-          categoryScores: Map<String, double>.from(results['category_scores']),
-          updatedAt: DateTime.now(),
-        );
-        _hasUnsavedChanges = false;
-      });
+      final completedEvaluation = _evaluation.copyWith(
+        status: 'completed',
+        overallScore: results['overall_score'],
+        categoryScores: Map<String, double>.from(results['category_scores']),
+        updatedAt: DateTime.now(),
+      );
       
-      // ✅ Eliminar borrador si existe
+      await ReportsStorage.saveReport(completedEvaluation);
       await DraftsStorage.deleteDraft(_evaluation.id);
       
+      setState(() => _hasUnsavedChanges = false);
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text(loc.translate('evaluation_completed')),
-              ],
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultsScreen(
+              evaluation: completedEvaluation,
+              species: widget.species,
+              results: results,
+              structuredJson: structuredJson,
             ),
-            backgroundColor: BianTheme.successGreen,
-            duration: Duration(seconds: 2),
           ),
         );
-
-        await Future.delayed(Duration(milliseconds: 800));
-        
-        if (mounted) {
-          Navigator.pop(context, true); // ✅ Retornar true para indicar que se completó
-        }
       }
     }
   }
 
+  // ✅ LOGGER ESTRUCTURADO PARA LA CONSOLA
+  void _logEvaluationResults(Map<String, dynamic> json) {
+    print('\n');
+    print('╔═══════════════════════════════════════════════════════════════╗');
+    print('║              EVALUACIÓN COMPLETADA - BIAN                     ║');
+    print('╚═══════════════════════════════════════════════════════════════╝');
+    print('');
+    print('📋 INFORMACIÓN GENERAL:');
+    print('   ID: ${json['evaluation_id']}');
+    print('   Fecha: ${json['evaluation_date']}');
+    print('   Idioma: ${json['language']}');
+    print('   Especie: ${json['species']}');
+    print('   Granja: ${json['farm_name']}');
+    print('   Ubicación: ${json['farm_location']}');
+    print('   Evaluador: ${json['evaluator_name']}');
+    print('');
+    print('🎯 RESULTADOS:');
+    print('   Puntuación General: ${json['overall_score'].toStringAsFixed(1)}%');
+    print('   Nivel de Cumplimiento: ${json['compliance_level']}');
+    print('');
+    print('📊 PUNTUACIONES POR CATEGORÍA:');
+    
+    final categories = json['categories'] as Map<String, dynamic>;
+    categories.forEach((categoryId, categoryData) {
+      final data = categoryData as Map<String, dynamic>;
+      final score = data['score'];
+      print('   ├─ ${categoryId.toUpperCase()}: ${score != null ? score.toStringAsFixed(1) : 'N/A'}%');
+      
+      data.forEach((key, value) {
+        if (key != 'score') {
+          print('   │  └─ $key: $value');
+        }
+      });
+    });
+    
+    print('');
+    print('⚠️  PUNTOS CRÍTICOS:');
+    final criticalPoints = json['critical_points'] as List;
+    if (criticalPoints.isEmpty) {
+      print('   ✓ Ninguno');
+    } else {
+      for (var point in criticalPoints) {
+        print('   • $point');
+      }
+    }
+    
+    print('');
+    print('✨ PUNTOS FUERTES:');
+    final strongPoints = json['strong_points'] as List;
+    if (strongPoints.isEmpty) {
+      print('   - Ninguno destacable');
+    } else {
+      for (var point in strongPoints) {
+        print('   • $point');
+      }
+    }
+    
+    print('');
+    print('💡 RECOMENDACIONES:');
+    final recommendations = json['recommendations'] as List;
+    for (int i = 0; i < recommendations.length; i++) {
+      print('   ${i + 1}. ${recommendations[i]}');
+    }
+    
+    print('');
+    print('═══════════════════════════════════════════════════════════════');
+    print('');
+  }
+
+  List<String> _translateRecommendations(List recommendationKeys) {
+    final translations = <String, String>{
+      'immediate_attention_required': widget.currentLanguage == 'es' 
+          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
+          : 'Immediate attention required to improve animal welfare conditions',
+      'improve_feeding_practices': widget.currentLanguage == 'es'
+          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
+          : 'Improve feeding practices and ensure constant access to quality water and food',
+      'strengthen_health_program': widget.currentLanguage == 'es'
+          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
+          : 'Strengthen animal health program, including vaccination and disease control',
+      'improve_infrastructure': widget.currentLanguage == 'es'
+          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
+          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
+      'train_staff_welfare': widget.currentLanguage == 'es'
+          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
+          : 'Train staff in animal welfare and maintain updated records',
+      'maintain_current_practices': widget.currentLanguage == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
+    };
+
+    final translatedRecommendations = <String>[];
+    for (var key in recommendationKeys) {
+      if (translations.containsKey(key)) {
+        translatedRecommendations.add(translations[key]!);
+      }
+    }
+
+    return translatedRecommendations;
+  }
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -681,7 +802,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ],
           ),
           actions: [
-            // ✅ Indicador de cambios sin guardar
             if (_hasUnsavedChanges)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
@@ -751,7 +871,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                           color: BianTheme.mediumGray,
                         ),
                       ),
-                      // ✅ Mostrar si es borrador
                       if (widget.draftToEdit != null)
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),

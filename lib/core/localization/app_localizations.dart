@@ -239,6 +239,18 @@ class AppLocalizations {
       'acceptable': 'Aceptable',
       'needs_improvement': 'Necesita Mejora',
       'critical': 'Crítico',
+
+      'farms': 'Granjas',
+      'completed_evaluations': 'Evaluaciones Completadas',
+      'no_evaluations': 'No hay evaluaciones completadas',
+      'start_first_evaluation': 'Comienza tu primera evaluación',
+      'saved_drafts': 'Borradores Guardados',
+      'no_drafts': 'No hay borradores guardados',
+      'continue_draft': 'Continuar',
+      'delete_draft': 'Eliminar',
+      'view_report': 'Ver Reporte',
+      'evaluation_date': 'Fecha de evaluación',
+      'draft_for': 'Borrador para',
     },
     'en': {
       'app_name': 'BIAN - Animal Welfare',
@@ -467,6 +479,18 @@ class AppLocalizations {
       'acceptable': 'Acceptable',
       'needs_improvement': 'Needs Improvement',
       'critical': 'Critical',
+
+      'farms': 'Farms',
+      'completed_evaluations': 'Completed Evaluations',
+      'no_evaluations': 'No completed evaluations',
+      'start_first_evaluation': 'Start your first evaluation',
+      'saved_drafts': 'Saved Drafts',
+      'no_drafts': 'No saved drafts',
+      'continue_draft': 'Continue',
+      'delete_draft': 'Delete',
+      'view_report': 'View Report',
+      'evaluation_date': 'Evaluation date',
+      'draft_for': 'Draft for',
     },
   };
 

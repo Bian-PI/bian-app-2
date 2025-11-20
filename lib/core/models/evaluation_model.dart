@@ -1,3 +1,5 @@
+// lib/core/models/evaluation_model.dart
+
 import 'package:bian_app/core/models/species_model.dart';
 
 class Evaluation {
@@ -7,10 +9,11 @@ class Evaluation {
   final String farmLocation;
   final DateTime evaluationDate;
   final String evaluatorName;
-  final Map<String, dynamic> responses; // categoryId_fieldId: value
+  final Map<String, dynamic> responses;
   final double? overallScore;
   final Map<String, double>? categoryScores;
-  final String status; // 'draft', 'completed'
+  final String status;
+  final String language;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +28,7 @@ class Evaluation {
     this.overallScore,
     this.categoryScores,
     this.status = 'draft',
+    this.language = 'es',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -43,6 +47,7 @@ class Evaluation {
           ? Map<String, double>.from(json['categoryScores'])
           : null,
       status: json['status'] ?? 'draft',
+      language: json['language'] ?? 'es',
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -60,6 +65,7 @@ class Evaluation {
       'overallScore': overallScore,
       'categoryScores': categoryScores,
       'status': status,
+      'language': language,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -76,6 +82,7 @@ class Evaluation {
     double? overallScore,
     Map<String, double>? categoryScores,
     String? status,
+    String? language,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -90,12 +97,12 @@ class Evaluation {
       overallScore: overallScore ?? this.overallScore,
       categoryScores: categoryScores ?? this.categoryScores,
       status: status ?? this.status,
+      language: language ?? this.language,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  // Calcular progreso de la evaluación
   double getProgress(Species species) {
     int totalFields = 0;
     int completedFields = 0;
@@ -113,7 +120,6 @@ class Evaluation {
     return totalFields > 0 ? completedFields / totalFields : 0.0;
   }
 
-  // Verificar si la evaluación está completa
   bool isComplete(Species species) {
     for (var category in species.categories) {
       for (var field in category.fields) {
@@ -128,76 +134,53 @@ class Evaluation {
     return true;
   }
 
-  // ✅ NUEVO: Generar JSON con nombres de campos en INGLÉS (nombres técnicos)
-  Map<String, dynamic> generateTechnicalJSON(Species species) {
-    final jsonData = <String, dynamic>{
+  // ✅ JSON ESTRUCTURADO POR CATEGORÍAS
+  Map<String, dynamic> generateStructuredJSON(
+    Species species,
+    Map<String, dynamic> results,
+    List<String> translatedRecommendations,
+  ) {
+    final structuredJson = <String, dynamic>{
       'evaluation_id': id,
       'evaluation_date': evaluationDate.toIso8601String(),
-      'species': speciesId, // 'birds' o 'pigs'
-      'farm': {
-        'name': farmName,
-        'location': farmLocation,
-      },
+      'language': language,
+      'species': speciesId,
+      'farm_name': farmName,
+      'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
       'status': status,
+      'overall_score': results['overall_score'],
+      'compliance_level': results['compliance_level'],
       'categories': {},
     };
 
-    // Recorrer todas las categorías y campos
+    // ✅ Agregar categorías con sus datos
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
       
-      for (var field in category.fields) {
-        final key = '${category.id}_${field.id}';
-        final value = responses[key];
-        
-        // Usar el ID del campo (nombre técnico en inglés)
-        dynamic processedValue;
-        if (value == null) {
-          processedValue = null;
-        } else if (value is bool) {
-          processedValue = value; // true/false directo
-        } else if (value is num) {
-          processedValue = value;
-        } else {
-          processedValue = value.toString();
-        }
-        
-        categoryData[field.id] = processedValue;
+      // Agregar score de la categoría
+      if (results['category_scores'] != null && 
+          results['category_scores'][category.id] != null) {
+        categoryData['score'] = results['category_scores'][category.id];
       }
       
-      jsonData['categories'][category.id] = categoryData;
-    }
-
-    return jsonData;
-  }
-
-  // ✅ NUEVO: Generar resumen legible (para mostrar al usuario)
-  String generateReadableSummary(Species species) {
-    final buffer = StringBuffer();
-    buffer.writeln('═══════════════════════════════════════════════════════════');
-    buffer.writeln('EVALUATION REPORT - BIAN');
-    buffer.writeln('═══════════════════════════════════════════════════════════');
-    buffer.writeln('ID: $id');
-    buffer.writeln('Species: $speciesId');
-    buffer.writeln('Farm: $farmName ($farmLocation)');
-    buffer.writeln('Evaluator: $evaluatorName');
-    buffer.writeln('Date: ${evaluationDate.toIso8601String()}');
-    buffer.writeln('Status: $status');
-    buffer.writeln('Progress: ${(getProgress(species) * 100).toStringAsFixed(1)}%');
-    buffer.writeln('───────────────────────────────────────────────────────────');
-    
-    for (var category in species.categories) {
-      buffer.writeln('');
-      buffer.writeln('${category.name.toUpperCase()} (${category.id}):');
+      // Agregar todos los campos de la categoría
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
         final value = responses[key];
-        buffer.writeln('  - ${field.id}: ${value ?? "null"}');
+        categoryData[field.id] = value;
       }
+      
+      structuredJson['categories'][category.id] = categoryData;
     }
+
+    // Puntos críticos y fuertes
+    structuredJson['critical_points'] = results['critical_points'];
+    structuredJson['strong_points'] = results['strong_points'];
     
-    buffer.writeln('═══════════════════════════════════════════════════════════');
-    return buffer.toString();
+    // Recomendaciones traducidas
+    structuredJson['recommendations'] = translatedRecommendations;
+
+    return structuredJson;
   }
 }
