@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider extends ChangeNotifier {
-  Locale _locale = const Locale('es', 'ES');
+  Locale _locale = const Locale('es');
   
   Locale get locale => _locale;
   
@@ -29,8 +29,8 @@ class LanguageProvider extends ChangeNotifier {
   
   Future<void> toggleLanguage() async {
     final newLocale = _locale.languageCode == 'es' 
-        ? const Locale('en', 'US') 
-        : const Locale('es', 'ES');
+        ? const Locale('en') 
+        : const Locale('es');
     await setLocale(newLocale);
   }
 }

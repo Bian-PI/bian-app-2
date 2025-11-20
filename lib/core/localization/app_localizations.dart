@@ -112,6 +112,8 @@ class AppLocalizations {
       'role': 'Rol',
       'account_status': 'Estado de Cuenta',
       'verification_status': 'Estado de Verificación',
+      'role_user': 'Usuario',
+      'role_admin': 'Administrador',
       'admin': 'Administrador',
       'user': 'Usuario',
       
@@ -253,6 +255,8 @@ class AppLocalizations {
       'role': 'Role',
       'account_status': 'Account Status',
       'verification_status': 'Verification Status',
+      'role_user': 'User',
+      'role_admin': 'Administrator',
       'admin': 'Administrator',
       'user': 'User',
       

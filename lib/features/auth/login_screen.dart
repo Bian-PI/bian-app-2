@@ -1,4 +1,6 @@
+import 'package:bian_app/core/providers/language_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
@@ -132,23 +134,94 @@ Future<void> _doLogin() async {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    
-    return Scaffold(
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(BianTheme.paddingLarge),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
-                  
+@override
+Widget build(BuildContext context) {
+  final loc = AppLocalizations.of(context);
+  final languageProvider = Provider.of<LanguageProvider>(context);
+  
+  return Scaffold(
+    body: SafeArea(
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(BianTheme.paddingLarge),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    PopupMenuButton<Locale>(
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: BianTheme.lightGray,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.language,
+                          color: BianTheme.primaryRed,
+                          size: 24,
+                        ),
+                      ),
+                      offset: const Offset(0, 45),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: const Locale('es'),
+                          child: Row(
+                            children: [
+                              const Text('🇪🇸', style: TextStyle(fontSize: 24)),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Español',
+                                style: TextStyle(
+                                  fontWeight: languageProvider.locale.languageCode == 'es'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: languageProvider.locale.languageCode == 'es'
+                                      ? BianTheme.primaryRed
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: const Locale('en'),
+                          child: Row(
+                            children: [
+                              const Text('🇺🇸', style: TextStyle(fontSize: 24)),
+                              const SizedBox(width: 12),
+                              Text(
+                                'English',
+                                style: TextStyle(
+                                  fontWeight: languageProvider.locale.languageCode == 'en'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: languageProvider.locale.languageCode == 'en'
+                                      ? BianTheme.primaryRed
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: _isLoading ? null : (Locale newLocale) {
+                        languageProvider.setLocale(newLocale);
+                      },
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
                   // Logo
                   Hero(
                     tag: 'bian_logo',

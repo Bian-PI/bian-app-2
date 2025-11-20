@@ -352,27 +352,32 @@ class ApiService {
   }
 
   /// PUT /users/{id}
-  Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
-    try {
-      final response = await put(ApiConfig.userById(id), userData);
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': data['message'],
-        };
-      } else if (response.statusCode == 404) {
-        return {'success': false, 'message': 'user_not_found'};
-      } else if (response.statusCode == 409) {
-        return {'success': false, 'message': 'user_exists'};
-      } else {
-        return {'success': false, 'message': 'server_error'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'connection_error'};
+Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
+  try {
+    final response = await put(ApiConfig.userById(id), userData);
+    
+    print('📥 Update status: ${response.statusCode}'); // ✅ Debug
+    print('📥 Update body: ${response.body}'); // ✅ Debug
+    
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true,
+        'message': data['message'],
+      };
+    } else if (response.statusCode == 404) {
+      return {'success': false, 'message': 'user_not_found'};
+    } else if (response.statusCode == 409) {
+      return {'success': false, 'message': 'user_exists'};
+    } else {
+      print('❌ Error response: ${response.body}'); // ✅ Debug
+      return {'success': false, 'message': 'server_error'};
     }
+  } catch (e) {
+    print('💥 Exception: $e'); // ✅ Debug
+    return {'success': false, 'message': 'connection_error'};
   }
+}
 
   /// DELETE /users/{id}
   Future<Map<String, dynamic>> deleteUser(int id) async {

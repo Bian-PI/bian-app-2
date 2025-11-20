@@ -6,6 +6,7 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/language_provider.dart';
+import '../../core/utils/role_helper.dart';
 import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -57,49 +58,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _isLoading = false;
     });
   }
-Future<void> _resendVerificationEmail() async {
-  if (_currentUser == null) return;
-  
-  final loc = AppLocalizations.of(context);
-  
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
-  );
-  
-  try {
-    final result = await _apiService.resendVerificationEmail(
-      _currentUser!.id!,
-      _currentUser!.email,
+
+  Future<void> _resendVerificationEmail() async {
+    if (_currentUser == null) return;
+    
+    final loc = AppLocalizations.of(context);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
     
-    if (!mounted) return;
-    Navigator.pop(context);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result['success'] 
-            ? loc.translate('verification_sent')
-            : loc.translate('server_error')
+    try {
+      final result = await _apiService.resendVerificationEmail(
+        _currentUser!.id!,
+        _currentUser!.email,
+      );
+      
+      if (!mounted) return;
+      Navigator.pop(context);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['success'] 
+              ? loc.translate('verification_sent')
+              : loc.translate('server_error')
+          ),
+          backgroundColor: result['success'] 
+            ? BianTheme.successGreen 
+            : BianTheme.errorRed,
         ),
-        backgroundColor: result['success'] 
-          ? BianTheme.successGreen 
-          : BianTheme.errorRed,
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).translate('connection_error')),
-        backgroundColor: BianTheme.errorRed,
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).translate('connection_error')),
+          backgroundColor: BianTheme.errorRed,
+        ),
+      );
+    }
   }
-}
+
   Future<void> _logout() async {
     final loc = AppLocalizations.of(context);
     
@@ -133,22 +136,23 @@ Future<void> _resendVerificationEmail() async {
     }
   }
 
-  void _showLanguageDialog() {
-    final loc = AppLocalizations.of(context);
-    final provider = Provider.of<LanguageProvider>(context, listen: false);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(loc.translate('select_language')),
-        content: Column(
+void _showLanguageDialog() {
+  final loc = AppLocalizations.of(context);
+  final provider = Provider.of<LanguageProvider>(context, listen: false);
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(loc.translate('select_language')),
+      content: SingleChildScrollView(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Text('🇪🇸', style: TextStyle(fontSize: 24)),
               title: Text(loc.translate('spanish')),
               onTap: () async {
-                await provider.setLocale(const Locale('es', 'ES'));
+                await provider.setLocale(const Locale('es'));
                 if (mounted) Navigator.pop(context);
               },
             ),
@@ -156,15 +160,16 @@ Future<void> _resendVerificationEmail() async {
               leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
               title: Text(loc.translate('english')),
               onTap: () async {
-                await provider.setLocale(const Locale('en', 'US'));
+                await provider.setLocale(const Locale('en'));
                 if (mounted) Navigator.pop(context);
               },
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -249,103 +254,121 @@ Future<void> _resendVerificationEmail() async {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(gradient: BianTheme.primaryGradient),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: BianTheme.primaryRed),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _currentUser?.name ?? 'Usuario',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isVerified 
-                        ? Colors.green.withOpacity(0.3)
-                        : Colors.orange.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+Widget _buildDrawer(BuildContext context) {
+  final loc = AppLocalizations.of(context);
+
+  return Drawer(
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DrawerHeader(
+          decoration: const BoxDecoration(gradient: BianTheme.primaryGradient),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Icon(
-                        _isVerified ? Icons.check_circle : Icons.warning,
-                        color: Colors.white,
-                        size: 14,
+                      const CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.person, size: 40, color: BianTheme.primaryRed),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(height: 12),
                       Text(
-                        _isVerified 
-                            ? loc.translate('verified')
-                            : loc.translate('not_verified'),
+                        _currentUser?.name ?? 'Usuario',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        RoleHelper.translateRole(context, _currentUser?.role),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _isVerified
+                              ? Colors.green.withOpacity(0.3)
+                              : Colors.orange.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isVerified ? Icons.check_circle : Icons.warning,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _isVerified
+                                  ? loc.translate('verified')
+                                  : loc.translate('not_verified'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home_rounded, color: BianTheme.primaryRed),
-            title: Text(loc.translate('home')),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_outline, color: BianTheme.primaryRed),
-            title: Text(loc.translate('profile')),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
-            title: Text(loc.translate('language')),
-            onTap: () {
-              Navigator.pop(context);
-              _showLanguageDialog();
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded, color: BianTheme.errorRed),
-            title: Text(loc.translate('logout')),
-            onTap: () {
-              Navigator.pop(context);
-              _logout();
-            },
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        ListTile(
+          leading: const Icon(Icons.home_rounded, color: BianTheme.primaryRed),
+          title: Text(loc.translate('home')),
+          onTap: () => Navigator.pop(context),
+        ),
+        ListTile(
+          leading: const Icon(Icons.person_outline, color: BianTheme.primaryRed),
+          title: Text(loc.translate('profile')),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
+          title: Text(loc.translate('language')),
+          onTap: () {
+            Navigator.pop(context);
+            _showLanguageDialog();
+          },
+        ),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.logout_rounded, color: BianTheme.errorRed),
+          title: Text(loc.translate('logout')),
+          onTap: () {
+            Navigator.pop(context);
+            _logout();
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildWelcomeCard(BuildContext context) {
     final loc = AppLocalizations.of(context);

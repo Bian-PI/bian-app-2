@@ -50,8 +50,8 @@ class BianApp extends StatelessWidget {
           // Configuración de idioma
           locale: languageProvider.locale,
           supportedLocales: const [
-            Locale('es', 'ES'),
-            Locale('en', 'US'),
+            Locale('es'),
+            Locale('en'),
           ],
           localizationsDelegates: const [
             AppLocalizations.delegate,

@@ -4,6 +4,7 @@ import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/utils/validators.dart';
+import '../../core/utils/role_helper.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
 
@@ -74,24 +75,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isSaving = true);
     
     try {
-      final updateData = <String, dynamic>{
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-      };
+      final updateData = <String, dynamic>{};
       
-      // Solo incluir documento si cambió o tiene valor
-      if (_documentController.text.isNotEmpty) {
-        updateData['document'] = _documentController.text.trim();
+      // Name
+      if (_nameController.text.trim().isNotEmpty && 
+          _nameController.text.trim() != _currentUser!.name) {
+        updateData['name'] = _nameController.text.trim();
       }
       
-      // Solo incluir teléfono si cambió o tiene valor
-      if (_phoneController.text.isNotEmpty) {
+      // Phone
+      if (_phoneController.text.trim().isNotEmpty && 
+          _phoneController.text.trim() != (_currentUser!.phone ?? '')) {
         updateData['phone'] = _phoneController.text.trim();
       }
       
-      // Solo incluir password si el usuario escribió uno nuevo
+      // Password (opcional)
       if (_passwordController.text.isNotEmpty) {
         updateData['password'] = _passwordController.text;
+      }
+      
+      print('📤 Sending update: $updateData');
+      
+      if (updateData.isEmpty) {
+        setState(() {
+          _isSaving = false;
+          _isEditing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No hay cambios para guardar'),
+            backgroundColor: BianTheme.warningYellow,
+          ),
+        );
+        return;
       }
       
       final result = await _apiService.updateUser(
@@ -106,16 +122,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final loc = AppLocalizations.of(context);
       
       if (result['success']) {
-        // Actualizar datos en storage
         final updatedUser = _currentUser!.copyWith(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          document: _documentController.text.trim().isEmpty 
-              ? _currentUser!.document 
-              : _documentController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty 
-              ? _currentUser!.phone 
-              : _phoneController.text.trim(),
+          name: updateData.containsKey('name') 
+              ? updateData['name'] 
+              : _currentUser!.name,
+          phone: updateData.containsKey('phone') 
+              ? updateData['phone'] 
+              : _currentUser!.phone,
         );
         await _storage.saveUser(updatedUser);
         
@@ -140,13 +153,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } else {
         final message = result['message'] ?? 'server_error';
         
-        // Mensajes más específicos
         String errorMsg;
-        if (message.contains('email') || message == 'user_exists') {
-          errorMsg = 'El correo ya está en uso';
-        } else if (message.contains('document')) {
-          errorMsg = 'El documento ya está en uso';
-        } else if (message.contains('phone')) {
+        if (message.contains('phone')) {
           errorMsg = 'El teléfono ya está en uso';
         } else {
           errorMsg = loc.translate(message);
@@ -167,6 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     } catch (e) {
+      print('💥 Error saving: $e');
       setState(() => _isSaving = false);
       final loc = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -320,44 +329,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               
               const SizedBox(height: 16),
               
+              // Email - NO editable
               TextFormField(
                 controller: _emailController,
-                enabled: _isEditing && !_isSaving,
+                enabled: false,
                 keyboardType: TextInputType.emailAddress,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(Validators.emailMaxLength),
-                ],
+                style: const TextStyle(
+                  color: BianTheme.mediumGray,
+                ),
                 decoration: InputDecoration(
                   labelText: loc.translate('email'),
                   prefixIcon: const Icon(Icons.email_outlined),
+                  filled: true,
+                  fillColor: BianTheme.lightGray.withOpacity(0.3),
                 ),
-                validator: _isEditing
-                    ? (value) {
-                        final error = Validators.validateEmail(value);
-                        return error != null ? loc.translate(error) : null;
-                      }
-                    : null,
               ),
               
               const SizedBox(height: 16),
               
+              // Document - NO editable
               TextFormField(
                 controller: _documentController,
-                enabled: _isEditing && !_isSaving,
+                enabled: false,
                 keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(Validators.documentMaxLength),
-                ],
+                style: const TextStyle(
+                  color: BianTheme.mediumGray,
+                ),
                 decoration: InputDecoration(
                   labelText: loc.translate('document'),
                   prefixIcon: const Icon(Icons.badge_outlined),
-                  helperText: _isEditing ? loc.translate('optional') : null,
+                  filled: true,
+                  fillColor: BianTheme.lightGray.withOpacity(0.3),
                 ),
               ),
               
               const SizedBox(height: 16),
               
+              // Phone
               TextFormField(
                 controller: _phoneController,
                 enabled: _isEditing && !_isSaving,
@@ -458,7 +466,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   icon: Icons.admin_panel_settings_outlined,
                   title: loc.translate('role'),
-                  value: _currentUser?.role?.toUpperCase() ?? 'USER',
+                  value: RoleHelper.translateRole(context, _currentUser?.role),
                 ),
               ],
             ],

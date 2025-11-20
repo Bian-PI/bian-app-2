@@ -25,7 +25,7 @@ class User {
       document: json['document'],
       phone: json['phone'],
       role: json['role'] ?? 'user',
-      isActiveSession: json['isActiveSession'] ?? false,
+      isActiveSession: json['isActiveSession'] ?? true,
     );
   }
 
