@@ -145,46 +145,42 @@ class Evaluation {
   }
 
   // 🔥 JSON GENÉRICO - TODO EN STRINGS - ✅ SOPORTA MODO OFFLINE
-// Reemplazar el método generateStructuredJSON completo:
-
-Future<Map<String, dynamic>> generateStructuredJSON(
-  Species species,
-  Map<String, dynamic> results,
-  List<String> translatedRecommendations,
-) async {
-  // ✅ Manejo robusto para modo offline
-  String userId = 'OFFLINE';
-  
-  try {
-    final user = await _storage.getUser();
-    if (user?.id != null) {
-      userId = user!.id.toString();
+  Future<Map<String, dynamic>> generateStructuredJSON(
+    Species species,
+    Map<String, dynamic> results,
+    List<String> translatedRecommendations,
+  ) async {
+    String userId = 'OFFLINE';
+    
+    try {
+      final user = await _storage.getUser();
+      if (user?.id != null) {
+        userId = user!.id.toString();
+      }
+    } catch (e) {
+      print('ℹ️ Usuario en modo offline: $userId');
     }
-  } catch (e) {
-    // Ignorar error en modo offline
-    print('ℹ️ Usuario en modo offline: $userId');
+
+    final structuredJson = <String, dynamic>{
+      'user_id': userId,
+      'evaluation_id': id,
+      'evaluation_date': evaluationDate.toIso8601String(),
+      'language': language,
+      'species': speciesId,
+      'farm_name': farmName,
+      'farm_location': farmLocation,
+      'evaluator_name': evaluatorName,
+      'status': status,
+      'overall_score': (results['overall_score'] ?? 0.0).toString(),
+      'compliance_level': (results['compliance_level'] ?? 0.0).toString(),
+      'categories': _buildGenericCategories(species, results),
+      'critical_points': _formatCriticalPoints(results['critical_points'] as List? ?? []),
+      'strong_points': _formatStrongPoints(results['strong_points'] as List? ?? []),
+      'recommendations': translatedRecommendations,
+    };
+
+    return structuredJson;
   }
-
-  final structuredJson = <String, dynamic>{
-    'user_id': userId,
-    'evaluation_id': id,
-    'evaluation_date': evaluationDate.toIso8601String(),
-    'language': language,
-    'species': speciesId,
-    'farm_name': farmName,
-    'farm_location': farmLocation,
-    'evaluator_name': evaluatorName,
-    'status': status,
-    'overall_score': results['overall_score'].toString(),
-    'compliance_level': results['compliance_level'].toString(),
-    'categories': _buildGenericCategories(species, results),
-    'critical_points': _formatCriticalPoints(results['critical_points']),
-    'strong_points': _formatStrongPoints(results['strong_points']),
-    'recommendations': translatedRecommendations,
-  };
-
-  return structuredJson;
-}
 
   // ✅ Construir categorías de forma genérica - TODO EN STRINGS
   Map<String, dynamic> _buildGenericCategories(
@@ -199,7 +195,10 @@ Future<Map<String, dynamic>> generateStructuredJSON(
       // Agregar score de la categoría COMO STRING
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
-        categoryData['score'] = results['category_scores'][category.id].toString();
+        categoryData['score'] =
+            results['category_scores'][category.id].toString();
+      } else {
+        categoryData['score'] = '0.0';
       }
 
       // Agregar respuestas de los campos de forma genérica COMO STRINGS
@@ -207,8 +206,6 @@ Future<Map<String, dynamic>> generateStructuredJSON(
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
         final value = responses[key];
-        
-        // Usar el ID del campo sin el sufijo de especie
         final genericFieldId = _getGenericFieldId(field.id);
         categoryData['responses'][genericFieldId] = value?.toString() ?? '';
       }
@@ -221,10 +218,7 @@ Future<Map<String, dynamic>> generateStructuredJSON(
 
   // ✅ Obtener ID genérico del campo (sin sufijos como _pigs, _birds)
   String _getGenericFieldId(String fieldId) {
-    // Remover sufijos específicos de especie
-    return fieldId
-        .replaceAll('_pigs', '')
-        .replaceAll('_birds', '');
+    return fieldId.replaceAll('_pigs', '').replaceAll('_birds', '');
   }
 
   // ✅ Formatear puntos críticos de forma legible
@@ -233,7 +227,6 @@ Future<Map<String, dynamic>> generateStructuredJSON(
       final parts = point.toString().split('_');
       final categoryId = parts[0];
       final fieldId = parts.sublist(1).join('_');
-      
       return {
         'category': categoryId,
         'field': _getGenericFieldId(fieldId),
@@ -249,5 +242,16 @@ Future<Map<String, dynamic>> generateStructuredJSON(
         'category': point.toString(),
       };
     }).toList();
+  }
+
+  // 🔹 Método seguro para resultados offline
+  Map<String, dynamic> recalculateResults(Species species) {
+    return {
+      'overall_score': overallScore ?? 0.0,
+      'compliance_level': 0.0,
+      'category_scores': categoryScores ?? {},
+      'critical_points': <String>[],
+      'strong_points': <String>[],
+    };
   }
 }

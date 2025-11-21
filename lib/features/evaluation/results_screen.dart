@@ -10,6 +10,7 @@ import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
+import 'package:open_filex/open_filex.dart';
 
 class ResultsScreen extends StatelessWidget {
   final Evaluation evaluation;
@@ -80,6 +81,65 @@ class ResultsScreen extends StatelessWidget {
       }
     }
     return true;
+  }
+
+Future<void> _openPDF(BuildContext context, String filePath) async {
+    try {
+      print('📂 Intentando abrir PDF: $filePath');
+      
+      final result = await OpenFilex.open(filePath);
+      print('📊 Resultado de apertura: ${result.type} - ${result.message}');
+      
+      if (result.type != ResultType.done) {
+        // Si no se pudo abrir, mostrar mensaje
+        if (!context.mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: BianTheme.warningYellow,
+            duration: Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Compartir',
+              textColor: Colors.white,
+              onPressed: () async {
+                await Share.shareXFiles([XFile(filePath)]);
+              },
+            ),
+          ),
+        );
+      } else {
+        print('✅ PDF abierto exitosamente');
+      }
+    } catch (e) {
+      print('❌ Error abriendo PDF: $e');
+      
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Error al abrir PDF: $e')),
+            ],
+          ),
+          backgroundColor: BianTheme.errorRed,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   // ✅ MÉTODO EXTRAÍDO Y SIMPLIFICADO
@@ -425,6 +485,18 @@ class ResultsScreen extends StatelessWidget {
             TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cerrar')),
+                OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _openPDF(context, filePath);
+              },
+              icon: const Icon(Icons.visibility),
+              label: const Text('Ver PDF'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: BianTheme.primaryRed,
+                side: const BorderSide(color: BianTheme.primaryRed),
+              ),
+            ),
             ElevatedButton.icon(
               onPressed: () async {
                 Navigator.pop(dialogContext);
@@ -595,7 +667,7 @@ class ResultsScreen extends StatelessWidget {
 
     final pdf = pw.Document();
 
-    final overallScore = results['overall_score'] as double;
+    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
     final criticalPoints = results['critical_points'] as List;
@@ -1188,7 +1260,7 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final overallScore = results['overall_score'] as double;
+    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
     final criticalPoints = results['critical_points'] as List;

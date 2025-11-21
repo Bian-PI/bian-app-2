@@ -76,8 +76,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
     final species =
         report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     final results = _recalculateResults(report, species);
-    final translatedRecommendations =
-        _translateRecommendations(results['recommendations'], report.language);
+    final translatedRecommendations = _translateRecommendations(
+        results['recommendations'] ?? [], report.language);
     final structuredJson = await report.generateStructuredJSON(
         species, results, translatedRecommendations);
 
@@ -225,7 +225,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
 
     if (confirm == true) {
       print('✅ Usuario confirmó salida del modo offline');
-      
+
       // Limpiar reportes locales
       await LocalReportsStorage.clearAllLocalReports();
       print('🗑️ Reportes locales eliminados');
@@ -244,7 +244,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
         );
         print('✅ Navegado a LoginScreen');
       }
-      
+
       return true;
     }
 
@@ -372,6 +372,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
       ),
     );
   }
+
   Widget _buildSpeciesCard(
       {required Species species, required VoidCallback onTap}) {
     return InkWell(
