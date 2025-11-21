@@ -1,8 +1,11 @@
+// lib/main.dart - ACTUALIZAR
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/providers/language_provider.dart';
+import 'core/providers/app_mode_provider.dart'; // ✅ NUEVO
+import 'core/utils/connectivity_service.dart'; // ✅ NUEVO
 import 'core/localization/app_localizations.dart';
 import 'core/theme/bian_theme.dart';
 import 'features/splash/splash_screen.dart';
@@ -10,13 +13,11 @@ import 'features/splash/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Forzar orientación vertical
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // Configurar StatusBar
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -26,16 +27,21 @@ void main() async {
     ),
   );
   
+  // ✅ INICIALIZAR SERVICIO DE CONECTIVIDAD
+  final connectivityService = ConnectivityService();
+  await connectivityService.initialize();
+  
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => AppModeProvider()..initialize()),
+        Provider<ConnectivityService>.value(value: connectivityService), // ✅ TIPADO
       ],
       child: const BianApp(),
     ),
   );
 }
-
 class BianApp extends StatelessWidget {
   const BianApp({super.key});
 
@@ -47,7 +53,6 @@ class BianApp extends StatelessWidget {
           title: 'BIAN - Bienestar Animal',
           debugShowCheckedModeBanner: false,
           
-          // Configuración de idioma
           locale: languageProvider.locale,
           supportedLocales: const [
             Locale('es'),
@@ -60,10 +65,8 @@ class BianApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           
-          // Tema
           theme: BianTheme.lightTheme,
           
-          // Pantalla inicial
           home: const SplashScreen(),
         );
       },

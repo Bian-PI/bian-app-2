@@ -16,6 +16,7 @@ import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
+import '../../core/widgets/connectivity_wrapper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,10 +50,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // ✅ CERRAR SESIÓN AL SALIR DE LA APP
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadAllData();
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      // App cerrada o en segundo plano - cerrar sesión
+      _storage.clearAll();
     }
   }
 
@@ -405,7 +408,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  @override
+
+@override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     
@@ -413,128 +417,131 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.translate('home')),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(loc.translate('no_notifications'))),
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(context),
-      body: Column(
-        children: [
-          if (!_isVerified)
-            Container(
-              color: BianTheme.warningYellow,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_rounded, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      loc.translate('email_not_verified'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+    // ✅ ENVOLVER CON ConnectivityWrapper
+    return ConnectivityWrapper(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(loc.translate('home')),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(loc.translate('no_notifications'))),
+                );
+              },
+            ),
+          ],
+        ),
+        drawer: _buildDrawer(context),
+        body: Column(
+          children: [
+            if (!_isVerified)
+              Container(
+                color: BianTheme.warningYellow,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_rounded, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        loc.translate('email_not_verified'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: _resendVerificationEmail,
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: BianTheme.warningYellow,
+                    TextButton(
+                      onPressed: _resendVerificationEmail,
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: BianTheme.warningYellow,
+                      ),
+                      child: Text(loc.translate('verify_email')),
                     ),
-                    child: Text(loc.translate('verify_email')),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadAllData,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(BianTheme.paddingLarge),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildWelcomeCard(context),
-                    
-                    const SizedBox(height: 30),
-                    
-                    Text(
-                      loc.translate('select_species'),
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSpeciesCards(context),
-                    
-                    const SizedBox(height: 30),
-                    
-                    _buildQuickStats(context),
-                    
-                    if (_drafts.isNotEmpty) ...[
+            
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadAllData,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(BianTheme.paddingLarge),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildWelcomeCard(context),
+                      
                       const SizedBox(height: 30),
+                      
+                      Text(
+                        loc.translate('select_species'),
+                        style: Theme.of(context).textTheme.displaySmall,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSpeciesCards(context),
+                      
+                      const SizedBox(height: 30),
+                      
+                      _buildQuickStats(context),
+                      
+                      if (_drafts.isNotEmpty) ...[
+                        const SizedBox(height: 30),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              loc.translate('saved_drafts'),
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            Text(
+                              '${_drafts.length}/2',
+                              style: TextStyle(
+                                color: BianTheme.mediumGray,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ..._drafts.map((draft) => _buildDraftCard(context, draft)),
+                      ],
+                      
+                      const SizedBox(height: 30),
+                      
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            loc.translate('saved_drafts'),
+                            loc.translate('completed_evaluations'),
                             style: Theme.of(context).textTheme.headlineMedium,
                           ),
                           Text(
-                            '${_drafts.length}/2',
+                            '${_reports.length}',
                             style: TextStyle(
-                              color: BianTheme.mediumGray,
-                              fontSize: 14,
+                              color: BianTheme.primaryRed,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      ..._drafts.map((draft) => _buildDraftCard(context, draft)),
+                      
+                      if (_reports.isEmpty)
+                        _buildEmptyReportsCard(context)
+                      else
+                        ..._reports.map((report) => _buildReportCard(context, report)),
                     ],
-                    
-                    const SizedBox(height: 30),
-                    
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          loc.translate('completed_evaluations'),
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        Text(
-                          '${_reports.length}',
-                          style: TextStyle(
-                            color: BianTheme.primaryRed,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    if (_reports.isEmpty)
-                      _buildEmptyReportsCard(context)
-                    else
-                      ..._reports.map((report) => _buildReportCard(context, report)),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -671,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Row(
             children: [
               Image.asset(
-                'assets/images/logo.png',
+                'assets/images/logo2.png',
                 width: 50,
                 height: 50,
                 color: Colors.white,

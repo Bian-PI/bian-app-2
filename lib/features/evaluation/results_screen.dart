@@ -158,181 +158,149 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _downloadPDF(BuildContext context) async {
-    final loc = AppLocalizations.of(context);
+// lib/features/evaluation/results_screen.dart - REEMPLAZAR MÉTODO _downloadPDF
+
+Future<void> _downloadPDF(BuildContext context) async {
+  final loc = AppLocalizations.of(context);
+  
+  _showLoadingDialog(context, loc);
+
+  try {
+    final pdf = await _buildPDFNoContext(loc);
     
-    _showLoadingDialog(context, loc);
-
-    try {
-      // ✅ Generar PDF sin context
-      final pdf = await _buildPDFNoContext(loc);
-      
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        directory = await getDownloadsDirectory();
+    // ✅ CERRAR DIÁLOGO ANTES DE GUARDAR
+    if (context.mounted) Navigator.pop(context);
+    
+    Directory? directory;
+    if (Platform.isAndroid) {
+      directory = Directory('/storage/emulated/0/Download');
+      if (!await directory.exists()) {
+        directory = await getExternalStorageDirectory();
       }
-      
-      final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${directory!.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+    } else if (Platform.isIOS) {
+      directory = await getApplicationDocumentsDirectory();
+    } else {
+      directory = await getDownloadsDirectory();
+    }
+    
+    final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${directory!.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
 
-      if (!context.mounted) return;
-      Navigator.pop(context);
+    if (!context.mounted) return;
 
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: BianTheme.successGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  color: BianTheme.successGreen,
-                  size: 32,
-                ),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: BianTheme.successGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  '¡PDF Guardado!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'El PDF se ha guardado exitosamente en:',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: BianTheme.lightGray.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: BianTheme.lightGray),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.folder, size: 18, color: BianTheme.primaryRed),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            directory?.path ?? '',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: BianTheme.mediumGray,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.description, size: 18, color: BianTheme.primaryRed),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            fileName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: BianTheme.infoBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 20, color: BianTheme.infoBlue),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        Platform.isAndroid
-                            ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo'
-                            : 'Busca en la carpeta de Documentos de tu dispositivo',
-                        style: const TextStyle(fontSize: 11, color: BianTheme.darkGray),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
+              child: const Icon(Icons.check_circle, color: BianTheme.successGreen, size: 32),
             ),
-            ElevatedButton.icon(
-              onPressed: () async {
-                Navigator.pop(context);
-                await Share.shareXFiles(
-                  [XFile(file.path)],
-                  text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}',
-                );
-              },
-              icon: const Icon(Icons.share),
-              label: const Text('Compartir'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BianTheme.infoBlue,
+            const SizedBox(width: 12),
+            const Expanded(child: Text('¡PDF Guardado!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('El PDF se ha guardado exitosamente en:', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BianTheme.lightGray.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: BianTheme.lightGray),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.folder, size: 18, color: BianTheme.primaryRed),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          directory?.path ?? '',
+                          style: const TextStyle(fontSize: 11, color: BianTheme.mediumGray, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.description, size: 18, color: BianTheme.primaryRed),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(fileName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BianTheme.infoBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 20, color: BianTheme.infoBlue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      Platform.isAndroid ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo' : 'Busca en la carpeta de Documentos de tu dispositivo',
+                      style: const TextStyle(fontSize: 11, color: BianTheme.darkGray),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      );
-    } catch (e) {
-      print('💥 ERROR GENERANDO PDF: $e');
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              await Share.shareXFiles([XFile(file.path)], text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('Compartir'),
+            style: ElevatedButton.styleFrom(backgroundColor: BianTheme.infoBlue),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    print('💥 ERROR: $e');
+    if (context.mounted) Navigator.pop(context);
+    
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(child: Text('Error al generar PDF: $e')),
+              Expanded(child: Text('Error: $e')),
             ],
           ),
           backgroundColor: BianTheme.errorRed,
@@ -341,29 +309,29 @@ class ResultsScreen extends StatelessWidget {
       );
     }
   }
+}
 
-  Future<void> _generateAndSharePDF(BuildContext context) async {
-    final loc = AppLocalizations.of(context);
+Future<void> _generateAndSharePDF(BuildContext context) async {
+  final loc = AppLocalizations.of(context);
+  
+  _showLoadingDialog(context, loc);
+
+  try {
+    final pdf = await _buildPDFNoContext(loc);
     
-    _showLoadingDialog(context, loc);
+    // ✅ CERRAR DIÁLOGO ANTES DE COMPARTIR
+    if (context.mounted) Navigator.pop(context);
+    
+    final output = await getTemporaryDirectory();
+    final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${output.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
 
-    try {
-      // ✅ Generar PDF sin context
-      final pdf = await _buildPDFNoContext(loc);
-      final output = await getTemporaryDirectory();
-      final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${output.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+    if (!context.mounted) return;
 
-      if (!context.mounted) return;
-      Navigator.pop(context);
+    await Share.shareXFiles([XFile(file.path)], text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}',
-      );
-
-      if (!context.mounted) return;
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -376,18 +344,19 @@ class ResultsScreen extends StatelessWidget {
           backgroundColor: BianTheme.successGreen,
         ),
       );
-    } catch (e) {
-      print('💥 ERROR GENERANDO PDF: $e');
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      
+    }
+  } catch (e) {
+    print('💥 ERROR: $e');
+    if (context.mounted) Navigator.pop(context);
+    
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(child: Text('Error al generar PDF: $e')),
+              Expanded(child: Text('Error: $e')),
             ],
           ),
           backgroundColor: BianTheme.errorRed,
@@ -396,6 +365,7 @@ class ResultsScreen extends StatelessWidget {
       );
     }
   }
+}
 
   // ✅ MÉTODO SIN CONTEXT - RECIBE LOC COMO PARÁMETRO
   Future<pw.Document> _buildPDFNoContext(AppLocalizations loc) async {

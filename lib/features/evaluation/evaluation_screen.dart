@@ -9,17 +9,20 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import 'results_screen.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/storage/local_reports_storage.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
   final Evaluation? draftToEdit;
   final String currentLanguage; // 'es' o 'en'
+  final bool isOfflineMode;
 
   const EvaluationScreen({
     super.key,
     required this.species,
     this.draftToEdit,
     required this.currentLanguage,
+    this.isOfflineMode = false, // ✅ NUEVO
   });
 
   @override
@@ -556,81 +559,84 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     return translatedRecommendations;
   }
 
-  Future<void> _completeEvaluation() async {
-    final loc = AppLocalizations.of(context);
-    
-    if (!_evaluation.isComplete(widget.species)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(loc.translate('complete_required_fields')),
-          backgroundColor: BianTheme.warningYellow,
-        ),
-      );
-      return;
-    }
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(loc.translate('finish_evaluation')),
-        content: Text(loc.translate('finish_evaluation_confirm')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(loc.translate('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(loc.translate('finish')),
-          ),
-        ],
+Future<void> _completeEvaluation() async {
+  final loc = AppLocalizations.of(context);
+  
+  if (!_evaluation.isComplete(widget.species)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(loc.translate('complete_required_fields')),
+        backgroundColor: BianTheme.warningYellow,
       ),
     );
+    return;
+  }
 
-    if (confirm == true) {
-      final results = _calculateResults();
-      final translatedRecommendations = _translateRecommendations(results['recommendations']);
-      
-      final structuredJson = await _evaluation.generateStructuredJSON(
-        widget.species,
-        results,
-        translatedRecommendations,
-      );
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(loc.translate('finish_evaluation')),
+      content: Text(loc.translate('finish_evaluation_confirm')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(loc.translate('cancel')),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(loc.translate('finish')),
+        ),
+      ],
+    ),
+  );
 
+  if (confirm == true) {
+    final results = _calculateResults();
+    final translatedRecommendations = _translateRecommendations(results['recommendations']);
+    
+    final structuredJson = await _evaluation.generateStructuredJSON(
+      widget.species,
+      results,
+      translatedRecommendations,
+    );
 
-      // ✅ IMPRIMIR JSON ESTRUCTURADO EN CONSOLA
-      _logEvaluationResults(structuredJson);
+    _logEvaluationResults(structuredJson);
 
-      final completedEvaluation = _evaluation.copyWith(
-        status: 'completed',
-        overallScore: results['overall_score'],
-        categoryScores: Map<String, double>.from(results['category_scores']),
-        updatedAt: DateTime.now(),
-      );
-      
+    final completedEvaluation = _evaluation.copyWith(
+      status: 'completed',
+      overallScore: results['overall_score'],
+      categoryScores: Map<String, double>.from(results['category_scores']),
+      updatedAt: DateTime.now(),
+    );
+    
+    // ✅ GUARDAR EN LOCAL O SERVIDOR SEGÚN EL MODO
+    if (widget.isOfflineMode) {
+      await LocalReportsStorage.saveLocalReport(completedEvaluation);
+    } else {
       await ReportsStorage.saveReport(completedEvaluation);
       await DraftsStorage.deleteDraft(_evaluation.id);
-      
-      setState(() => _hasUnsavedChanges = false);
-      
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultsScreen(
-              evaluation: completedEvaluation,
-              species: widget.species,
-              results: results,
-              structuredJson: structuredJson,
-            ),
+    }
+    
+    setState(() => _hasUnsavedChanges = false);
+    
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResultsScreen(
+            evaluation: completedEvaluation,
+            species: widget.species,
+            results: results,
+            structuredJson: structuredJson,
           ),
-        );
-      }
+        ),
+      );
     }
   }
+}
 void printJson(dynamic data, {String indent = ''}) {
   if (data is Map) {
     data.forEach((key, value) {

@@ -1,4 +1,7 @@
+// lib/features/auth/login_screen.dart - REEMPLAZAR COMPLETO
+
 import 'package:bian_app/core/providers/language_provider.dart';
+import 'package:bian_app/core/utils/connectivity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/api/api_service.dart';
@@ -6,9 +9,12 @@ import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
+import '../../core/providers/app_mode_provider.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
+import 'offline_mode_screen.dart';
 import '../home/home_screen.dart';
+import '../home/offline_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _hasConnection = true;
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
 
@@ -41,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen>
       CurvedAnimation(parent: _animController, curve: Curves.easeIn),
     );
     _animController.forward();
+    _checkInitialConnection();
   }
 
   @override
@@ -51,69 +59,78 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-Future<void> _doLogin() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _checkInitialConnection() async {
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+    final hasConnection = await connectivityService.checkConnection();
+    if (mounted) {
+      setState(() => _hasConnection = hasConnection);
+    }
+  }
 
-  setState(() => _isLoading = true);
+  Future<void> _doLogin() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  try {
-    final result = await _apiService.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    setState(() => _isLoading = true);
 
-    if (!mounted) return;
+    try {
+      final result = await _apiService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-    if (result['success'] == true) {
-      // Guardar token
-      await _storage.saveToken(result['token']);
-      
-      // Guardar usuario
-      if (result['user'] != null) {
-        final user = User.fromJson(result['user']);
-        await _storage.saveUser(user);
-      }
+      if (!mounted) return;
 
-      setState(() => _isLoading = false);
+      if (result['success'] == true) {
+        await _storage.saveToken(result['token']);
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    } else {
-      setState(() => _isLoading = false);
-      
-      final loc = AppLocalizations.of(context);
-      final message = result['message'] ?? 'invalid_credentials';
-      
-      if (message == 'user_not_verified') {
-        final email = result['email'] ?? _emailController.text.trim();
-        final userId = result['userId']; // ✅ Capturar userId
-        
+        if (result['user'] != null) {
+          final user = User.fromJson(result['user']);
+          await _storage.saveUser(user);
+        }
+
+        Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
+
+        setState(() => _isLoading = false);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(
-                email: email,
-                userId: userId, // ✅ Pasar userId
-                fromLogin: true,
-              ),
-            ),
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
           );
         }
       } else {
-        _showSnackBar(loc.translate(message), isError: true);
+        setState(() => _isLoading = false);
+
+        final loc = AppLocalizations.of(context);
+        final message = result['message'] ?? 'invalid_credentials';
+
+        if (message == 'user_not_verified') {
+          final email = result['email'] ?? _emailController.text.trim();
+          final userId = result['userId'];
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(
+                  email: email,
+                  userId: userId,
+                  fromLogin: true,
+                ),
+              ),
+            );
+          }
+        } else {
+          _showSnackBar(loc.translate(message), isError: true);
+        }
       }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      final loc = AppLocalizations.of(context);
+      _showSnackBar(loc.translate('connection_error'), isError: true);
     }
-  } catch (e) {
-    setState(() => _isLoading = false);
-    final loc = AppLocalizations.of(context);
-    _showSnackBar(loc.translate('connection_error'), isError: true);
   }
-}
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -134,230 +151,445 @@ Future<void> _doLogin() async {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  final loc = AppLocalizations.of(context);
-  final languageProvider = Provider.of<LanguageProvider>(context);
-  
-  return Scaffold(
-    body: SafeArea(
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(BianTheme.paddingLarge),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+// lib/features/auth/login_screen.dart - ACTUALIZAR DIÁLOGO CON TRADUCCIONES
+
+  void _handleOfflineModeClick() {
+    final loc = AppLocalizations.of(context);
+
+    if (_hasConnection) {
+      // ✅ TIENE CONEXIÓN - PREGUNTAR SI QUIERE CONTINUAR OFFLINE
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: BianTheme.successGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.wifi,
+                  color: BianTheme.successGreen,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  loc.translate('you_have_connection'),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.translate('internet_connection_detected'),
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BianTheme.warningYellow.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: BianTheme.warningYellow.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
                   children: [
-                    PopupMenuButton<Locale>(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: BianTheme.lightGray,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.language,
-                          color: BianTheme.primaryRed,
-                          size: 24,
-                        ),
+                    Icon(Icons.info_outline,
+                        color: BianTheme.warningYellow, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        loc.translate('continue_offline_anyway') +
+                            ' ' +
+                            loc.translate('reports_wont_sync'),
+                        style:
+                            TextStyle(fontSize: 12, color: BianTheme.darkGray),
                       ),
-                      offset: const Offset(0, 45),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: const Locale('es'),
-                          child: Row(
-                            children: [
-                              const Text('🇪🇸', style: TextStyle(fontSize: 24)),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Español',
-                                style: TextStyle(
-                                  fontWeight: languageProvider.locale.languageCode == 'es'
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: languageProvider.locale.languageCode == 'es'
-                                      ? BianTheme.primaryRed
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: const Locale('en'),
-                          child: Row(
-                            children: [
-                              const Text('🇺🇸', style: TextStyle(fontSize: 24)),
-                              const SizedBox(width: 12),
-                              Text(
-                                'English',
-                                style: TextStyle(
-                                  fontWeight: languageProvider.locale.languageCode == 'en'
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: languageProvider.locale.languageCode == 'en'
-                                      ? BianTheme.primaryRed
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onSelected: _isLoading ? null : (Locale newLocale) {
-                        languageProvider.setLocale(newLocale);
-                      },
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 20),
-                  // Logo
-                  Hero(
-                    tag: 'bian_logo',
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.contain,
-                    ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(loc.translate('cancel')),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Provider.of<AppModeProvider>(context, listen: false)
+                    .setMode(AppMode.offline);
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const OfflineHomeScreen(),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Título
-                  Text(
-                    loc.translate('welcome'),
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: BianTheme.primaryRed,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Subtítulo
-                  Text(
-                    loc.translate('login_subtitle'),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Email/Document
-                  TextFormField(
-                    controller: _emailController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: loc.translate('email_or_document'),
-                      hintText: 'ejemplo@correo.com',
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return loc.translate('field_required');
-                      }
-                      return null;
-                    },
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Password
-                  TextFormField(
-                    controller: _passwordController,
-                    enabled: !_isLoading,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: loc.translate('password'),
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: _isLoading
-                            ? null
-                            : () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return loc.translate('field_required');
-                      }
-                      return null;
-                    },
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Login Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _doLogin,
-                    child: _isLoading
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+                );
+              },
+              icon: Icon(Icons.offline_bolt),
+              label: Text(loc.translate('continue_without_connection')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BianTheme.warningYellow,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // ✅ NO TIENE CONEXIÓN - IR DIRECTO A MODO OFFLINE
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const OfflineModeScreen(),
+        ),
+      );
+    }
+  }
+
+// ✅ ACTUALIZAR EL BOTÓN DINÁMICO CON TRADUCCIONES
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+        body: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(BianTheme.paddingLarge),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 20),
+
+                    // ✅ BARRA SUPERIOR CON CONEXIÓN DINÁMICA
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // ✅ BOTÓN OFFLINE DINÁMICO CON STREAM Y TRADUCCIONES
+                        StreamBuilder<bool>(
+                          stream: connectivityService.connectionStatus,
+                          initialData: _hasConnection,
+                          builder: (context, snapshot) {
+                            final hasConnection = snapshot.data ?? true;
+
+                            // Actualizar estado local
+                            if (_hasConnection != hasConnection) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  setState(
+                                      () => _hasConnection = hasConnection);
+                                }
+                              });
+                            }
+
+                            return AnimatedContainer(
+                              duration: Duration(milliseconds: 300),
+                              child: TextButton.icon(
+                                onPressed:
+                                    _isLoading ? null : _handleOfflineModeClick,
+                                icon: Icon(
+                                  hasConnection ? Icons.wifi : Icons.wifi_off,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  hasConnection
+                                      ? loc.translate('offline_mode')
+                                      : loc.translate('no_connection'),
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: hasConnection
+                                      ? BianTheme.infoBlue
+                                      : BianTheme.errorRed,
+                                  backgroundColor: hasConnection
+                                      ? BianTheme.infoBlue.withOpacity(0.1)
+                                      : BianTheme.errorRed.withOpacity(0.1),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: BorderSide(
+                                      color: hasConnection
+                                          ? BianTheme.infoBlue.withOpacity(0.3)
+                                          : BianTheme.errorRed.withOpacity(0.3),
+                                    ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Text(loc.translate('signing_in')),
-                            ],
-                          )
-                        : Text(loc.translate('sign_in')),
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Register Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${loc.translate('no_account')} ',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                            );
+                          },
+                        ),
+
+                        PopupMenuButton<Locale>(
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: BianTheme.lightGray,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.language,
+                              color: BianTheme.primaryRed,
+                              size: 24,
+                            ),
+                          ),
+                          offset: const Offset(0, 45),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: const Locale('es'),
+                              child: Row(
+                                children: [
+                                  const Text('🇪🇸',
+                                      style: TextStyle(fontSize: 24)),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    loc.translate('spanish'),
+                                    style: TextStyle(
+                                      fontWeight: languageProvider
+                                                  .locale.languageCode ==
+                                              'es'
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: languageProvider
+                                                  .locale.languageCode ==
+                                              'es'
+                                          ? BianTheme.primaryRed
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: const Locale('en'),
+                              child: Row(
+                                children: [
+                                  const Text('🇺🇸',
+                                      style: TextStyle(fontSize: 24)),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    loc.translate('english'),
+                                    style: TextStyle(
+                                      fontWeight: languageProvider
+                                                  .locale.languageCode ==
+                                              'en'
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: languageProvider
+                                                  .locale.languageCode ==
+                                              'en'
+                                          ? BianTheme.primaryRed
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onSelected: _isLoading
+                              ? null
+                              : (Locale newLocale) {
+                                  languageProvider.setLocale(newLocale);
+                                },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+                    Hero(
+                      tag: 'bian_logo',
+                      child: Image.asset(
+                        'assets/images/logo2.png',
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.contain,
                       ),
-                      GestureDetector(
-                        onTap: _isLoading
-                            ? null
-                            : () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterScreen(),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Text(
+                      loc.translate('welcome'),
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            color: BianTheme.primaryRed,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      loc.translate('login_subtitle'),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    TextFormField(
+                      controller: _emailController,
+                      enabled: !_isLoading,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: loc.translate('email_or_document'),
+                        hintText: 'ejemplo@correo.com',
+                        prefixIcon: const Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return loc.translate('field_required');
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    TextFormField(
+                      controller: _passwordController,
+                      enabled: !_isLoading,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: loc.translate('password'),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: _isLoading
+                              ? null
+                              : () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return loc.translate('field_required');
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    ElevatedButton(
+                      onPressed:
+                          (_isLoading || !_hasConnection) ? null : _doLogin,
+                      child: _isLoading
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 ),
-                        child: Text(
-                          loc.translate('register'),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: BianTheme.primaryRed,
-                            fontWeight: FontWeight.bold,
+                                const SizedBox(width: 12),
+                                Text(loc.translate('signing_in')),
+                              ],
+                            )
+                          : Text(loc.translate('sign_in')),
+                    ),
+
+                    // ✅ ALERTA DE SIN CONEXIÓN CON TRADUCCIÓN
+                    if (!_hasConnection)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: BianTheme.errorRed.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: BianTheme.errorRed.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.wifi_off,
+                                  color: BianTheme.errorRed, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  loc.translate('no_connection_use_offline'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: BianTheme.darkGray,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${loc.translate('no_account')} ',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        GestureDetector(
+                          onTap: (_isLoading || !_hasConnection)
+                              ? null
+                              : () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RegisterScreen(),
+                                    ),
+                                  ),
+                          child: Text(
+                            loc.translate('register'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: (_hasConnection && !_isLoading)
+                                      ? BianTheme.primaryRed
+                                      : BianTheme.mediumGray,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

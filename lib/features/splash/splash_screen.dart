@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:bian_app/core/utils/connectivity_service.dart';
+import 'package:bian_app/features/auth/offline_mode_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
@@ -43,24 +45,44 @@ class _SplashScreenState extends State<SplashScreen>
     Timer(const Duration(seconds: 3), _checkSession);
   }
 
-  Future<void> _checkSession() async {
-    final hasSession = await _storage.hasActiveSession();
-    
+Future<void> _checkSession() async {
+  // ✅ VERIFICAR CONECTIVIDAD
+  final connectivityService = ConnectivityService();
+  final hasConnection = await connectivityService.checkConnection();
+  
+  if (!hasConnection) {
+    // Sin conexión - ir a modo offline
     if (!mounted) return;
-    
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            hasSession ? const HomeScreen() : const LoginScreen(),
+            const OfflineModeScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 600),
       ),
     );
+    return;
   }
-
+  
+  final hasSession = await _storage.hasActiveSession();
+  
+  if (!mounted) return;
+  
+  Navigator.pushReplacement(
+    context,
+    PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          hasSession ? const HomeScreen() : const LoginScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 600),
+    ),
+  );
+}
   @override
   void dispose() {
     _controller.dispose();
