@@ -1,11 +1,11 @@
-// lib/features/evaluation/results_screen.dart - REEMPLAZAR COMPLETO
-
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
@@ -24,6 +24,48 @@ class ResultsScreen extends StatelessWidget {
     required this.results,
     required this.structuredJson,
   });
+
+  Future<bool> _requestPermissions() async {
+    if (Platform.isAndroid) {
+      try {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        print('📱 Android SDK: ${androidInfo.version.sdkInt}');
+
+        if (androidInfo.version.sdkInt >= 33) {
+          // Android 13+ - no necesita permisos para descargas
+          print('✅ Android 13+ - No necesita permisos');
+          return true;
+        } else if (androidInfo.version.sdkInt >= 30) {
+          // Android 11-12
+          print('⚙️ Android 11-12 - Solicitando MANAGE_EXTERNAL_STORAGE');
+          var status = await Permission.manageExternalStorage.status;
+          print('📊 Estado actual: $status');
+
+          if (!status.isGranted) {
+            status = await Permission.manageExternalStorage.request();
+            print('📊 Estado después de solicitar: $status');
+          }
+          return status.isGranted;
+        } else {
+          // Android 10 y anteriores
+          print('⚙️ Android ≤10 - Solicitando STORAGE');
+          var status = await Permission.storage.status;
+          print('📊 Estado actual: $status');
+
+          if (!status.isGranted) {
+            status = await Permission.storage.request();
+            print('📊 Estado después de solicitar: $status');
+          }
+          return status.isGranted;
+        }
+      } catch (e) {
+        print('⚠️ Error en permisos (continuando de todos modos): $e');
+        // Continuar sin permisos para Android 13+
+        return true;
+      }
+    }
+    return true;
+  }
 
   void _showPDFOptions(BuildContext context) {
     showModalBottomSheet(
@@ -164,37 +206,102 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-// lib/features/evaluation/results_screen.dart - REEMPLAZAR MÉTODO _downloadPDF
-
   Future<void> _downloadPDF(BuildContext context) async {
+    print('🔵 === INICIANDO DESCARGA DE PDF ===');
     final loc = AppLocalizations.of(context);
+
+    final hasPermission = await _requestPermissions();
+    print('🔐 Permisos: $hasPermission');
+
+    if (!hasPermission) {
+      print('❌ Permisos denegados');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Se requieren permisos de almacenamiento'),
+          backgroundColor: BianTheme.errorRed,
+        ),
+      );
+      return;
+    }
 
     _showLoadingDialog(context, loc);
 
     try {
+      print('📄 Paso 1: Construyendo PDF...');
       final pdf = await _buildPDFNoContext(loc);
+      print('✅ PDF construido exitosamente');
 
-      // ✅ CERRAR DIÁLOGO ANTES DE GUARDAR
-      if (context.mounted) Navigator.pop(context);
-
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        directory = await getDownloadsDirectory();
+      if (context.mounted) {
+        print('🔄 Cerrando diálogo de carga...');
+        Navigator.pop(context);
       }
+
+      print('📁 Paso 2: Determinando directorio...');
+      Directory? directory;
+
+      if (Platform.isAndroid) {
+        print('🤖 Plataforma: Android');
+
+        // Opción 1: Download
+        directory = Directory('/storage/emulated/0/Download');
+        print('🔍 Intentando: ${directory.path}');
+
+        if (!await directory.exists()) {
+          print('❌ No existe');
+          // Opción 2: Downloads
+          directory = Directory('/storage/emulated/0/Downloads');
+          print('🔍 Intentando: ${directory.path}');
+        }
+
+        if (!await directory.exists()) {
+          print('❌ No existe');
+          // Opción 3: External storage
+          directory = await getExternalStorageDirectory();
+          print('🔍 Usando external storage: ${directory?.path}');
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+        print('📱 Plataforma: iOS - ${directory.path}');
+      }
+
+      if (directory == null) {
+        throw Exception('No se pudo determinar directorio de almacenamiento');
+      }
+
+      print('✅ Directorio seleccionado: ${directory.path}');
+      print('📝 Paso 3: Creando archivo...');
 
       final fileName =
           'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${directory!.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+      final filePath = '${directory.path}/$fileName';
+      print('📍 Ruta completa: $filePath');
 
-      if (!context.mounted) return;
+      final file = File(filePath);
+
+      print('💾 Paso 4: Guardando PDF...');
+      final pdfBytes = await pdf.save();
+      print('📦 Tamaño del PDF: ${pdfBytes.length} bytes');
+
+      await file.writeAsBytes(pdfBytes, flush: true);
+      print('✅ Archivo escrito');
+
+      print('🔍 Paso 5: Verificando archivo...');
+      final exists = await file.exists();
+      print('📂 ¿Archivo existe?: $exists');
+
+      if (!exists) {
+        throw Exception('El archivo no se creó correctamente');
+      }
+
+      final fileSize = await file.length();
+      print('📊 Tamaño del archivo guardado: $fileSize bytes');
+
+      if (!context.mounted) {
+        print('⚠️ Contexto no disponible');
+        return;
+      }
+
+      print('✅ === PDF GUARDADO EXITOSAMENTE ===');
 
       showDialog(
         context: context,
@@ -243,7 +350,7 @@ class ResultsScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            directory?.path ?? '',
+                            directory?.path ?? 'Ruta no disponible',
                             style: const TextStyle(
                                 fontSize: 11,
                                 color: BianTheme.mediumGray,
@@ -290,8 +397,8 @@ class ResultsScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         Platform.isAndroid
-                            ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo'
-                            : 'Busca en la carpeta de Documentos de tu dispositivo',
+                            ? 'Busca en "Archivos" → "Descargas" de tu dispositivo'
+                            : 'Busca en la carpeta de Documentos',
                         style: const TextStyle(
                             fontSize: 11, color: BianTheme.darkGray),
                       ),
@@ -308,9 +415,10 @@ class ResultsScreen extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () async {
                 Navigator.pop(context);
-                await Share.shareXFiles([XFile(file.path)],
-                    text:
-                        '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
+                print('🔄 Compartiendo PDF...');
+                await Share.shareXFiles([XFile(filePath)],
+                    text: 'Reporte BIAN - ${evaluation.farmName}');
+                print('✅ PDF compartido');
               },
               icon: const Icon(Icons.share),
               label: const Text('Compartir'),
@@ -320,22 +428,72 @@ class ResultsScreen extends StatelessWidget {
           ],
         ),
       );
-    } catch (e) {
-      print('💥 ERROR: $e');
+    } catch (e, stackTrace) {
+      print('💥 ═══ ERROR CRÍTICO ═══');
+      print('❌ Error: $e');
+      print('📍 Stack trace:');
+      print(stackTrace);
+      print('═══════════════════════');
+
       if (context.mounted) Navigator.pop(context);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Error: $e')),
+                Icon(Icons.error_outline, color: BianTheme.errorRed, size: 32),
+                SizedBox(width: 12),
+                Expanded(
+                    child: Text('Error al guardar',
+                        style: TextStyle(fontSize: 18))),
               ],
             ),
-            backgroundColor: BianTheme.errorRed,
-            duration: const Duration(seconds: 4),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No se pudo guardar el PDF:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: BianTheme.errorRed.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(e.toString(),
+                      style: TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                ),
+                SizedBox(height: 12),
+                Text('💡 Sugerencias:',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                SizedBox(height: 8),
+                Text('• Intenta usar "Compartir PDF" en su lugar',
+                    style: TextStyle(fontSize: 12)),
+                Text('• Verifica que tengas espacio disponible',
+                    style: TextStyle(fontSize: 12)),
+                Text('• Revisa los permisos de la app',
+                    style: TextStyle(fontSize: 12)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text('Cerrar')),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _generateAndSharePDF(context);
+                },
+                child: Text('Intentar Compartir'),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: BianTheme.infoBlue),
+              ),
+            ],
           ),
         );
       }
@@ -348,20 +506,27 @@ class ResultsScreen extends StatelessWidget {
     _showLoadingDialog(context, loc);
 
     try {
+      print('🔵 Generando PDF para compartir...');
       final pdf = await _buildPDFNoContext(loc);
 
-      // ✅ CERRAR DIÁLOGO ANTES DE COMPARTIR
       if (context.mounted) Navigator.pop(context);
 
       final output = await getTemporaryDirectory();
       final fileName =
           'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${output.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+      final filePath = '${output.path}/$fileName';
+      final file = File(filePath);
+
+      print('💾 Guardando temporal en: $filePath');
+
+      final pdfBytes = await pdf.save();
+      await file.writeAsBytes(pdfBytes);
+
+      print('✅ Listo para compartir');
 
       if (!context.mounted) return;
 
-      await Share.shareXFiles([XFile(file.path)],
+      await Share.shareXFiles([XFile(filePath)],
           text:
               '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
 
@@ -379,8 +544,10 @@ class ResultsScreen extends StatelessWidget {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('💥 ERROR: $e');
+      print('📍 Stack: $stackTrace');
+
       if (context.mounted) Navigator.pop(context);
 
       if (context.mounted) {
@@ -394,13 +561,15 @@ class ResultsScreen extends StatelessWidget {
               ],
             ),
             backgroundColor: BianTheme.errorRed,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
     }
   }
 
+  // Resto de métodos (_buildPDFNoContext, etc.) SIN CAMBIOS...
+  // [Copiar el resto del archivo que ya tienes]
   Future<pw.Document> _buildPDFNoContext(AppLocalizations loc) async {
     print('🔵 Iniciando generación de PDF...');
 

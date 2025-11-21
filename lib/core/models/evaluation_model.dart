@@ -145,44 +145,46 @@ class Evaluation {
   }
 
   // 🔥 JSON GENÉRICO - TODO EN STRINGS - ✅ SOPORTA MODO OFFLINE
-  Future<Map<String, dynamic>> generateStructuredJSON(
-    Species species,
-    Map<String, dynamic> results,
-    List<String> translatedRecommendations,
-  ) async {
-    // ✅ Intentar obtener usuario, pero manejar modo offline
-    User? user;
-    String userId = 'OFFLINE';
-    
-    try {
-      user = await _storage.getUser();
-      if (user?.id != null) {
-        userId = user!.id.toString();
-      }
-    } catch (e) {
-      print('⚠️ No se pudo obtener usuario (posiblemente modo offline): $e');
+// Reemplazar el método generateStructuredJSON completo:
+
+Future<Map<String, dynamic>> generateStructuredJSON(
+  Species species,
+  Map<String, dynamic> results,
+  List<String> translatedRecommendations,
+) async {
+  // ✅ Manejo robusto para modo offline
+  String userId = 'OFFLINE';
+  
+  try {
+    final user = await _storage.getUser();
+    if (user?.id != null) {
+      userId = user!.id.toString();
     }
-
-    final structuredJson = <String, dynamic>{
-      'user_id': userId,
-      'evaluation_id': id,
-      'evaluation_date': evaluationDate.toIso8601String(),
-      'language': language,
-      'species': speciesId,
-      'farm_name': farmName,
-      'farm_location': farmLocation,
-      'evaluator_name': evaluatorName,
-      'status': status,
-      'overall_score': results['overall_score'].toString(),
-      'compliance_level': results['compliance_level'].toString(),
-      'categories': _buildGenericCategories(species, results),
-      'critical_points': _formatCriticalPoints(results['critical_points']),
-      'strong_points': _formatStrongPoints(results['strong_points']),
-      'recommendations': translatedRecommendations,
-    };
-
-    return structuredJson;
+  } catch (e) {
+    // Ignorar error en modo offline
+    print('ℹ️ Usuario en modo offline: $userId');
   }
+
+  final structuredJson = <String, dynamic>{
+    'user_id': userId,
+    'evaluation_id': id,
+    'evaluation_date': evaluationDate.toIso8601String(),
+    'language': language,
+    'species': speciesId,
+    'farm_name': farmName,
+    'farm_location': farmLocation,
+    'evaluator_name': evaluatorName,
+    'status': status,
+    'overall_score': results['overall_score'].toString(),
+    'compliance_level': results['compliance_level'].toString(),
+    'categories': _buildGenericCategories(species, results),
+    'critical_points': _formatCriticalPoints(results['critical_points']),
+    'strong_points': _formatStrongPoints(results['strong_points']),
+    'recommendations': translatedRecommendations,
+  };
+
+  return structuredJson;
+}
 
   // ✅ Construir categorías de forma genérica - TODO EN STRINGS
   Map<String, dynamic> _buildGenericCategories(
