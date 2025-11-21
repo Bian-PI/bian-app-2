@@ -64,9 +64,12 @@ class ResultsScreen extends StatelessWidget {
               ),
               title: const Text('Descargar PDF'),
               subtitle: const Text('Guardar en el dispositivo'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _downloadPDF(context);
+                await Future.delayed(Duration(milliseconds: 300));
+                if (context.mounted) {
+                  _downloadPDF(context);
+                }
               },
             ),
             const SizedBox(height: 8),
@@ -84,9 +87,12 @@ class ResultsScreen extends StatelessWidget {
               ),
               title: const Text('Compartir PDF'),
               subtitle: const Text('WhatsApp, Gmail, Drive, etc.'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _generateAndSharePDF(context);
+                await Future.delayed(Duration(milliseconds: 300));
+                if (context.mounted) {
+                  _generateAndSharePDF(context);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -160,219 +166,246 @@ class ResultsScreen extends StatelessWidget {
 
 // lib/features/evaluation/results_screen.dart - REEMPLAZAR MÉTODO _downloadPDF
 
-Future<void> _downloadPDF(BuildContext context) async {
-  final loc = AppLocalizations.of(context);
-  
-  _showLoadingDialog(context, loc);
+  Future<void> _downloadPDF(BuildContext context) async {
+    final loc = AppLocalizations.of(context);
 
-  try {
-    final pdf = await _buildPDFNoContext(loc);
-    
-    // ✅ CERRAR DIÁLOGO ANTES DE GUARDAR
-    if (context.mounted) Navigator.pop(context);
-    
-    Directory? directory;
-    if (Platform.isAndroid) {
-      directory = Directory('/storage/emulated/0/Download');
-      if (!await directory.exists()) {
-        directory = await getExternalStorageDirectory();
+    _showLoadingDialog(context, loc);
+
+    try {
+      final pdf = await _buildPDFNoContext(loc);
+
+      // ✅ CERRAR DIÁLOGO ANTES DE GUARDAR
+      if (context.mounted) Navigator.pop(context);
+
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else if (Platform.isIOS) {
+        directory = await getApplicationDocumentsDirectory();
+      } else {
+        directory = await getDownloadsDirectory();
       }
-    } else if (Platform.isIOS) {
-      directory = await getApplicationDocumentsDirectory();
-    } else {
-      directory = await getDownloadsDirectory();
-    }
-    
-    final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-    final file = File('${directory!.path}/$fileName');
-    await file.writeAsBytes(await pdf.save());
 
-    if (!context.mounted) return;
+      final fileName =
+          'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory!.path}/$fileName');
+      await file.writeAsBytes(await pdf.save());
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: BianTheme.successGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: BianTheme.successGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.check_circle,
+                    color: BianTheme.successGreen, size: 32),
               ),
-              child: const Icon(Icons.check_circle, color: BianTheme.successGreen, size: 32),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('¡PDF Guardado!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('El PDF se ha guardado exitosamente en:', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BianTheme.lightGray.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BianTheme.lightGray),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.folder, size: 18, color: BianTheme.primaryRed),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          directory?.path ?? '',
-                          style: const TextStyle(fontSize: 11, color: BianTheme.mediumGray, fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
+              const SizedBox(width: 12),
+              const Expanded(
+                  child: Text('¡PDF Guardado!',
+                      style: TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('El PDF se ha guardado exitosamente en:',
+                  style: TextStyle(fontSize: 14)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BianTheme.lightGray.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: BianTheme.lightGray),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.folder,
+                            size: 18, color: BianTheme.primaryRed),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            directory?.path ?? '',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: BianTheme.mediumGray,
+                                fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.description, size: 18, color: BianTheme.primaryRed),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(fileName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BianTheme.infoBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 20, color: BianTheme.infoBlue),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      Platform.isAndroid ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo' : 'Busca en la carpeta de Documentos de tu dispositivo',
-                      style: const TextStyle(fontSize: 11, color: BianTheme.darkGray),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.description,
+                            size: 18, color: BianTheme.primaryRed),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(fileName,
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BianTheme.infoBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        size: 20, color: BianTheme.infoBlue),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        Platform.isAndroid
+                            ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo'
+                            : 'Busca en la carpeta de Documentos de tu dispositivo',
+                        style: const TextStyle(
+                            fontSize: 11, color: BianTheme.darkGray),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar')),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await Share.shareXFiles([XFile(file.path)],
+                    text:
+                        '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Compartir'),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: BianTheme.infoBlue),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              await Share.shareXFiles([XFile(file.path)], text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
-            },
-            icon: const Icon(Icons.share),
-            label: const Text('Compartir'),
-            style: ElevatedButton.styleFrom(backgroundColor: BianTheme.infoBlue),
-          ),
-        ],
-      ),
-    );
-  } catch (e) {
-    print('💥 ERROR: $e');
-    if (context.mounted) Navigator.pop(context);
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('Error: $e')),
-            ],
-          ),
-          backgroundColor: BianTheme.errorRed,
-          duration: const Duration(seconds: 4),
-        ),
       );
+    } catch (e) {
+      print('💥 ERROR: $e');
+      if (context.mounted) Navigator.pop(context);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: $e')),
+              ],
+            ),
+            backgroundColor: BianTheme.errorRed,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
-}
 
-Future<void> _generateAndSharePDF(BuildContext context) async {
-  final loc = AppLocalizations.of(context);
-  
-  _showLoadingDialog(context, loc);
+  Future<void> _generateAndSharePDF(BuildContext context) async {
+    final loc = AppLocalizations.of(context);
 
-  try {
-    final pdf = await _buildPDFNoContext(loc);
-    
-    // ✅ CERRAR DIÁLOGO ANTES DE COMPARTIR
-    if (context.mounted) Navigator.pop(context);
-    
-    final output = await getTemporaryDirectory();
-    final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-    final file = File('${output.path}/$fileName');
-    await file.writeAsBytes(await pdf.save());
+    _showLoadingDialog(context, loc);
 
-    if (!context.mounted) return;
+    try {
+      final pdf = await _buildPDFNoContext(loc);
 
-    await Share.shareXFiles([XFile(file.path)], text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
+      // ✅ CERRAR DIÁLOGO ANTES DE COMPARTIR
+      if (context.mounted) Navigator.pop(context);
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text(loc.translate('pdf_generated'))),
-            ],
+      final output = await getTemporaryDirectory();
+      final fileName =
+          'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${output.path}/$fileName');
+      await file.writeAsBytes(await pdf.save());
+
+      if (!context.mounted) return;
+
+      await Share.shareXFiles([XFile(file.path)],
+          text:
+              '${loc.translate('evaluation_results')} - ${evaluation.farmName}');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(loc.translate('pdf_generated'))),
+              ],
+            ),
+            backgroundColor: BianTheme.successGreen,
           ),
-          backgroundColor: BianTheme.successGreen,
-        ),
-      );
-    }
-  } catch (e) {
-    print('💥 ERROR: $e');
-    if (context.mounted) Navigator.pop(context);
-    
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('Error: $e')),
-            ],
+        );
+      }
+    } catch (e) {
+      print('💥 ERROR: $e');
+      if (context.mounted) Navigator.pop(context);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: $e')),
+              ],
+            ),
+            backgroundColor: BianTheme.errorRed,
+            duration: const Duration(seconds: 4),
           ),
-          backgroundColor: BianTheme.errorRed,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+        );
+      }
     }
   }
-}
 
-  // ✅ MÉTODO SIN CONTEXT - RECIBE LOC COMO PARÁMETRO
   Future<pw.Document> _buildPDFNoContext(AppLocalizations loc) async {
     print('🔵 Iniciando generación de PDF...');
-    
+
     final pdf = pw.Document();
-    
+
     final overallScore = results['overall_score'] as double;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
@@ -404,7 +437,7 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
           return [
             // Header
             pw.Container(
-              padding: const pw.EdgeInsets.all(16),
+              padding: const pw.EdgeInsets.all(20),
               decoration: pw.BoxDecoration(
                 gradient: pw.LinearGradient(
                   colors: [
@@ -412,25 +445,58 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
                     PdfColor.fromInt(0xFFB71C1C),
                   ],
                 ),
-                borderRadius: pw.BorderRadius.circular(12),
+                borderRadius: pw.BorderRadius.circular(16),
               ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'BIAN',
-                    style: pw.TextStyle(
-                      fontSize: 32,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                    ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'BIAN',
+                        style: pw.TextStyle(
+                          fontSize: 36,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                      pw.SizedBox(height: 6),
+                      pw.Text(
+                        loc.translate('app_name'),
+                        style: const pw.TextStyle(
+                          fontSize: 13,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    loc.translate('app_name'),
-                    style: const pw.TextStyle(
-                      fontSize: 12,
-                      color: PdfColors.white,
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromInt(
+                          0xFFF5F5F5), // Color sólido gris claro
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Column(
+                      children: [
+                        pw.Text(
+                          overallScore.toStringAsFixed(1),
+                          style: pw.TextStyle(
+                            fontSize: 32,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.Text(
+                          '%',
+                          style: const pw.TextStyle(
+                            fontSize: 14,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -442,8 +508,9 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
             pw.Text(
               loc.translate('evaluation_results'),
               style: pw.TextStyle(
-                fontSize: 24,
+                fontSize: 26,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
 
@@ -452,88 +519,97 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
             pw.Container(
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
-                color: scoreColor.flatten(),
+                color: PdfColor.fromInt(0xFFEEEEEE), // Color sólido blanco-gris
                 borderRadius: pw.BorderRadius.circular(12),
+                border: pw.Border.all(color: scoreColor, width: 2),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    loc.translate('overall_score'),
-                    style: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                    ),
-                  ),
-                  pw.Text(
-                    '${overallScore.toStringAsFixed(1)}%',
-                    style: pw.TextStyle(
-                      fontSize: 32,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          loc.translate('compliance_level'),
+                          style: pw.TextStyle(
+                            fontSize: 14,
+                            color: PdfColor.fromInt(0xFF757575),
+                          ),
+                        ),
+                        pw.SizedBox(height: 6),
+                        pw.Text(
+                          loc.translate(complianceLevel),
+                          style: pw.TextStyle(
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                            color: scoreColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
 
-            pw.SizedBox(height: 8),
-
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: scoreColor),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Text(
-                '${loc.translate('compliance_level')}: ${loc.translate(complianceLevel)}',
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                  color: scoreColor,
-                ),
-              ),
-            ),
-
             pw.SizedBox(height: 24),
 
-            pw.Text(
-              loc.translate('farm_information'),
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFF5F5F5),
+                borderRadius: pw.BorderRadius.circular(12),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    loc.translate('farm_information'),
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromInt(0xFF2D2D2D),
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                  _buildInfoRow(
+                      loc.translate('farm_name'), evaluation.farmName),
+                  pw.SizedBox(height: 8),
+                  _buildInfoRow(
+                      loc.translate('location'), evaluation.farmLocation),
+                  pw.SizedBox(height: 8),
+                  _buildInfoRow(loc.translate('evaluator_name'),
+                      evaluation.evaluatorName),
+                  pw.SizedBox(height: 8),
+                  _buildInfoRow(
+                    loc.translate('evaluation_date'),
+                    '${evaluation.evaluationDate.day}/${evaluation.evaluationDate.month}/${evaluation.evaluationDate.year}',
+                  ),
+                  pw.SizedBox(height: 8),
+                  _buildInfoRow(loc.translate('species'), species.namePlural),
+                ],
               ),
             ),
-
-            pw.SizedBox(height: 12),
-
-            _buildInfoRow(loc.translate('farm_name'), evaluation.farmName),
-            _buildInfoRow(loc.translate('location'), evaluation.farmLocation),
-            _buildInfoRow(loc.translate('evaluator_name'), evaluation.evaluatorName),
-            _buildInfoRow(
-              loc.translate('evaluation_date'),
-              '${evaluation.evaluationDate.day}/${evaluation.evaluationDate.month}/${evaluation.evaluationDate.year}',
-            ),
-            _buildInfoRow(loc.translate('species'), species.namePlural),
 
             pw.SizedBox(height: 24),
 
             pw.Text(
               loc.translate('category_scores'),
               style: pw.TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
 
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 16),
 
             ...species.categories.map((category) {
               final score = categoryScores[category.id] ?? 0.0;
-              return _buildCategoryScore(
-                loc.translate(category.id),
-                score,
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 12),
+                child: _buildCategoryScore(loc.translate(category.id), score),
               );
             }),
 
@@ -542,23 +618,53 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
             pw.Text(
               loc.translate('critical_points'),
               style: pw.TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
 
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 16),
 
             if (criticalPoints.isEmpty)
               pw.Container(
-                padding: const pw.EdgeInsets.all(12),
+                padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFFF5F5F5),
+                  color: PdfColor.fromInt(0xFFE8F5E9),
                   borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColor.fromInt(0xFF4CAF50)),
                 ),
-                child: pw.Text(
-                  loc.translate('no_critical_points'),
-                  style: const pw.TextStyle(fontSize: 12),
+                child: pw.Row(
+                  children: [
+                    pw.Container(
+                      width: 24,
+                      height: 24,
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromInt(0xFF4CAF50),
+                        shape: pw.BoxShape.circle,
+                      ),
+                      child: pw.Center(
+                        child: pw.Text(
+                          '✓',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 14,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    pw.SizedBox(width: 12),
+                    pw.Expanded(
+                      child: pw.Text(
+                        loc.translate('no_critical_points'),
+                        style: pw.TextStyle(
+                          fontSize: 13,
+                          color: PdfColor.fromInt(0xFF2D2D2D),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               )
             else
@@ -567,30 +673,59 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
                 final categoryId = parts[0];
                 final fieldId = parts.sublist(1).join('_');
                 return pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 8),
-                  padding: const pw.EdgeInsets.all(12),
+                  margin: const pw.EdgeInsets.only(bottom: 10),
+                  padding: const pw.EdgeInsets.all(14),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromInt(0xFFFFEBEE),
                     borderRadius: pw.BorderRadius.circular(8),
                     border: pw.Border.all(
                       color: PdfColor.fromInt(0xFFD32F2F),
+                      width: 1.5,
                     ),
                   ),
                   child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Container(
-                        width: 8,
-                        height: 8,
+                        width: 22,
+                        height: 22,
                         decoration: pw.BoxDecoration(
                           color: PdfColor.fromInt(0xFFD32F2F),
                           shape: pw.BoxShape.circle,
                         ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            '!',
+                            style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontSize: 13,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                       pw.SizedBox(width: 12),
                       pw.Expanded(
-                        child: pw.Text(
-                          '${loc.translate(categoryId)}: ${loc.translate(fieldId)}',
-                          style: const pw.TextStyle(fontSize: 11),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              loc.translate(categoryId),
+                              style: pw.TextStyle(
+                                fontSize: 12,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromInt(0xFFD32F2F),
+                              ),
+                            ),
+                            pw.SizedBox(height: 4),
+                            pw.Text(
+                              loc.translate(fieldId),
+                              style: pw.TextStyle(
+                                fontSize: 11,
+                                color: PdfColor.fromInt(0xFF2D2D2D),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -603,52 +738,72 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
             pw.Text(
               loc.translate('strong_points'),
               style: pw.TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
 
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 16),
 
             if (strongPoints.isEmpty)
               pw.Container(
-                padding: const pw.EdgeInsets.all(12),
+                padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFF5F5F5),
                   borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColor.fromInt(0xFFE0E0E0)),
                 ),
                 child: pw.Text(
                   loc.translate('no_strong_points'),
-                  style: const pw.TextStyle(fontSize: 12),
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    color: PdfColor.fromInt(0xFF757575),
+                  ),
                 ),
               )
             else
               ...strongPoints.map((point) {
                 return pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 8),
-                  padding: const pw.EdgeInsets.all(12),
+                  margin: const pw.EdgeInsets.only(bottom: 10),
+                  padding: const pw.EdgeInsets.all(14),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromInt(0xFFE8F5E9),
                     borderRadius: pw.BorderRadius.circular(8),
                     border: pw.Border.all(
                       color: PdfColor.fromInt(0xFF4CAF50),
+                      width: 1.5,
                     ),
                   ),
                   child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Container(
-                        width: 8,
-                        height: 8,
+                        width: 22,
+                        height: 22,
                         decoration: pw.BoxDecoration(
                           color: PdfColor.fromInt(0xFF4CAF50),
                           shape: pw.BoxShape.circle,
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            '✓',
+                            style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontSize: 13,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                       pw.SizedBox(width: 12),
                       pw.Expanded(
                         child: pw.Text(
                           loc.translate(point.toString()),
-                          style: const pw.TextStyle(fontSize: 11),
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            color: PdfColor.fromInt(0xFF2D2D2D),
+                          ),
                         ),
                       ),
                     ],
@@ -661,39 +816,56 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
             pw.Text(
               loc.translate('recommendations'),
               style: pw.TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
 
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 16),
 
             ...List.generate(recommendations.length, (index) {
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 12),
-                padding: const pw.EdgeInsets.all(12),
+                padding: const pw.EdgeInsets.all(14),
                 decoration: pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFE3F2FD),
                   borderRadius: pw.BorderRadius.circular(8),
                   border: pw.Border.all(
                     color: PdfColor.fromInt(0xFF2196F3),
+                    width: 1.5,
                   ),
                 ),
                 child: pw.Row(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(
-                      '${index + 1}. ',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold,
+                    pw.Container(
+                      width: 24,
+                      height: 24,
+                      decoration: pw.BoxDecoration(
                         color: PdfColor.fromInt(0xFF2196F3),
+                        shape: pw.BoxShape.circle,
+                      ),
+                      child: pw.Center(
+                        child: pw.Text(
+                          '${index + 1}',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
                       ),
                     ),
+                    pw.SizedBox(width: 12),
                     pw.Expanded(
                       child: pw.Text(
                         recommendations[index].toString(),
-                        style: const pw.TextStyle(fontSize: 11),
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColor.fromInt(0xFF2D2D2D),
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
@@ -703,8 +875,8 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
 
             pw.SizedBox(height: 32),
 
-            pw.Divider(),
-            pw.SizedBox(height: 8),
+            pw.Divider(color: PdfColor.fromInt(0xFFE0E0E0)),
+            pw.SizedBox(height: 12),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -734,29 +906,28 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
   }
 
   pw.Widget _buildInfoRow(String label, String value) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 8),
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(
-        color: PdfColor.fromInt(0xFFF5F5F5),
-        borderRadius: pw.BorderRadius.circular(6),
-      ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            label,
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 11,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColor.fromInt(0xFF757575),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
             style: pw.TextStyle(
               fontSize: 11,
-              fontWeight: pw.FontWeight.bold,
+              color: PdfColor.fromInt(0xFF2D2D2D),
             ),
+            textAlign: pw.TextAlign.right,
           ),
-          pw.Text(
-            value,
-            style: const pw.TextStyle(fontSize: 11),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -771,7 +942,12 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
     }
 
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 12),
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColor.fromInt(0xFFE0E0E0)),
+      ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -781,36 +957,38 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
               pw.Text(
                 categoryName,
                 style: pw.TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromInt(0xFF2D2D2D),
                 ),
               ),
               pw.Text(
                 '${score.toStringAsFixed(1)}%',
                 style: pw.TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: pw.FontWeight.bold,
                   color: barColor,
                 ),
               ),
             ],
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 10),
           pw.Container(
-            height: 10,
+            height: 12,
             decoration: pw.BoxDecoration(
               color: PdfColor.fromInt(0xFFE0E0E0),
-              borderRadius: pw.BorderRadius.circular(5),
+              borderRadius: pw.BorderRadius.circular(6),
             ),
-            child: pw.Align(
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Container(
-                width: 500 * (score / 100),
-                decoration: pw.BoxDecoration(
-                  color: barColor,
-                  borderRadius: pw.BorderRadius.circular(5),
+            child: pw.Stack(
+              children: [
+                pw.Container(
+                  width: 500 * (score / 100),
+                  decoration: pw.BoxDecoration(
+                    color: barColor,
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -845,13 +1023,9 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildScoreHeader(context, overallScore, complianceLevel),
-            
             const SizedBox(height: 24),
-            
             _buildInfoCard(context, loc),
-            
             const SizedBox(height: 24),
-            
             Text(
               loc.translate('category_scores'),
               style: Theme.of(context).textTheme.headlineMedium,
@@ -861,33 +1035,36 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
               final score = categoryScores[category.id] ?? 0.0;
               return _buildCategoryScoreCard(context, loc, category.id, score);
             }),
-            
             const SizedBox(height: 24),
-            
             Text(
               loc.translate('critical_points'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
             if (criticalPoints.isEmpty)
-              _buildEmptyCard(context, loc.translate('no_critical_points'), BianTheme.successGreen)
+              _buildEmptyCard(context, loc.translate('no_critical_points'),
+                  BianTheme.successGreen)
             else
               ...criticalPoints.take(10).map((point) {
                 final parts = point.toString().split('_');
                 final categoryId = parts[0];
-                final fieldId = parts.sublist(1).join('_').replaceAll('_pigs', '').replaceAll('_birds', '');
-                return _buildCriticalPointCard(context, loc, categoryId, fieldId);
+                final fieldId = parts
+                    .sublist(1)
+                    .join('_')
+                    .replaceAll('_pigs', '')
+                    .replaceAll('_birds', '');
+                return _buildCriticalPointCard(
+                    context, loc, categoryId, fieldId);
               }),
-            
             const SizedBox(height: 24),
-            
             Text(
               loc.translate('strong_points'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
             if (strongPoints.isEmpty)
-              _buildEmptyCard(context, loc.translate('no_strong_points'), BianTheme.mediumGray)
+              _buildEmptyCard(context, loc.translate('no_strong_points'),
+                  BianTheme.mediumGray)
             else
               ...strongPoints.map((point) {
                 return _buildStrongPointCard(
@@ -895,18 +1072,15 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
                   loc.translate(point.toString()),
                 );
               }),
-            
             const SizedBox(height: 24),
-            
             Text(
               loc.translate('recommendations'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
-            ...recommendations.map((rec) => _buildRecommendationCard(context, rec.toString())),
-            
+            ...recommendations.map(
+                (rec) => _buildRecommendationCard(context, rec.toString())),
             const SizedBox(height: 32),
-            
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: Text(loc.translate('close')),
@@ -919,10 +1093,10 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
 
   Widget _buildScoreHeader(BuildContext context, double score, String level) {
     final loc = AppLocalizations.of(context);
-    
+
     Color scoreColor;
     IconData scoreIcon;
-    
+
     if (score >= 90) {
       scoreColor = BianTheme.successGreen;
       scoreIcon = Icons.celebration;
@@ -1078,7 +1252,8 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
     );
   }
 
-  Widget _buildCategoryScoreCard(BuildContext context, AppLocalizations loc, String categoryId, double score) {
+  Widget _buildCategoryScoreCard(BuildContext context, AppLocalizations loc,
+      String categoryId, double score) {
     Color barColor;
     if (score >= 80) {
       barColor = BianTheme.successGreen;
@@ -1134,7 +1309,8 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
     );
   }
 
-  Widget _buildCriticalPointCard(BuildContext context, AppLocalizations loc, String categoryId, String fieldId) {
+  Widget _buildCriticalPointCard(BuildContext context, AppLocalizations loc,
+      String categoryId, String fieldId) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1182,7 +1358,7 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
 
   String _getFieldLabel(AppLocalizations loc, String fieldId) {
     final language = evaluation.language;
-    
+
     final labelsEs = {
       'water_access': 'Acceso al agua',
       'feed_quality': 'Calidad del alimento',
@@ -1214,7 +1390,7 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
       'handling': 'Manejo',
       'castration': 'Castración',
     };
-    
+
     final labelsEn = {
       'water_access': 'Water access',
       'feed_quality': 'Feed quality',
@@ -1246,7 +1422,7 @@ Future<void> _generateAndSharePDF(BuildContext context) async {
       'handling': 'Handling',
       'castration': 'Castration',
     };
-    
+
     final labels = language == 'en' ? labelsEn : labelsEs;
     return labels[fieldId] ?? fieldId;
   }

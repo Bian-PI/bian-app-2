@@ -1,4 +1,3 @@
-// lib/features/splash/splash_screen.dart
 import 'dart:async';
 import 'package:bian_app/core/utils/connectivity_service.dart';
 import 'package:flutter/material.dart';
@@ -40,14 +39,20 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
     
-    Timer(const Duration(seconds: 3), _checkSession);
+    Timer(const Duration(seconds: 2), _checkSession);
   }
 
   Future<void> _checkSession() async {
+    print('🔍 Verificando conectividad desde Splash...');
     final connectivityService = ConnectivityService();
+    
+    await Future.delayed(Duration(milliseconds: 1000));
+    
     final hasConnection = await connectivityService.checkConnection();
+    print('📡 Resultado final de conexión: $hasConnection');
     
     if (!hasConnection) {
+      print('❌ SIN CONEXIÓN - Navegando a LoginScreen');
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -63,7 +68,9 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
     
+    print('✅ CON CONEXIÓN - Verificando sesión...');
     final hasSession = await _storage.hasActiveSession();
+    print('🔐 Sesión activa: $hasSession');
     
     if (!mounted) return;
     

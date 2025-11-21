@@ -733,89 +733,95 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     final progress = _evaluation.getProgress(widget.species);
 
     return WillPopScope(
-      onWillPop: () async {
-        if (_hasUnsavedChanges) {
-          final confirm = await showDialog<String>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text(loc.translate('exit_without_saving')),
-              content: Text(loc.translate('data_will_be_lost')),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, 'cancel'),
-                  child: Text(loc.translate('cancel')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, 'discard'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: BianTheme.errorRed,
-                  ),
-                  child: Text(loc.translate('exit')),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, 'save'),
-                  child: Text(loc.translate('save_draft')),
-                ),
-              ],
-            ),
-          );
-          
-          if (confirm == 'save') {
-            await _saveDraft();
-            return true;
-          } else if (confirm == 'discard') {
-            return true;
-          }
-          return false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${loc.translate('evaluation')} ${widget.species.namePlural}',
-                style: TextStyle(fontSize: 18),
-              ),
-              if (_evaluation.farmName.isNotEmpty)
-                Text(
-                  _evaluation.farmName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-            ],
-          ),
+  onWillPop: () async {
+    if (MediaQuery.of(context).viewInsets.bottom > 0) {
+      FocusScope.of(context).unfocus();
+      return false;
+    }
+    
+    if (_hasUnsavedChanges && !widget.isOfflineMode) {
+      final confirm = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(loc.translate('exit_without_saving')),
+          content: Text(loc.translate('data_will_be_lost')),
           actions: [
-            if (_hasUnsavedChanges)
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Center(
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: BianTheme.warningYellow,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-            IconButton(
-              icon: Icon(Icons.save_outlined),
-              onPressed: _saveDraft,
-              tooltip: loc.translate('save_draft'),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: Text(loc.translate('cancel')),
             ),
-            IconButton(
-              icon: Icon(Icons.info_outline),
-              onPressed: _showWelcomeDialog,
-              tooltip: loc.translate('information'),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'discard'),
+              style: TextButton.styleFrom(
+                foregroundColor: BianTheme.errorRed,
+              ),
+              child: Text(loc.translate('exit')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, 'save'),
+              child: Text(loc.translate('save_draft')),
             ),
           ],
         ),
+      );
+      
+      if (confirm == 'save') {
+        await _saveDraft();
+        return true;
+      } else if (confirm == 'discard') {
+        return true;
+      }
+      return false;
+    }
+    return true;
+  },
+  child: Scaffold(
+        appBar: AppBar(
+  title: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        '${loc.translate('evaluation')} ${widget.species.namePlural}',
+        style: TextStyle(fontSize: 18),
+      ),
+      if (_evaluation.farmName.isNotEmpty)
+        Text(
+          _evaluation.farmName,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+    ],
+  ),
+  actions: [
+    if (_hasUnsavedChanges && !widget.isOfflineMode)
+      Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Center(
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: BianTheme.warningYellow,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    if (!widget.isOfflineMode)
+      IconButton(
+        icon: Icon(Icons.save_outlined),
+        onPressed: _saveDraft,
+        tooltip: loc.translate('save_draft'),
+      ),
+    IconButton(
+      icon: Icon(Icons.info_outline),
+      onPressed: _showWelcomeDialog,
+      tooltip: loc.translate('information'),
+    ),
+  ],
+),
         body: Column(
           children: [
             Container(

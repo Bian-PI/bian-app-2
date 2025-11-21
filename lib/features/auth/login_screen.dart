@@ -33,24 +33,43 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _hasConnection = true;
+  bool _hasConnection = false;
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   DateTime? _lastBackPress;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeIn),
-    );
-    _animController.forward();
+@override
+void initState() {
+  super.initState();
+  _animController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  );
+  _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(parent: _animController, curve: Curves.easeIn),
+  );
+  _animController.forward();
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     _checkInitialConnection();
+  });
+}
+
+Future<void> _checkInitialConnection() async {
+  print('🔍 LoginScreen: Verificando conexión inicial...');
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
+  final hasConnection = await connectivityService.checkConnection();
+  
+  print('📡 LoginScreen: Conexión inicial detectada = $hasConnection');
+  
+  if (mounted) {
+    setState(() {
+      _hasConnection = hasConnection;
+    });
+    print('✅ LoginScreen: Estado actualizado a $_hasConnection');
   }
+}
 
   @override
   void dispose() {
@@ -58,15 +77,6 @@ class _LoginScreenState extends State<LoginScreen>
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkInitialConnection() async {
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
-    final hasConnection = await connectivityService.checkConnection();
-    if (mounted) {
-      setState(() => _hasConnection = hasConnection);
-    }
   }
 
   Future<void> _doLogin() async {
@@ -266,24 +276,31 @@ class _LoginScreenState extends State<LoginScreen>
         Provider.of<ConnectivityService>(context, listen: false);
 
     return WillPopScope(
-      onWillPop: () async {
-        final now = DateTime.now();
-        if (_lastBackPress == null || 
-            now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
-          _lastBackPress = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Presiona de nuevo para salir'),
-              duration: Duration(seconds: 2),
-              backgroundColor: BianTheme.mediumGray,
-            ),
-          );
-          return false;
-        }
-        SystemNavigator.pop();
-        return true;
-      },
-      child: Scaffold(
+  onWillPop: () async {
+    // Si el teclado está abierto, cerrarlo primero
+    if (MediaQuery.of(context).viewInsets.bottom > 0) {
+      FocusScope.of(context).unfocus();
+      return false;
+    }
+    
+    // Si no hay teclado, entonces mostrar diálogo de salida
+    final now = DateTime.now();
+    if (_lastBackPress == null || 
+        now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+      _lastBackPress = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Presiona de nuevo para salir'),
+          duration: Duration(seconds: 2),
+          backgroundColor: BianTheme.mediumGray,
+        ),
+      );
+      return false;
+    }
+    SystemNavigator.pop();
+    return true;
+  },
+  child: Scaffold(
         body: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
@@ -312,57 +329,62 @@ class _LoginScreenState extends State<LoginScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               StreamBuilder<bool>(
-                                stream: connectivityService.connectionStatus,
-                                initialData: _hasConnection,
-                                builder: (context, snapshot) {
-                                  final hasConnection = snapshot.data ?? true;
+  stream: connectivityService.connectionStatus,
+  builder: (context, snapshot) {
+    // ✅ SOLO usar el valor del snapshot si tiene datos
+    final bool currentConnection = snapshot.hasData 
+        ? snapshot.data! 
+        : _hasConnection;
+    
+    print('🔄 StreamBuilder: hasData=${snapshot.hasData}, data=${snapshot.data}, currentConnection=$currentConnection, _hasConnection=$_hasConnection');
+    
+    // ✅ SOLO actualizar si realmente cambió
+    if (snapshot.hasData && currentConnection != _hasConnection) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          print('🔄 LoginScreen: Actualizando estado de $_hasConnection a $currentConnection');
+          setState(() {
+            _hasConnection = currentConnection;
+          });
+        }
+      });
+    }
 
-                                  if (_hasConnection != hasConnection) {
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      if (mounted) {
-                                        setState(
-                                            () => _hasConnection = hasConnection);
-                                      }
-                                    });
-                                  }
-
-                                  return AnimatedContainer(
-                                    duration: Duration(milliseconds: 300),
-                                    child: TextButton.icon(
-                                      onPressed:
-                                          _isLoading ? null : _handleOfflineModeClick,
-                                      icon: Icon(
-                                        hasConnection ? Icons.wifi : Icons.wifi_off,
-                                        size: 20,
-                                      ),
-                                      label: Text(
-                                        hasConnection
-                                            ? loc.translate('offline_mode')
-                                            : loc.translate('no_connection'),
-                                      ),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: hasConnection
-                                            ? BianTheme.infoBlue
-                                            : BianTheme.errorRed,
-                                        backgroundColor: hasConnection
-                                            ? BianTheme.infoBlue.withOpacity(0.1)
-                                            : BianTheme.errorRed.withOpacity(0.1),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          side: BorderSide(
-                                            color: hasConnection
-                                                ? BianTheme.infoBlue.withOpacity(0.3)
-                                                : BianTheme.errorRed.withOpacity(0.3),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 300),
+      child: TextButton.icon(
+        onPressed: _isLoading ? null : _handleOfflineModeClick,
+        icon: Icon(
+          currentConnection ? Icons.wifi : Icons.wifi_off,
+          size: 20,
+        ),
+        label: Text(
+          currentConnection
+              ? loc.translate('offline_mode')
+              : loc.translate('no_connection'),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: currentConnection
+              ? BianTheme.infoBlue
+              : BianTheme.errorRed,
+          backgroundColor: currentConnection
+              ? BianTheme.infoBlue.withOpacity(0.1)
+              : BianTheme.errorRed.withOpacity(0.1),
+          padding: EdgeInsets.symmetric(
+              horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: currentConnection
+                  ? BianTheme.infoBlue.withOpacity(0.3)
+                  : BianTheme.errorRed.withOpacity(0.3),
+            ),
+          ),
+        ),
+      ),
+    );
+  },
+),
                               PopupMenuButton<Locale>(
                                 icon: Container(
                                   padding: const EdgeInsets.all(8),
