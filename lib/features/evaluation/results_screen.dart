@@ -1,4 +1,4 @@
-// lib/features/evaluation/results_screen.dart
+// lib/features/evaluation/results_screen.dart - REEMPLAZAR COMPLETO
 
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -26,7 +26,6 @@ class ResultsScreen extends StatelessWidget {
   });
 
   void _showPDFOptions(BuildContext context) {
-    
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -51,8 +50,6 @@ class ResultsScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 24),
-            
-            // Opción: Descargar PDF
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -72,10 +69,7 @@ class ResultsScreen extends StatelessWidget {
                 _downloadPDF(context);
               },
             ),
-            
             const SizedBox(height: 8),
-            
-            // Opción: Compartir PDF
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -95,7 +89,6 @@ class ResultsScreen extends StatelessWidget {
                 _generateAndSharePDF(context);
               },
             ),
-            
             const SizedBox(height: 16),
           ],
         ),
@@ -103,7 +96,6 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  // ✅ ANIMACIÓN MEJORADA
   void _showLoadingDialog(BuildContext context, AppLocalizations loc) {
     showDialog(
       context: context,
@@ -166,18 +158,17 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  // ✅ GUARDAR PDF MEJORADO - Guarda en Descargas/Downloads
   Future<void> _downloadPDF(BuildContext context) async {
     final loc = AppLocalizations.of(context);
     
     _showLoadingDialog(context, loc);
 
     try {
-      final pdf = await _buildPDF(context);
+      // ✅ Generar PDF sin context
+      final pdf = await _buildPDFNoContext(loc);
       
       Directory? directory;
       if (Platform.isAndroid) {
-        // En Android, usar directorio de Descargas
         directory = Directory('/storage/emulated/0/Download');
         if (!await directory.exists()) {
           directory = await getExternalStorageDirectory();
@@ -193,9 +184,8 @@ class ResultsScreen extends StatelessWidget {
       await file.writeAsBytes(await pdf.save());
 
       if (!context.mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
-      // Mostrar diálogo de éxito mejorado
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -332,8 +322,9 @@ class ResultsScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
+      print('💥 ERROR GENERANDO PDF: $e');
       if (!context.mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -357,16 +348,16 @@ class ResultsScreen extends StatelessWidget {
     _showLoadingDialog(context, loc);
 
     try {
-      final pdf = await _buildPDF(context);
+      // ✅ Generar PDF sin context
+      final pdf = await _buildPDFNoContext(loc);
       final output = await getTemporaryDirectory();
       final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${output.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
       if (!context.mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
-      // Compartir
       await Share.shareXFiles(
         [XFile(file.path)],
         text: '${loc.translate('evaluation_results')} - ${evaluation.farmName}',
@@ -386,8 +377,9 @@ class ResultsScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
+      print('💥 ERROR GENERANDO PDF: $e');
       if (!context.mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -405,8 +397,10 @@ class ResultsScreen extends StatelessWidget {
     }
   }
 
-  Future<pw.Document> _buildPDF(BuildContext context) async {
-    final loc = AppLocalizations.of(context);
+  // ✅ MÉTODO SIN CONTEXT - RECIBE LOC COMO PARÁMETRO
+  Future<pw.Document> _buildPDFNoContext(AppLocalizations loc) async {
+    print('🔵 Iniciando generación de PDF...');
+    
     final pdf = pw.Document();
     
     final overallScore = results['overall_score'] as double;
@@ -416,7 +410,8 @@ class ResultsScreen extends StatelessWidget {
     final strongPoints = results['strong_points'] as List;
     final recommendations = structuredJson['recommendations'] as List;
 
-    // Color basado en score
+    print('📊 Datos cargados - Score: $overallScore');
+
     PdfColor scoreColor;
     if (overallScore >= 90) {
       scoreColor = PdfColor.fromInt(0xFF4CAF50);
@@ -428,345 +423,343 @@ class ResultsScreen extends StatelessWidget {
       scoreColor = PdfColor.fromInt(0xFFD32F2F);
     }
 
+    print('🎨 Color determinado');
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        build: (context) => [
-          // Header
-          pw.Container(
-            padding: const pw.EdgeInsets.all(16),
-            decoration: pw.BoxDecoration(
-              gradient: pw.LinearGradient(
-                colors: [
-                  PdfColor.fromInt(0xFFEC1C21),
-                  PdfColor.fromInt(0xFFB71C1C),
-                ],
-              ),
-              borderRadius: pw.BorderRadius.circular(12),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'BIAN',
-                  style: pw.TextStyle(
-                    fontSize: 32,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  loc.translate('app_name'),
-                  style: const pw.TextStyle(
-                    fontSize: 12,
-                    color: PdfColors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          pw.SizedBox(height: 24),
-
-          // Título
-          pw.Text(
-            loc.translate('evaluation_results'),
-            style: pw.TextStyle(
-              fontSize: 24,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 20),
-
-          // Score general
-          pw.Container(
-            padding: const pw.EdgeInsets.all(16),
-            decoration: pw.BoxDecoration(
-              color: scoreColor.flatten(),
-              borderRadius: pw.BorderRadius.circular(12),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  loc.translate('overall_score'),
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
-                ),
-                pw.Text(
-                  '${overallScore.toStringAsFixed(1)}%',
-                  style: pw.TextStyle(
-                    fontSize: 32,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          pw.SizedBox(height: 8),
-
-          pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: scoreColor),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
-            child: pw.Text(
-              '${loc.translate('compliance_level')}: ${loc.translate(complianceLevel)}',
-              style: pw.TextStyle(
-                fontSize: 14,
-                fontWeight: pw.FontWeight.bold,
-                color: scoreColor,
-              ),
-            ),
-          ),
-
-          pw.SizedBox(height: 24),
-
-          // Información de la granja
-          pw.Text(
-            loc.translate('farm_information'),
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 12),
-
-          _buildInfoRow(loc.translate('farm_name'), evaluation.farmName),
-          _buildInfoRow(loc.translate('location'), evaluation.farmLocation),
-          _buildInfoRow(loc.translate('evaluator_name'), evaluation.evaluatorName),
-          _buildInfoRow(
-            loc.translate('evaluation_date'),
-            '${evaluation.evaluationDate.day}/${evaluation.evaluationDate.month}/${evaluation.evaluationDate.year}',
-          ),
-          _buildInfoRow(loc.translate('species'), species.namePlural),
-
-          pw.SizedBox(height: 24),
-
-          // Scores por categoría
-          pw.Text(
-            loc.translate('category_scores'),
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 12),
-
-          ...species.categories.map((category) {
-            final score = categoryScores[category.id] ?? 0.0;
-            return _buildCategoryScore(
-              loc.translate(category.id),
-              score,
-            );
-          }),
-
-          pw.SizedBox(height: 24),
-
-          // Puntos Críticos
-          pw.Text(
-            loc.translate('critical_points'),
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 12),
-
-          if (criticalPoints.isEmpty)
+        build: (context) {
+          print('📄 Construyendo página PDF...');
+          return [
+            // Header
             pw.Container(
-              padding: const pw.EdgeInsets.all(12),
+              padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFF5F5F5),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Text(
-                loc.translate('no_critical_points'),
-                style: const pw.TextStyle(fontSize: 12),
-              ),
-            )
-          else
-            ...criticalPoints.map((point) {
-              final parts = point.toString().split('_');
-              final categoryId = parts[0];
-              final fieldId = parts.sublist(1).join('_');
-              return pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 8),
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFFFFEBEE),
-                  borderRadius: pw.BorderRadius.circular(8),
-                  border: pw.Border.all(
-                    color: PdfColor.fromInt(0xFFD32F2F),
-                  ),
-                ),
-                child: pw.Row(
-                  children: [
-                    pw.Container(
-                      width: 8,
-                      height: 8,
-                      decoration: pw.BoxDecoration(
-                        color: PdfColor.fromInt(0xFFD32F2F),
-                        shape: pw.BoxShape.circle,
-                      ),
-                    ),
-                    pw.SizedBox(width: 12),
-                    pw.Expanded(
-                      child: pw.Text(
-                        '${loc.translate(categoryId)}: ${loc.translate(fieldId)}',
-                        style: const pw.TextStyle(fontSize: 11),
-                      ),
-                    ),
+                gradient: pw.LinearGradient(
+                  colors: [
+                    PdfColor.fromInt(0xFFEC1C21),
+                    PdfColor.fromInt(0xFFB71C1C),
                   ],
                 ),
-              );
-            }),
-
-          pw.SizedBox(height: 24),
-
-          // Puntos Fuertes
-          pw.Text(
-            loc.translate('strong_points'),
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 12),
-
-          if (strongPoints.isEmpty)
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFF5F5F5),
-                borderRadius: pw.BorderRadius.circular(8),
+                borderRadius: pw.BorderRadius.circular(12),
               ),
-              child: pw.Text(
-                loc.translate('no_strong_points'),
-                style: const pw.TextStyle(fontSize: 12),
-              ),
-            )
-          else
-            ...strongPoints.map((point) {
-              return pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 8),
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFFE8F5E9),
-                  borderRadius: pw.BorderRadius.circular(8),
-                  border: pw.Border.all(
-                    color: PdfColor.fromInt(0xFF4CAF50),
-                  ),
-                ),
-                child: pw.Row(
-                  children: [
-                    pw.Container(
-                      width: 8,
-                      height: 8,
-                      decoration: pw.BoxDecoration(
-                        color: PdfColor.fromInt(0xFF4CAF50),
-                        shape: pw.BoxShape.circle,
-                      ),
-                    ),
-                    pw.SizedBox(width: 12),
-                    pw.Expanded(
-                      child: pw.Text(
-                        loc.translate(point.toString()),
-                        style: const pw.TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-          pw.SizedBox(height: 24),
-
-          // Recomendaciones
-          pw.Text(
-            loc.translate('recommendations'),
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-
-          pw.SizedBox(height: 12),
-
-          ...List.generate(recommendations.length, (index) {
-            return pw.Container(
-              margin: const pw.EdgeInsets.only(bottom: 12),
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFE3F2FD),
-                borderRadius: pw.BorderRadius.circular(8),
-                border: pw.Border.all(
-                  color: PdfColor.fromInt(0xFF2196F3),
-                ),
-              ),
-              child: pw.Row(
+              child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    '${index + 1}. ',
+                    'BIAN',
                     style: pw.TextStyle(
-                      fontSize: 12,
+                      fontSize: 32,
                       fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromInt(0xFF2196F3),
+                      color: PdfColors.white,
                     ),
                   ),
-                  pw.Expanded(
-                    child: pw.Text(
-                      recommendations[index].toString(),
-                      style: const pw.TextStyle(fontSize: 11),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    loc.translate('app_name'),
+                    style: const pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.white,
                     ),
                   ),
                 ],
               ),
-            );
-          }),
+            ),
 
-          pw.SizedBox(height: 32),
+            pw.SizedBox(height: 24),
 
-          // Footer
-          pw.Divider(),
-          pw.SizedBox(height: 8),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'BIAN - ${loc.translate('app_name')}',
+            pw.Text(
+              loc.translate('evaluation_results'),
+              style: pw.TextStyle(
+                fontSize: 24,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: scoreColor.flatten(),
+                borderRadius: pw.BorderRadius.circular(12),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    loc.translate('overall_score'),
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                  pw.Text(
+                    '${overallScore.toStringAsFixed(1)}%',
+                    style: pw.TextStyle(
+                      fontSize: 32,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 8),
+
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: scoreColor),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Text(
+                '${loc.translate('compliance_level')}: ${loc.translate(complianceLevel)}',
                 style: pw.TextStyle(
-                  fontSize: 10,
-                  color: PdfColor.fromInt(0xFF757575),
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: scoreColor,
                 ),
               ),
-              pw.Text(
-                'Generado: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  color: PdfColor.fromInt(0xFF757575),
-                ),
+            ),
+
+            pw.SizedBox(height: 24),
+
+            pw.Text(
+              loc.translate('farm_information'),
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
               ),
-            ],
-          ),
-        ],
+            ),
+
+            pw.SizedBox(height: 12),
+
+            _buildInfoRow(loc.translate('farm_name'), evaluation.farmName),
+            _buildInfoRow(loc.translate('location'), evaluation.farmLocation),
+            _buildInfoRow(loc.translate('evaluator_name'), evaluation.evaluatorName),
+            _buildInfoRow(
+              loc.translate('evaluation_date'),
+              '${evaluation.evaluationDate.day}/${evaluation.evaluationDate.month}/${evaluation.evaluationDate.year}',
+            ),
+            _buildInfoRow(loc.translate('species'), species.namePlural),
+
+            pw.SizedBox(height: 24),
+
+            pw.Text(
+              loc.translate('category_scores'),
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+
+            pw.SizedBox(height: 12),
+
+            ...species.categories.map((category) {
+              final score = categoryScores[category.id] ?? 0.0;
+              return _buildCategoryScore(
+                loc.translate(category.id),
+                score,
+              );
+            }),
+
+            pw.SizedBox(height: 24),
+
+            pw.Text(
+              loc.translate('critical_points'),
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+
+            pw.SizedBox(height: 12),
+
+            if (criticalPoints.isEmpty)
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFFF5F5F5),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Text(
+                  loc.translate('no_critical_points'),
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
+              )
+            else
+              ...criticalPoints.map((point) {
+                final parts = point.toString().split('_');
+                final categoryId = parts[0];
+                final fieldId = parts.sublist(1).join('_');
+                return pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromInt(0xFFFFEBEE),
+                    borderRadius: pw.BorderRadius.circular(8),
+                    border: pw.Border.all(
+                      color: PdfColor.fromInt(0xFFD32F2F),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Container(
+                        width: 8,
+                        height: 8,
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromInt(0xFFD32F2F),
+                          shape: pw.BoxShape.circle,
+                        ),
+                      ),
+                      pw.SizedBox(width: 12),
+                      pw.Expanded(
+                        child: pw.Text(
+                          '${loc.translate(categoryId)}: ${loc.translate(fieldId)}',
+                          style: const pw.TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+            pw.SizedBox(height: 24),
+
+            pw.Text(
+              loc.translate('strong_points'),
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+
+            pw.SizedBox(height: 12),
+
+            if (strongPoints.isEmpty)
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFFF5F5F5),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Text(
+                  loc.translate('no_strong_points'),
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
+              )
+            else
+              ...strongPoints.map((point) {
+                return pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromInt(0xFFE8F5E9),
+                    borderRadius: pw.BorderRadius.circular(8),
+                    border: pw.Border.all(
+                      color: PdfColor.fromInt(0xFF4CAF50),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Container(
+                        width: 8,
+                        height: 8,
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromInt(0xFF4CAF50),
+                          shape: pw.BoxShape.circle,
+                        ),
+                      ),
+                      pw.SizedBox(width: 12),
+                      pw.Expanded(
+                        child: pw.Text(
+                          loc.translate(point.toString()),
+                          style: const pw.TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+            pw.SizedBox(height: 24),
+
+            pw.Text(
+              loc.translate('recommendations'),
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+
+            pw.SizedBox(height: 12),
+
+            ...List.generate(recommendations.length, (index) {
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 12),
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFFE3F2FD),
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(
+                    color: PdfColor.fromInt(0xFF2196F3),
+                  ),
+                ),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      '${index + 1}. ',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromInt(0xFF2196F3),
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Text(
+                        recommendations[index].toString(),
+                        style: const pw.TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            pw.SizedBox(height: 32),
+
+            pw.Divider(),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'BIAN - ${loc.translate('app_name')}',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColor.fromInt(0xFF757575),
+                  ),
+                ),
+                pw.Text(
+                  'Generado: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColor.fromInt(0xFF757575),
+                  ),
+                ),
+              ],
+            ),
+          ];
+        },
       ),
     );
 
+    print('✅ PDF construido exitosamente');
     return pdf;
   }
 
@@ -901,7 +894,6 @@ class ResultsScreen extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Puntos Críticos
             Text(
               loc.translate('critical_points'),
               style: Theme.of(context).textTheme.headlineMedium,
@@ -919,7 +911,6 @@ class ResultsScreen extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Puntos Fuertes
             Text(
               loc.translate('strong_points'),
               style: Theme.of(context).textTheme.headlineMedium,
@@ -1222,7 +1213,6 @@ class ResultsScreen extends StatelessWidget {
   String _getFieldLabel(AppLocalizations loc, String fieldId) {
     final language = evaluation.language;
     
-    // Mapeo de IDs a etiquetas
     final labelsEs = {
       'water_access': 'Acceso al agua',
       'feed_quality': 'Calidad del alimento',
