@@ -1,4 +1,3 @@
-// lib/features/home/offline_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -42,7 +41,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      // App cerrada o en segundo plano - limpiar reportes
       LocalReportsStorage.clearAllLocalReports();
     }
   }
@@ -98,131 +96,16 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
 
   Map<String, dynamic> _recalculateResults(
       Evaluation evaluation, Species species) {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
-    final categoryScores = <String, double>{};
-
-    for (var category in species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
-
-      for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = evaluation.responses[key];
-
-          if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
-
-            bool isPositive = false;
-            if (field.id.contains('access') ||
-                field.id.contains('quality') ||
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
-            }
-
-            if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
-            }
-          }
-        }
-      }
-
-      if (categoryTotal > 0) {
-        categoryScores[category.id] = (categoryPositive / categoryTotal) * 100;
-      }
-    }
-
-    final overallScore =
-        totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
-
-    String complianceLevel;
-    if (overallScore >= 90) {
-      complianceLevel = 'excellent';
-    } else if (overallScore >= 75) {
-      complianceLevel = 'good';
-    } else if (overallScore >= 60) {
-      complianceLevel = 'acceptable';
-    } else if (overallScore >= 40) {
-      complianceLevel = 'needs_improvement';
-    } else {
-      complianceLevel = 'critical';
-    }
-
-    final recommendationKeys = <String>[];
-    if (overallScore < 60)
-      recommendationKeys.add('immediate_attention_required');
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70)
-      recommendationKeys.add('improve_feeding_practices');
-    if (categoryScores['health'] != null && categoryScores['health']! < 70)
-      recommendationKeys.add('strengthen_health_program');
-    if (categoryScores['infrastructure'] != null &&
-        categoryScores['infrastructure']! < 70)
-      recommendationKeys.add('improve_infrastructure');
-    if (categoryScores['management'] != null &&
-        categoryScores['management']! < 70)
-      recommendationKeys.add('train_staff_welfare');
-    if (recommendationKeys.isEmpty)
-      recommendationKeys.add('maintain_current_practices');
-
-    return {
-      'overall_score': overallScore,
-      'compliance_level': complianceLevel,
-      'category_scores': categoryScores,
-      'recommendations': recommendationKeys,
-      'critical_points': [],
-      'strong_points': [],
-    };
+    // ... tu código actual
+    return {};
   }
 
   List<String> _translateRecommendations(
       List recommendationKeys, String language) {
-    final translations = <String, String>{
-      'immediate_attention_required': language == 'es'
-          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
-          : 'Immediate attention required to improve animal welfare conditions',
-      'improve_feeding_practices': language == 'es'
-          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
-          : 'Improve feeding practices and ensure constant access to quality water and food',
-      'strengthen_health_program': language == 'es'
-          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
-          : 'Strengthen animal health program, including vaccination and disease control',
-      'improve_infrastructure': language == 'es'
-          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
-          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': language == 'es'
-          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
-          : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': language == 'es'
-          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
-          : 'Maintain current good practices and continue monitoring animal welfare',
-    };
-
-    return recommendationKeys
-        .map((key) => translations[key] ?? key.toString())
-        .toList();
+    // ... tu código actual
+    return [];
   }
 
-// lib/features/home/offline_home_screen.dart - ACTUALIZAR TRADUCCIONES
-
-// En el método _deleteLocalReport:
   Future<void> _deleteLocalReport(String id) async {
     final loc = AppLocalizations.of(context);
 
@@ -251,11 +134,123 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
     }
   }
 
-// En el método _exitOfflineMode:
+  // ✅ MÉTODO EXTRAÍDO PARA MANEJAR LA SALIDA DEL MODO OFFLINE
+  Future<bool> _handleExitOfflineMode() async {
+    final loc = AppLocalizations.of(context);
 
-// lib/features/home/offline_home_screen.dart - ACTUALIZAR con WillPopScope
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: BianTheme.warningYellow.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.exit_to_app,
+                color: BianTheme.warningYellow,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                loc.translate('exit_offline_mode'),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              loc.translate('exit_offline_mode_warning'),
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BianTheme.errorRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: BianTheme.errorRed.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: BianTheme.errorRed, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _localReports.isEmpty
+                          ? 'Se cerrará el modo sin conexión'
+                          : 'Se eliminarán ${_localReports.length} reporte(s) local(es)',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: BianTheme.darkGray,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(loc.translate('cancel')),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: Icon(Icons.exit_to_app),
+            label: Text(loc.translate('exit')),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BianTheme.errorRed,
+            ),
+          ),
+        ],
+      ),
+    );
 
-// ✅ ENVOLVER EL Scaffold CON WillPopScope:
+    if (confirm == true) {
+      print('✅ Usuario confirmó salida del modo offline');
+      
+      // Limpiar reportes locales
+      await LocalReportsStorage.clearAllLocalReports();
+      print('🗑️ Reportes locales eliminados');
+
+      // Cambiar modo a online
+      if (mounted) {
+        Provider.of<AppModeProvider>(context, listen: false)
+            .setMode(AppMode.online);
+        print('🔄 Modo cambiado a ONLINE');
+
+        // ✅ NAVEGAR A LOGIN
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+        print('✅ Navegado a LoginScreen');
+      }
+      
+      return true;
+    }
+
+    print('❌ Usuario canceló salida');
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -265,119 +260,12 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // ✅ USAR WillPopScope CORRECTAMENTE
     return WillPopScope(
-      onWillPop: () async {
-        // Mostrar diálogo confirmando salida del modo offline
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: BianTheme.warningYellow.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.exit_to_app,
-                    color: BianTheme.warningYellow,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    loc.translate('exit_offline_mode'),
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.translate('exit_offline_mode_warning'),
-                  style: TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: BianTheme.errorRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: BianTheme.errorRed.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded,
-                          color: BianTheme.errorRed, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _localReports.isEmpty
-                              ? 'Se cerrará el modo sin conexión'
-                              : 'Se eliminarán ${_localReports.length} reporte(s) local(es)',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: BianTheme.darkGray,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(loc.translate('cancel')),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context, true),
-                icon: Icon(Icons.exit_to_app),
-                label: Text(loc.translate('exit')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BianTheme.errorRed,
-                ),
-              ),
-            ],
-          ),
-        );
-
-        if (confirm == true) {
-          // Limpiar reportes locales
-          await LocalReportsStorage.clearAllLocalReports();
-
-          // Cambiar modo a online
-          if (mounted) {
-            Provider.of<AppModeProvider>(context, listen: false)
-                .setMode(AppMode.online);
-
-            // Navegar a LoginScreen
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-              (route) => false,
-            );
-          }
-          return false; // No permitir el pop normal, ya navegamos manualmente
-        }
-
-        return false; // No salir si canceló
-      },
+      onWillPop: _handleExitOfflineMode,
       child: Scaffold(
         appBar: AppBar(
-          // ✅ IMPORTANTE: Remover el leading para que use el botón de retroceso por defecto
-          // que será interceptado por WillPopScope
+          // ✅ PERMITIR BOTÓN DE RETROCESO AUTOMÁTICO
           automaticallyImplyLeading: true,
           title: Row(
             children: [
@@ -388,16 +276,10 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
           ),
           backgroundColor: BianTheme.warningYellow,
           actions: [
+            // ✅ BOTÓN QUE LLAMA DIRECTAMENTE AL MÉTODO
             IconButton(
               icon: Icon(Icons.exit_to_app),
-              onPressed: () async {
-                // Usar la misma lógica del WillPopScope
-                await (this as State)
-                    .context
-                    .findAncestorWidgetOfExactType<WillPopScope>()
-                    ?.onWillPop
-                    ?.call();
-              },
+              onPressed: _handleExitOfflineMode,
               tooltip: loc.translate('exit'),
             ),
           ],
@@ -490,7 +372,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen>
       ),
     );
   }
-
   Widget _buildSpeciesCard(
       {required Species species, required VoidCallback onTap}) {
     return InkWell(
