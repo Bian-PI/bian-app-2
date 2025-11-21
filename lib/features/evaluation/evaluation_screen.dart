@@ -1,3 +1,4 @@
+// lib/features/evaluation/evaluation_screen.dart - SOLO AGREGAR ScrollController
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -14,7 +15,7 @@ import '../../core/storage/local_reports_storage.dart';
 class EvaluationScreen extends StatefulWidget {
   final Species species;
   final Evaluation? draftToEdit;
-  final String currentLanguage; // 'es' o 'en'
+  final String currentLanguage;
   final bool isOfflineMode;
 
   const EvaluationScreen({
@@ -22,7 +23,7 @@ class EvaluationScreen extends StatefulWidget {
     required this.species,
     this.draftToEdit,
     required this.currentLanguage,
-    this.isOfflineMode = false, // ✅ NUEVO
+    this.isOfflineMode = false,
   });
 
   @override
@@ -31,6 +32,7 @@ class EvaluationScreen extends StatefulWidget {
 
 class _EvaluationScreenState extends State<EvaluationScreen> {
   final _uuid = const Uuid();
+  final _scrollController = ScrollController();
   
   int _currentCategoryIndex = 0;
   late Evaluation _evaluation;
@@ -58,6 +60,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _farmNameController.dispose();
     _farmLocationController.dispose();
     _evaluatorNameController.dispose();
@@ -559,102 +562,100 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     return translatedRecommendations;
   }
 
-Future<void> _completeEvaluation() async {
-  final loc = AppLocalizations.of(context);
-  
-  if (!_evaluation.isComplete(widget.species)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(loc.translate('complete_required_fields')),
-        backgroundColor: BianTheme.warningYellow,
-      ),
-    );
-    return;
-  }
-
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      title: Text(loc.translate('finish_evaluation')),
-      content: Text(loc.translate('finish_evaluation_confirm')),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(loc.translate('cancel')),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(loc.translate('finish')),
-        ),
-      ],
-    ),
-  );
-
-  if (confirm == true) {
-    final results = _calculateResults();
-    final translatedRecommendations = _translateRecommendations(results['recommendations']);
+  Future<void> _completeEvaluation() async {
+    final loc = AppLocalizations.of(context);
     
-    final structuredJson = await _evaluation.generateStructuredJSON(
-      widget.species,
-      results,
-      translatedRecommendations,
-    );
-
-    _logEvaluationResults(structuredJson);
-
-    final completedEvaluation = _evaluation.copyWith(
-      status: 'completed',
-      overallScore: results['overall_score'],
-      categoryScores: Map<String, double>.from(results['category_scores']),
-      updatedAt: DateTime.now(),
-    );
-    
-    // ✅ GUARDAR EN LOCAL O SERVIDOR SEGÚN EL MODO
-    if (widget.isOfflineMode) {
-      await LocalReportsStorage.saveLocalReport(completedEvaluation);
-    } else {
-      await ReportsStorage.saveReport(completedEvaluation);
-      await DraftsStorage.deleteDraft(_evaluation.id);
-    }
-    
-    setState(() => _hasUnsavedChanges = false);
-    
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResultsScreen(
-            evaluation: completedEvaluation,
-            species: widget.species,
-            results: results,
-            structuredJson: structuredJson,
-          ),
+    if (!_evaluation.isComplete(widget.species)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(loc.translate('complete_required_fields')),
+          backgroundColor: BianTheme.warningYellow,
         ),
       );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(loc.translate('finish_evaluation')),
+        content: Text(loc.translate('finish_evaluation_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(loc.translate('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(loc.translate('finish')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final results = _calculateResults();
+      final translatedRecommendations = _translateRecommendations(results['recommendations']);
+      
+      final structuredJson = await _evaluation.generateStructuredJSON(
+        widget.species,
+        results,
+        translatedRecommendations,
+      );
+
+      _logEvaluationResults(structuredJson);
+
+      final completedEvaluation = _evaluation.copyWith(
+        status: 'completed',
+        overallScore: results['overall_score'],
+        categoryScores: Map<String, double>.from(results['category_scores']),
+        updatedAt: DateTime.now(),
+      );
+      
+      if (widget.isOfflineMode) {
+        await LocalReportsStorage.saveLocalReport(completedEvaluation);
+      } else {
+        await ReportsStorage.saveReport(completedEvaluation);
+        await DraftsStorage.deleteDraft(_evaluation.id);
+      }
+      
+      setState(() => _hasUnsavedChanges = false);
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultsScreen(
+              evaluation: completedEvaluation,
+              species: widget.species,
+              results: results,
+              structuredJson: structuredJson,
+            ),
+          ),
+        );
+      }
     }
   }
-}
-void printJson(dynamic data, {String indent = ''}) {
-  if (data is Map) {
-    data.forEach((key, value) {
-      print('$indent$key:');
-      printJson(value, indent: '$indent  ');
-    });
-  } else if (data is List) {
-    for (int i = 0; i < data.length; i++) {
-      print('$indent[$i]:');
-      printJson(data[i], indent: '$indent  ');
+
+  void printJson(dynamic data, {String indent = ''}) {
+    if (data is Map) {
+      data.forEach((key, value) {
+        print('$indent$key:');
+        printJson(value, indent: '$indent  ');
+      });
+    } else if (data is List) {
+      for (int i = 0; i < data.length; i++) {
+        print('$indent[$i]:');
+        printJson(data[i], indent: '$indent  ');
+      }
+    } else {
+      print('$indent$data');
     }
-  } else {
-    print('$indent$data');
   }
-}
 
-
-  // ✅ LOGGER ESTRUCTURADO PARA LA CONSOLA
   void _logEvaluationResults(Map<String, dynamic> json) {
     print('\n');
     printJson(json);
@@ -681,7 +682,7 @@ void printJson(dynamic data, {String indent = ''}) {
     final categories = Map<String, dynamic>.from(json['categories']);
     categories.forEach((categoryId, categoryData) {
       final data = categoryData as Map<String, dynamic>;
-      final score = data['score']; // Ya es string
+      final score = data['score'];
       print('   ├─ ${categoryId.toUpperCase()}: ${score ?? 'N/A'}%');
       
       data.forEach((key, value) {
@@ -941,6 +942,7 @@ void printJson(dynamic data, {String indent = ''}) {
 
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: currentCategory.fields.length,
                 itemBuilder: (context, index) {
@@ -979,6 +981,11 @@ void printJson(dynamic data, {String indent = ''}) {
                           setState(() {
                             _currentCategoryIndex--;
                           });
+                          _scrollController.animateTo(
+                            0,
+                            duration: Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
                         },
                         icon: Icon(Icons.arrow_back),
                         label: Text(loc.translate('previous')),
@@ -1001,6 +1008,11 @@ void printJson(dynamic data, {String indent = ''}) {
                             setState(() {
                               _currentCategoryIndex++;
                             });
+                            _scrollController.animateTo(
+                              0,
+                              duration: Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
                           }
                         } else {
                           _completeEvaluation();

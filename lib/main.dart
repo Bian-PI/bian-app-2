@@ -1,11 +1,11 @@
-// lib/main.dart - ACTUALIZAR
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/providers/language_provider.dart';
-import 'core/providers/app_mode_provider.dart'; // ✅ NUEVO
-import 'core/utils/connectivity_service.dart'; // ✅ NUEVO
+import 'core/providers/app_mode_provider.dart';
+import 'core/utils/connectivity_service.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/theme/bian_theme.dart';
 import 'features/splash/splash_screen.dart';
@@ -18,16 +18,20 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+    overlays: [SystemUiOverlay.top],
+  );
+  
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   
-  // ✅ INICIALIZAR SERVICIO DE CONECTIVIDAD
   final connectivityService = ConnectivityService();
   await connectivityService.initialize();
   
@@ -36,12 +40,13 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => AppModeProvider()..initialize()),
-        Provider<ConnectivityService>.value(value: connectivityService), // ✅ TIPADO
+        Provider<ConnectivityService>.value(value: connectivityService),
       ],
       child: const BianApp(),
     ),
   );
 }
+
 class BianApp extends StatelessWidget {
   const BianApp({super.key});
 

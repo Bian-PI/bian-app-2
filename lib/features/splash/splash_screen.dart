@@ -1,6 +1,6 @@
+// lib/features/splash/splash_screen.dart
 import 'dart:async';
 import 'package:bian_app/core/utils/connectivity_service.dart';
-import 'package:bian_app/features/auth/offline_mode_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
@@ -25,7 +25,6 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     
-    // Configurar animaciones
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -41,48 +40,46 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
     
-    // Navegar después de 3 segundos
     Timer(const Duration(seconds: 3), _checkSession);
   }
 
-Future<void> _checkSession() async {
-  // ✅ VERIFICAR CONECTIVIDAD
-  final connectivityService = ConnectivityService();
-  final hasConnection = await connectivityService.checkConnection();
-  
-  if (!hasConnection) {
-    // Sin conexión - ir a modo offline
+  Future<void> _checkSession() async {
+    final connectivityService = ConnectivityService();
+    final hasConnection = await connectivityService.checkConnection();
+    
+    if (!hasConnection) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
+      return;
+    }
+    
+    final hasSession = await _storage.hasActiveSession();
+    
     if (!mounted) return;
+    
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const OfflineModeScreen(),
+            hasSession ? const HomeScreen() : const LoginScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 600),
       ),
     );
-    return;
   }
-  
-  final hasSession = await _storage.hasActiveSession();
-  
-  if (!mounted) return;
-  
-  Navigator.pushReplacement(
-    context,
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          hasSession ? const HomeScreen() : const LoginScreen(),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 600),
-    ),
-  );
-}
+
   @override
   void dispose() {
     _controller.dispose();
@@ -104,7 +101,6 @@ Future<void> _checkSession() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -122,7 +118,6 @@ Future<void> _checkSession() async {
                   
                   const SizedBox(height: 32),
                   
-                  // Título
                   const Text(
                     'BIAN',
                     style: TextStyle(
@@ -142,7 +137,6 @@ Future<void> _checkSession() async {
                   
                   const SizedBox(height: 8),
                   
-                  // Subtítulo
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -165,7 +159,6 @@ Future<void> _checkSession() async {
                   
                   const SizedBox(height: 50),
                   
-                  // Loading indicator
                   const SizedBox(
                     width: 40,
                     height: 40,

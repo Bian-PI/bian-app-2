@@ -1,8 +1,8 @@
-// lib/features/auth/login_screen.dart - REEMPLAZAR COMPLETO
-
+// lib/features/auth/login_screen.dart
 import 'package:bian_app/core/providers/language_provider.dart';
 import 'package:bian_app/core/utils/connectivity_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
@@ -36,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _hasConnection = true;
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
+  DateTime? _lastBackPress;
 
   @override
   void initState() {
@@ -151,13 +152,10 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-// lib/features/auth/login_screen.dart - ACTUALIZAR DIÁLOGO CON TRADUCCIONES
-
   void _handleOfflineModeClick() {
     final loc = AppLocalizations.of(context);
 
     if (_hasConnection) {
-      // ✅ TIENE CONEXIÓN - PREGUNTAR SI QUIERE CONTINUAR OFFLINE
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -251,7 +249,6 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
     } else {
-      // ✅ NO TIENE CONEXIÓN - IR DIRECTO A MODO OFFLINE
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -261,7 +258,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-// ✅ ACTUALIZAR EL BOTÓN DINÁMICO CON TRADUCCIONES
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -270,325 +266,352 @@ class _LoginScreenState extends State<LoginScreen>
         Provider.of<ConnectivityService>(context, listen: false);
 
     return WillPopScope(
-      onWillPop: () async => false,
+      onWillPop: () async {
+        final now = DateTime.now();
+        if (_lastBackPress == null || 
+            now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+          _lastBackPress = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Presiona de nuevo para salir'),
+              duration: Duration(seconds: 2),
+              backgroundColor: BianTheme.mediumGray,
+            ),
+          );
+          return false;
+        }
+        SystemNavigator.pop();
+        return true;
+      },
       child: Scaffold(
         body: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(BianTheme.paddingLarge),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _checkInitialConnection();
+              },
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(BianTheme.paddingLarge),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height - 
+                        MediaQuery.of(context).padding.top - 
+                        MediaQuery.of(context).padding.bottom - 48,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 20),
 
-                    // ✅ BARRA SUPERIOR CON CONEXIÓN DINÁMICA
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // ✅ BOTÓN OFFLINE DINÁMICO CON STREAM Y TRADUCCIONES
-                        StreamBuilder<bool>(
-                          stream: connectivityService.connectionStatus,
-                          initialData: _hasConnection,
-                          builder: (context, snapshot) {
-                            final hasConnection = snapshot.data ?? true;
-
-                            // Actualizar estado local
-                            if (_hasConnection != hasConnection) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) {
-                                  setState(
-                                      () => _hasConnection = hasConnection);
-                                }
-                              });
-                            }
-
-                            return AnimatedContainer(
-                              duration: Duration(milliseconds: 300),
-                              child: TextButton.icon(
-                                onPressed:
-                                    _isLoading ? null : _handleOfflineModeClick,
-                                icon: Icon(
-                                  hasConnection ? Icons.wifi : Icons.wifi_off,
-                                  size: 20,
-                                ),
-                                label: Text(
-                                  hasConnection
-                                      ? loc.translate('offline_mode')
-                                      : loc.translate('no_connection'),
-                                ),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: hasConnection
-                                      ? BianTheme.infoBlue
-                                      : BianTheme.errorRed,
-                                  backgroundColor: hasConnection
-                                      ? BianTheme.infoBlue.withOpacity(0.1)
-                                      : BianTheme.errorRed.withOpacity(0.1),
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(
-                                      color: hasConnection
-                                          ? BianTheme.infoBlue.withOpacity(0.3)
-                                          : BianTheme.errorRed.withOpacity(0.3),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        PopupMenuButton<Locale>(
-                          icon: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: BianTheme.lightGray,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.language,
-                              color: BianTheme.primaryRed,
-                              size: 24,
-                            ),
-                          ),
-                          offset: const Offset(0, 45),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: const Locale('es'),
-                              child: Row(
-                                children: [
-                                  const Text('🇪🇸',
-                                      style: TextStyle(fontSize: 24)),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    loc.translate('spanish'),
-                                    style: TextStyle(
-                                      fontWeight: languageProvider
-                                                  .locale.languageCode ==
-                                              'es'
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: languageProvider
-                                                  .locale.languageCode ==
-                                              'es'
-                                          ? BianTheme.primaryRed
-                                          : null,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: const Locale('en'),
-                              child: Row(
-                                children: [
-                                  const Text('🇺🇸',
-                                      style: TextStyle(fontSize: 24)),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    loc.translate('english'),
-                                    style: TextStyle(
-                                      fontWeight: languageProvider
-                                                  .locale.languageCode ==
-                                              'en'
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: languageProvider
-                                                  .locale.languageCode ==
-                                              'en'
-                                          ? BianTheme.primaryRed
-                                          : null,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onSelected: _isLoading
-                              ? null
-                              : (Locale newLocale) {
-                                  languageProvider.setLocale(newLocale);
-                                },
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-                    Hero(
-                      tag: 'bian_logo',
-                      child: Image.asset(
-                        'assets/images/logo2.png',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    Text(
-                      loc.translate('welcome'),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: BianTheme.primaryRed,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      loc.translate('login_subtitle'),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    TextFormField(
-                      controller: _emailController,
-                      enabled: !_isLoading,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: loc.translate('email_or_document'),
-                        hintText: 'ejemplo@correo.com',
-                        prefixIcon: const Icon(Icons.person_outline),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return loc.translate('field_required');
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    TextFormField(
-                      controller: _passwordController,
-                      enabled: !_isLoading,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: loc.translate('password'),
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: _isLoading
-                              ? null
-                              : () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return loc.translate('field_required');
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    ElevatedButton(
-                      onPressed:
-                          (_isLoading || !_hasConnection) ? null : _doLogin,
-                      child: _isLoading
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(loc.translate('signing_in')),
-                              ],
-                            )
-                          : Text(loc.translate('sign_in')),
-                    ),
-
-                    // ✅ ALERTA DE SIN CONEXIÓN CON TRADUCCIÓN
-                    if (!_hasConnection)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: BianTheme.errorRed.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: BianTheme.errorRed.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(Icons.wifi_off,
-                                  color: BianTheme.errorRed, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  loc.translate('no_connection_use_offline'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: BianTheme.darkGray,
+                              StreamBuilder<bool>(
+                                stream: connectivityService.connectionStatus,
+                                initialData: _hasConnection,
+                                builder: (context, snapshot) {
+                                  final hasConnection = snapshot.data ?? true;
+
+                                  if (_hasConnection != hasConnection) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted) {
+                                        setState(
+                                            () => _hasConnection = hasConnection);
+                                      }
+                                    });
+                                  }
+
+                                  return AnimatedContainer(
+                                    duration: Duration(milliseconds: 300),
+                                    child: TextButton.icon(
+                                      onPressed:
+                                          _isLoading ? null : _handleOfflineModeClick,
+                                      icon: Icon(
+                                        hasConnection ? Icons.wifi : Icons.wifi_off,
+                                        size: 20,
+                                      ),
+                                      label: Text(
+                                        hasConnection
+                                            ? loc.translate('offline_mode')
+                                            : loc.translate('no_connection'),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: hasConnection
+                                            ? BianTheme.infoBlue
+                                            : BianTheme.errorRed,
+                                        backgroundColor: hasConnection
+                                            ? BianTheme.infoBlue.withOpacity(0.1)
+                                            : BianTheme.errorRed.withOpacity(0.1),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          side: BorderSide(
+                                            color: hasConnection
+                                                ? BianTheme.infoBlue.withOpacity(0.3)
+                                                : BianTheme.errorRed.withOpacity(0.3),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              PopupMenuButton<Locale>(
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: BianTheme.lightGray,
+                                    shape: BoxShape.circle,
                                   ),
+                                  child: const Icon(
+                                    Icons.language,
+                                    color: BianTheme.primaryRed,
+                                    size: 24,
+                                  ),
+                                ),
+                                offset: const Offset(0, 45),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: const Locale('es'),
+                                    child: Row(
+                                      children: [
+                                        const Text('🇪🇸',
+                                            style: TextStyle(fontSize: 24)),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          loc.translate('spanish'),
+                                          style: TextStyle(
+                                            fontWeight: languageProvider
+                                                        .locale.languageCode ==
+                                                    'es'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: languageProvider
+                                                        .locale.languageCode ==
+                                                    'es'
+                                                ? BianTheme.primaryRed
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: const Locale('en'),
+                                    child: Row(
+                                      children: [
+                                        const Text('🇺🇸',
+                                            style: TextStyle(fontSize: 24)),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          loc.translate('english'),
+                                          style: TextStyle(
+                                            fontWeight: languageProvider
+                                                        .locale.languageCode ==
+                                                    'en'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: languageProvider
+                                                        .locale.languageCode ==
+                                                    'en'
+                                                ? BianTheme.primaryRed
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                onSelected: _isLoading
+                                    ? null
+                                    : (Locale newLocale) {
+                                        languageProvider.setLocale(newLocale);
+                                      },
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                          Hero(
+                            tag: 'bian_logo',
+                            child: Image.asset(
+                              'assets/images/logo2.png',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          Text(
+                            loc.translate('welcome'),
+                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  color: BianTheme.primaryRed,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            loc.translate('login_subtitle'),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          TextFormField(
+                            controller: _emailController,
+                            enabled: !_isLoading,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: loc.translate('email_or_document'),
+                              hintText: 'ejemplo@correo.com',
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return loc.translate('field_required');
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          TextFormField(
+                            controller: _passwordController,
+                            enabled: !_isLoading,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: loc.translate('password'),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => setState(
+                                        () => _obscurePassword = !_obscurePassword),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return loc.translate('field_required');
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          ElevatedButton(
+                            onPressed:
+                                (_isLoading || !_hasConnection) ? null : _doLogin,
+                            child: _isLoading
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(loc.translate('signing_in')),
+                                    ],
+                                  )
+                                : Text(loc.translate('sign_in')),
+                          ),
+
+                          if (!_hasConnection)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: BianTheme.errorRed.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: BianTheme.errorRed.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.wifi_off,
+                                        color: BianTheme.errorRed, size: 20),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        loc.translate('no_connection_use_offline'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: BianTheme.darkGray,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 20),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${loc.translate('no_account')} ',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              GestureDetector(
+                                onTap: (_isLoading || !_hasConnection)
+                                    ? null
+                                    : () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const RegisterScreen(),
+                                          ),
+                                        ),
+                                child: Text(
+                                  loc.translate('register'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: (_hasConnection && !_isLoading)
+                                            ? BianTheme.primaryRed
+                                            : BianTheme.mediumGray,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-
-                    const SizedBox(height: 20),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${loc.translate('no_account')} ',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        GestureDetector(
-                          onTap: (_isLoading || !_hasConnection)
-                              ? null
-                              : () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const RegisterScreen(),
-                                    ),
-                                  ),
-                          child: Text(
-                            loc.translate('register'),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: (_hasConnection && !_isLoading)
-                                      ? BianTheme.primaryRed
-                                      : BianTheme.mediumGray,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
