@@ -57,7 +57,7 @@ class Evaluation {
       language: json['language'] ?? 'es',
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      user: null, // si quieres luego cargarlo, hazlo fuera
+      user: null,
     );
   }
 
@@ -144,13 +144,12 @@ class Evaluation {
     return true;
   }
 
-  // 🔥 JSON estructurado, ahora async
+  // 🔥 JSON GENÉRICO - Funciona para todas las especies
   Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
     List<String> translatedRecommendations,
   ) async {
-
     final user = await _storage.getUser();
 
     final structuredJson = <String, dynamic>{
@@ -165,30 +164,77 @@ class Evaluation {
       'status': status,
       'overall_score': results['overall_score'],
       'compliance_level': results['compliance_level'],
-      'categories': {},
+      'categories': _buildGenericCategories(species, results),
+      'critical_points': _formatCriticalPoints(results['critical_points']),
+      'strong_points': _formatStrongPoints(results['strong_points']),
+      'recommendations': translatedRecommendations,
     };
+
+    return structuredJson;
+  }
+
+  // ✅ Construir categorías de forma genérica
+  Map<String, dynamic> _buildGenericCategories(
+    Species species,
+    Map<String, dynamic> results,
+  ) {
+    final categories = <String, dynamic>{};
 
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
 
+      // Agregar score de la categoría
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
         categoryData['score'] = results['category_scores'][category.id];
       }
 
+      // Agregar respuestas de los campos de forma genérica
+      categoryData['responses'] = {};
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
         final value = responses[key];
-        categoryData[field.id] = value;
+        
+        // Usar el ID del campo sin el sufijo de especie
+        final genericFieldId = _getGenericFieldId(field.id);
+        categoryData['responses'][genericFieldId] = value;
       }
 
-      structuredJson['categories'][category.id] = categoryData;
+      categories[category.id] = categoryData;
     }
 
-    structuredJson['critical_points'] = results['critical_points'];
-    structuredJson['strong_points'] = results['strong_points'];
-    structuredJson['recommendations'] = translatedRecommendations;
+    return categories;
+  }
 
-    return structuredJson;
+  // ✅ Obtener ID genérico del campo (sin sufijos como _pigs, _birds)
+  String _getGenericFieldId(String fieldId) {
+    // Remover sufijos específicos de especie
+    return fieldId
+        .replaceAll('_pigs', '')
+        .replaceAll('_birds', '');
+  }
+
+  // ✅ Formatear puntos críticos de forma legible
+  List<Map<String, dynamic>> _formatCriticalPoints(List criticalPoints) {
+    return criticalPoints.map((point) {
+      final parts = point.toString().split('_');
+      final categoryId = parts[0];
+      final fieldId = parts.sublist(1).join('_');
+      
+      return {
+        'category': categoryId,
+        'field': _getGenericFieldId(fieldId),
+        'full_id': point.toString(),
+      };
+    }).toList();
+  }
+
+  // ✅ Formatear puntos fuertes
+  List<Map<String, dynamic>> _formatStrongPoints(List strongPoints) {
+    return strongPoints.map((point) {
+      return {
+        'category': point.toString(),
+      };
+    }).toList();
   }
 }

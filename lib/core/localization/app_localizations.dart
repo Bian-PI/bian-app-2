@@ -251,6 +251,25 @@ class AppLocalizations {
       'view_report': 'Ver Reporte',
       'evaluation_date': 'Fecha de evaluación',
       'draft_for': 'Borrador para',
+
+            // PDF y compartir
+      'share_report': 'Compartir Reporte',
+      'download_pdf': 'Descargar PDF',
+      'generating_pdf': 'Generando PDF...',
+      'pdf_generated': 'PDF generado exitosamente',
+      'error_generating_pdf': 'Error al generar PDF',
+
+      // Recomendaciones traducidas
+      'improve_feeding_practices': 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad',
+      'strengthen_health_program': 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades',
+      'improve_infrastructure': 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas',
+      'train_staff_welfare': 'Capacitar al personal en bienestar animal y mantener registros actualizados',
+      'maintain_current_practices': 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal',
+      'immediate_attention_required': 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal',
+
+      // Puntos críticos y fuertes
+      'no_critical_points': 'No se identificaron puntos críticos',
+      'no_strong_points': 'No se identificaron puntos fuertes destacables',
     },
     'en': {
       'app_name': 'BIAN - Animal Welfare',
@@ -491,6 +510,26 @@ class AppLocalizations {
       'view_report': 'View Report',
       'evaluation_date': 'Evaluation date',
       'draft_for': 'Draft for',
+
+      // PDF and sharing
+      'share_report': 'Share Report',
+      'download_pdf': 'Download PDF',
+      'generating_pdf': 'Generating PDF...',
+      'pdf_generated': 'PDF generated successfully',
+      'error_generating_pdf': 'Error generating PDF',
+
+      // Translated recommendations
+      'improve_feeding_practices': 'Improve feeding practices and ensure constant access to quality water and food',
+      'strengthen_health_program': 'Strengthen animal health program, including vaccination and disease control',
+      'improve_infrastructure': 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
+      'train_staff_welfare': 'Train staff in animal welfare and maintain updated records',
+      'maintain_current_practices': 'Maintain current good practices and continue monitoring animal welfare',
+      'immediate_attention_required': 'Immediate attention required to improve animal welfare conditions',
+
+      // Critical and strong points
+      'no_critical_points': 'No critical points identified',
+      'no_strong_points': 'No strong points identified',
+
     },
   };
 

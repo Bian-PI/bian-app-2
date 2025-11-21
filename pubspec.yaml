@@ -10,38 +10,31 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # Localización
   flutter_localizations:
     sdk: flutter
   intl: 0.20.2
   
-  # HTTP & API
   http: ^1.2.2
   dio: ^5.9.0
   
-  # Almacenamiento
   flutter_secure_storage: ^8.1.0
   shared_preferences: ^2.5.3
   
-  # Estado
   provider: ^6.1.5
   
-  # UI & Animaciones
   google_fonts: ^6.3.2
   lottie: ^2.7.0
   flutter_svg: ^2.2.1
   
-  # Validación
   validators: ^3.0.0
-  
-  # JSON
   json_annotation: ^4.9.0
-  
-  # Iconos
   flutter_launcher_icons: ^0.14.4
-  
-  # UUID para IDs únicos
   uuid: ^4.5.1
+  
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  share_plus: ^10.1.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
