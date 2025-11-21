@@ -29,38 +29,58 @@ class ResultsScreen extends StatelessWidget {
     if (Platform.isAndroid) {
       try {
         final androidInfo = await DeviceInfoPlugin().androidInfo;
-        print('📱 Android SDK: ${androidInfo.version.sdkInt}');
+        final sdkInt = androidInfo.version.sdkInt;
+        print('📱 Android SDK: $sdkInt');
 
-        if (androidInfo.version.sdkInt >= 33) {
-          // Android 13+ - no necesita permisos para descargas
-          print('✅ Android 13+ - No necesita permisos');
+        // ✅ Android 13+ (API 33+) NO necesita permisos
+        if (sdkInt >= 33) {
+          print('✅ Android 13+ - Permisos no requeridos');
           return true;
-        } else if (androidInfo.version.sdkInt >= 30) {
-          // Android 11-12
-          print('⚙️ Android 11-12 - Solicitando MANAGE_EXTERNAL_STORAGE');
-          var status = await Permission.manageExternalStorage.status;
-          print('📊 Estado actual: $status');
+        }
 
-          if (!status.isGranted) {
-            status = await Permission.manageExternalStorage.request();
-            print('📊 Estado después de solicitar: $status');
-          }
-          return status.isGranted;
-        } else {
-          // Android 10 y anteriores
-          print('⚙️ Android ≤10 - Solicitando STORAGE');
-          var status = await Permission.storage.status;
-          print('📊 Estado actual: $status');
+        // ✅ Android 11-12 (API 30-32) - Usar MANAGE_EXTERNAL_STORAGE
+        if (sdkInt >= 30) {
+          print('⚙️ Android 11-12 - Verificando MANAGE_EXTERNAL_STORAGE');
+          final status = await Permission.manageExternalStorage.status;
 
-          if (!status.isGranted) {
-            status = await Permission.storage.request();
-            print('📊 Estado después de solicitar: $status');
+          if (status.isGranted) {
+            print('✅ Permiso ya concedido');
+            return true;
           }
+
+          if (status.isDenied) {
+            final result = await Permission.manageExternalStorage.request();
+            print('📊 Resultado: $result');
+            return result.isGranted;
+          }
+
+          // Si está permanentemente denegado, abrir configuración
+          if (status.isPermanentlyDenied) {
+            await openAppSettings();
+            return false;
+          }
+
           return status.isGranted;
         }
+
+        // ✅ Android 10 y anteriores (API 29-)
+        print('⚙️ Android ≤10 - Verificando STORAGE');
+        final status = await Permission.storage.status;
+
+        if (status.isGranted) return true;
+        if (status.isDenied) {
+          final result = await Permission.storage.request();
+          return result.isGranted;
+        }
+        if (status.isPermanentlyDenied) {
+          await openAppSettings();
+          return false;
+        }
+
+        return status.isGranted;
       } catch (e) {
-        print('⚠️ Error en permisos (continuando de todos modos): $e');
-        // Continuar sin permisos para Android 13+
+        print('⚠️ Error verificando permisos: $e');
+        // En caso de error, continuar (Android 13+ no falla)
         return true;
       }
     }
