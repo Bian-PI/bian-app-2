@@ -144,16 +144,27 @@ class Evaluation {
     return true;
   }
 
-  // 🔥 JSON GENÉRICO - TODO EN STRINGS
+  // 🔥 JSON GENÉRICO - TODO EN STRINGS - ✅ SOPORTA MODO OFFLINE
   Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
     List<String> translatedRecommendations,
   ) async {
-    final user = await _storage.getUser();
+    // ✅ Intentar obtener usuario, pero manejar modo offline
+    User? user;
+    String userId = 'OFFLINE';
+    
+    try {
+      user = await _storage.getUser();
+      if (user?.id != null) {
+        userId = user!.id.toString();
+      }
+    } catch (e) {
+      print('⚠️ No se pudo obtener usuario (posiblemente modo offline): $e');
+    }
 
     final structuredJson = <String, dynamic>{
-      'user_id': user?.id?.toString() ?? '',
+      'user_id': userId,
       'evaluation_id': id,
       'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,

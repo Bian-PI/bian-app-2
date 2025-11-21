@@ -727,55 +727,120 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final currentCategory = widget.species.categories[_currentCategoryIndex];
-    final progress = _evaluation.getProgress(widget.species);
+Widget build(BuildContext context) {
+  final loc = AppLocalizations.of(context);
+  final currentCategory = widget.species.categories[_currentCategoryIndex];
+  final progress = _evaluation.getProgress(widget.species);
 
-    return WillPopScope(
-  onWillPop: () async {
-    if (MediaQuery.of(context).viewInsets.bottom > 0) {
-      FocusScope.of(context).unfocus();
-      return false;
-    }
-    
-    if (_hasUnsavedChanges && !widget.isOfflineMode) {
-      final confirm = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(loc.translate('exit_without_saving')),
-          content: Text(loc.translate('data_will_be_lost')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'cancel'),
-              child: Text(loc.translate('cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'discard'),
-              style: TextButton.styleFrom(
-                foregroundColor: BianTheme.errorRed,
-              ),
-              child: Text(loc.translate('exit')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, 'save'),
-              child: Text(loc.translate('save_draft')),
-            ),
-          ],
-        ),
-      );
-      
-      if (confirm == 'save') {
-        await _saveDraft();
-        return true;
-      } else if (confirm == 'discard') {
-        return true;
+  return WillPopScope(
+    onWillPop: () async {
+      // 1️⃣ Si el teclado está abierto, cerrarlo primero
+      if (MediaQuery.of(context).viewInsets.bottom > 0) {
+        FocusScope.of(context).unfocus();
+        return false;
       }
-      return false;
-    }
-    return true;
-  },
-  child: Scaffold(
+      
+      // 2️⃣ Si está en modo ONLINE y hay cambios sin guardar, preguntar
+      if (!widget.isOfflineMode && _hasUnsavedChanges) {
+        final confirm = await showDialog<String>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: BianTheme.warningYellow.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: BianTheme.warningYellow,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    loc.translate('exit_without_saving'),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.translate('data_will_be_lost'),
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: BianTheme.infoBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: BianTheme.infoBlue.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: BianTheme.infoBlue, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Puedes guardar un borrador para continuar después',
+                          style: TextStyle(fontSize: 12, color: BianTheme.darkGray),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'cancel'),
+                child: Text(loc.translate('cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'discard'),
+                style: TextButton.styleFrom(
+                  foregroundColor: BianTheme.errorRed,
+                ),
+                child: Text('Salir sin guardar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, 'save'),
+                icon: Icon(Icons.save),
+                label: Text(loc.translate('save_draft')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BianTheme.successGreen,
+                ),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirm == 'save') {
+          await _saveDraft();
+          return true;
+        } else if (confirm == 'discard') {
+          return true;
+        }
+        return false;
+      }
+      
+      // 3️⃣ Si está en modo OFFLINE, permitir salir sin preguntar
+      return true;
+    },
+    child: Scaffold(
         appBar: AppBar(
   title: Column(
     crossAxisAlignment: CrossAxisAlignment.start,

@@ -20,7 +20,8 @@ class OfflineHomeScreen extends StatefulWidget {
   State<OfflineHomeScreen> createState() => _OfflineHomeScreenState();
 }
 
-class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindingObserver {
+class _OfflineHomeScreenState extends State<OfflineHomeScreen>
+    with WidgetsBindingObserver {
   List<Evaluation> _localReports = [];
   bool _isLoading = true;
 
@@ -39,7 +40,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       // App cerrada o en segundo plano - limpiar reportes
       LocalReportsStorage.clearAllLocalReports();
     }
@@ -55,8 +57,9 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
   }
 
   void _navigateToEvaluation(Species species) async {
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -67,16 +70,19 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
         ),
       ),
     );
-    
+
     _loadLocalReports();
   }
 
   void _viewReport(Evaluation report) async {
-    final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    final species =
+        report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     final results = _recalculateResults(report, species);
-    final translatedRecommendations = _translateRecommendations(results['recommendations'], report.language);
-    final structuredJson = await report.generateStructuredJSON(species, results, translatedRecommendations);
-    
+    final translatedRecommendations =
+        _translateRecommendations(results['recommendations'], report.language);
+    final structuredJson = await report.generateStructuredJSON(
+        species, results, translatedRecommendations);
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -90,7 +96,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
     );
   }
 
-  Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
+  Map<String, dynamic> _recalculateResults(
+      Evaluation evaluation, Species species) {
     int totalQuestions = 0;
     int positiveResponses = 0;
     final categoryScores = <String, double>{};
@@ -103,23 +110,33 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
         if (field.type == FieldType.yesNo) {
           final key = '${category.id}_${field.id}';
           final value = evaluation.responses[key];
-          
+
           if (value != null) {
             categoryTotal++;
             totalQuestions++;
-            
+
             bool isPositive = false;
-            if (field.id.contains('access') || field.id.contains('quality') || field.id.contains('sufficient') ||
-                field.id.contains('health') || field.id.contains('vaccination') || field.id.contains('natural_behavior') ||
-                field.id.contains('movement') || field.id.contains('ventilation') || field.id.contains('training') ||
-                field.id.contains('records') || field.id.contains('biosecurity') || field.id.contains('handling') ||
-                field.id.contains('lighting') || field.id.contains('enrichment') || field.id.contains('resting_area') ||
+            if (field.id.contains('access') ||
+                field.id.contains('quality') ||
+                field.id.contains('sufficient') ||
+                field.id.contains('health') ||
+                field.id.contains('vaccination') ||
+                field.id.contains('natural_behavior') ||
+                field.id.contains('movement') ||
+                field.id.contains('ventilation') ||
+                field.id.contains('training') ||
+                field.id.contains('records') ||
+                field.id.contains('biosecurity') ||
+                field.id.contains('handling') ||
+                field.id.contains('lighting') ||
+                field.id.contains('enrichment') ||
+                field.id.contains('resting_area') ||
                 field.id.contains('castration')) {
               isPositive = value == true;
             } else {
               isPositive = value == false;
             }
-            
+
             if (isPositive) {
               categoryPositive++;
               positiveResponses++;
@@ -133,7 +150,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    final overallScore =
+        totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
 
     String complianceLevel;
     if (overallScore >= 90) {
@@ -149,12 +167,20 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
     }
 
     final recommendationKeys = <String>[];
-    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) recommendationKeys.add('improve_feeding_practices');
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) recommendationKeys.add('strengthen_health_program');
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) recommendationKeys.add('improve_infrastructure');
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) recommendationKeys.add('train_staff_welfare');
-    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+    if (overallScore < 60)
+      recommendationKeys.add('immediate_attention_required');
+    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70)
+      recommendationKeys.add('improve_feeding_practices');
+    if (categoryScores['health'] != null && categoryScores['health']! < 70)
+      recommendationKeys.add('strengthen_health_program');
+    if (categoryScores['infrastructure'] != null &&
+        categoryScores['infrastructure']! < 70)
+      recommendationKeys.add('improve_infrastructure');
+    if (categoryScores['management'] != null &&
+        categoryScores['management']! < 70)
+      recommendationKeys.add('train_staff_welfare');
+    if (recommendationKeys.isEmpty)
+      recommendationKeys.add('maintain_current_practices');
 
     return {
       'overall_score': overallScore,
@@ -166,184 +192,307 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> with WidgetsBindi
     };
   }
 
-  List<String> _translateRecommendations(List recommendationKeys, String language) {
+  List<String> _translateRecommendations(
+      List recommendationKeys, String language) {
     final translations = <String, String>{
-      'immediate_attention_required': language == 'es' ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal' : 'Immediate attention required to improve animal welfare conditions',
-      'improve_feeding_practices': language == 'es' ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad' : 'Improve feeding practices and ensure constant access to quality water and food',
-      'strengthen_health_program': language == 'es' ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades' : 'Strengthen animal health program, including vaccination and disease control',
-      'improve_infrastructure': language == 'es' ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas' : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': language == 'es' ? 'Capacitar al personal en bienestar animal y mantener registros actualizados' : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': language == 'es' ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal' : 'Maintain current good practices and continue monitoring animal welfare',
+      'immediate_attention_required': language == 'es'
+          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
+          : 'Immediate attention required to improve animal welfare conditions',
+      'improve_feeding_practices': language == 'es'
+          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
+          : 'Improve feeding practices and ensure constant access to quality water and food',
+      'strengthen_health_program': language == 'es'
+          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
+          : 'Strengthen animal health program, including vaccination and disease control',
+      'improve_infrastructure': language == 'es'
+          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
+          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
+      'train_staff_welfare': language == 'es'
+          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
+          : 'Train staff in animal welfare and maintain updated records',
+      'maintain_current_practices': language == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
     };
 
-    return recommendationKeys.map((key) => translations[key] ?? key.toString()).toList();
+    return recommendationKeys
+        .map((key) => translations[key] ?? key.toString())
+        .toList();
   }
-
 
 // lib/features/home/offline_home_screen.dart - ACTUALIZAR TRADUCCIONES
 
 // En el método _deleteLocalReport:
-Future<void> _deleteLocalReport(String id) async {
-  final loc = AppLocalizations.of(context);
-  
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(loc.translate('delete_local_report')),
-      content: Text(loc.translate('delete_local_report_confirm')),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(loc.translate('cancel'))),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: BianTheme.errorRed),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(loc.translate('delete')),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirm == true) {
-    await LocalReportsStorage.deleteLocalReport(id);
-    _loadLocalReports();
-  }
-}
+  Future<void> _deleteLocalReport(String id) async {
+    final loc = AppLocalizations.of(context);
 
-// En el método _exitOfflineMode:
-void _exitOfflineMode() async {
-  final loc = AppLocalizations.of(context);
-  
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(loc.translate('exit_offline_mode')),
-      content: Text(loc.translate('exit_offline_mode_warning')),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(loc.translate('cancel'))),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: BianTheme.errorRed),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(loc.translate('exit')),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirm == true) {
-    await LocalReportsStorage.clearAllLocalReports();
-    if (mounted) {
-      Provider.of<AppModeProvider>(context, listen: false).setMode(AppMode.online);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
-  }
-}
-
-// En el método build - actualizar textos:
-@override
-Widget build(BuildContext context) {
-  final loc = AppLocalizations.of(context);
-
-  if (_isLoading) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
-
-  return Scaffold(
-    appBar: AppBar(
-      title: Row(
-        children: [
-          Icon(Icons.offline_bolt, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(loc.translate('offline_mode_title')),
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(loc.translate('delete_local_report')),
+        content: Text(loc.translate('delete_local_report_confirm')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.translate('cancel'))),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: BianTheme.errorRed),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(loc.translate('delete')),
+          ),
         ],
       ),
-      backgroundColor: BianTheme.warningYellow,
-      actions: [
-        IconButton(
-          icon: Icon(Icons.exit_to_app),
-          onPressed: _exitOfflineMode,
-          tooltip: loc.translate('exit'),
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        Container(
-          color: BianTheme.warningYellow.withOpacity(0.1),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: BianTheme.warningYellow),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  loc.translate('offline_reports_lost_on_close'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: BianTheme.darkGray,
-                    fontWeight: FontWeight.w600,
+    );
+
+    if (confirm == true) {
+      await LocalReportsStorage.deleteLocalReport(id);
+      _loadLocalReports();
+    }
+  }
+
+// En el método _exitOfflineMode:
+
+// lib/features/home/offline_home_screen.dart - ACTUALIZAR con WillPopScope
+
+// ✅ ENVOLVER EL Scaffold CON WillPopScope:
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return WillPopScope(
+      onWillPop: () async {
+        // Mostrar diálogo confirmando salida del modo offline
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: BianTheme.warningYellow.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Icon(
+                    Icons.exit_to_app,
+                    color: BianTheme.warningYellow,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    loc.translate('exit_offline_mode'),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loc.translate('exit_offline_mode_warning'),
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: BianTheme.errorRed.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: BianTheme.errorRed.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: BianTheme.errorRed, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _localReports.isEmpty
+                              ? 'Se cerrará el modo sin conexión'
+                              : 'Se eliminarán ${_localReports.length} reporte(s) local(es)',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: BianTheme.darkGray,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(loc.translate('cancel')),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: Icon(Icons.exit_to_app),
+                label: Text(loc.translate('exit')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BianTheme.errorRed,
                 ),
               ),
             ],
           ),
+        );
+
+        if (confirm == true) {
+          // Limpiar reportes locales
+          await LocalReportsStorage.clearAllLocalReports();
+
+          // Cambiar modo a online
+          if (mounted) {
+            Provider.of<AppModeProvider>(context, listen: false)
+                .setMode(AppMode.online);
+
+            // Navegar a LoginScreen
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            );
+          }
+          return false; // No permitir el pop normal, ya navegamos manualmente
+        }
+
+        return false; // No salir si canceló
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          // ✅ IMPORTANTE: Remover el leading para que use el botón de retroceso por defecto
+          // que será interceptado por WillPopScope
+          automaticallyImplyLeading: true,
+          title: Row(
+            children: [
+              Icon(Icons.offline_bolt, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(loc.translate('offline_mode_title')),
+            ],
+          ),
+          backgroundColor: BianTheme.warningYellow,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.exit_to_app),
+              onPressed: () async {
+                // Usar la misma lógica del WillPopScope
+                await (this as State)
+                    .context
+                    .findAncestorWidgetOfExactType<WillPopScope>()
+                    ?.onWillPop
+                    ?.call();
+              },
+              tooltip: loc.translate('exit'),
+            ),
+          ],
         ),
-
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.translate('create_new_evaluation'),
-                  style: Theme.of(context).textTheme.displaySmall,
-                ),
-                const SizedBox(height: 24),
-                _buildSpeciesCard(species: Species.birds(), onTap: () => _navigateToEvaluation(Species.birds())),
-                const SizedBox(height: 16),
-                _buildSpeciesCard(species: Species.pigs(), onTap: () => _navigateToEvaluation(Species.pigs())),
-
-                const SizedBox(height: 40),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(loc.translate('local_reports'), style: Theme.of(context).textTheme.headlineMedium),
-                    Text('${_localReports.length}/10', style: TextStyle(color: BianTheme.mediumGray, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                if (_localReports.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: BianTheme.lightGray.withOpacity(0.5)),
+        body: Column(
+          children: [
+            Container(
+              color: BianTheme.warningYellow.withOpacity(0.1),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: BianTheme.warningYellow),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      loc.translate('offline_reports_lost_on_close'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BianTheme.darkGray,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    child: Column(
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loc.translate('create_new_evaluation'),
+                      style: Theme.of(context).textTheme.displaySmall,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSpeciesCard(
+                        species: Species.birds(),
+                        onTap: () => _navigateToEvaluation(Species.birds())),
+                    const SizedBox(height: 16),
+                    _buildSpeciesCard(
+                        species: Species.pigs(),
+                        onTap: () => _navigateToEvaluation(Species.pigs())),
+                    const SizedBox(height: 40),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.assignment_outlined, size: 64, color: BianTheme.mediumGray.withOpacity(0.5)),
-                        const SizedBox(height: 16),
-                        Text(loc.translate('no_local_reports'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: BianTheme.mediumGray)),
+                        Text(loc.translate('local_reports'),
+                            style: Theme.of(context).textTheme.headlineMedium),
+                        Text('${_localReports.length}/10',
+                            style: TextStyle(
+                                color: BianTheme.mediumGray, fontSize: 14)),
                       ],
                     ),
-                  )
-                else
-                  ..._localReports.map((report) => _buildReportCard(report)),
-              ],
+                    const SizedBox(height: 16),
+                    if (_localReports.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: BianTheme.lightGray.withOpacity(0.5)),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.assignment_outlined,
+                                size: 64,
+                                color: BianTheme.mediumGray.withOpacity(0.5)),
+                            const SizedBox(height: 16),
+                            Text(loc.translate('no_local_reports'),
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: BianTheme.mediumGray)),
+                          ],
+                        ),
+                      )
+                    else
+                      ..._localReports
+                          .map((report) => _buildReportCard(report)),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
-}
-  Widget _buildSpeciesCard({required Species species, required VoidCallback onTap}) {
+      ),
+    );
+  }
+
+  Widget _buildSpeciesCard(
+      {required Species species, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -361,7 +510,8 @@ Widget build(BuildContext context) {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Color(int.parse(species.gradientColors[0])).withOpacity(0.3),
+              color:
+                  Color(int.parse(species.gradientColors[0])).withOpacity(0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -379,7 +529,8 @@ Widget build(BuildContext context) {
                 species.iconPath,
                 width: 40,
                 height: 40,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
             ),
             const SizedBox(width: 20),
@@ -389,17 +540,22 @@ Widget build(BuildContext context) {
                 children: [
                   Text(
                     AppLocalizations.of(context).translate(species.id),
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    AppLocalizations.of(context).translate('${species.id}_subtitle'),
+                    AppLocalizations.of(context)
+                        .translate('${species.id}_subtitle'),
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -436,8 +592,13 @@ Widget build(BuildContext context) {
                   ),
                   child: Column(
                     children: [
-                      Text('${report.overallScore!.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: scoreColor)),
-                      Text('%', style: TextStyle(fontSize: 12, color: scoreColor)),
+                      Text('${report.overallScore!.toStringAsFixed(0)}',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: scoreColor)),
+                      Text('%',
+                          style: TextStyle(fontSize: 12, color: scoreColor)),
                     ],
                   ),
                 ),
@@ -446,13 +607,21 @@ Widget build(BuildContext context) {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(report.farmName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(report.farmName,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on, size: 14, color: BianTheme.mediumGray),
+                          Icon(Icons.location_on,
+                              size: 14, color: BianTheme.mediumGray),
                           const SizedBox(width: 4),
-                          Expanded(child: Text(report.farmLocation, style: TextStyle(fontSize: 12, color: BianTheme.mediumGray), overflow: TextOverflow.ellipsis)),
+                          Expanded(
+                              child: Text(report.farmLocation,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: BianTheme.mediumGray),
+                                  overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     ],
