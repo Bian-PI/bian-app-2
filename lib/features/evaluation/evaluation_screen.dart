@@ -667,7 +667,7 @@ void printJson(dynamic data, {String indent = ''}) {
     print('   Evaluador: ${json['evaluator_name']}');
     print('');
     print('🎯 RESULTADOS:');
-    print('   Puntuación General: ${json['overall_score'].toStringAsFixed(1)}%');
+    print('   Puntuación General: ${json['overall_score']}%');
     print('   Nivel de Cumplimiento: ${json['compliance_level']}');
     print('');
     print('📊 PUNTUACIONES POR CATEGORÍA:');
@@ -675,8 +675,8 @@ void printJson(dynamic data, {String indent = ''}) {
     final categories = Map<String, dynamic>.from(json['categories']);
     categories.forEach((categoryId, categoryData) {
       final data = categoryData as Map<String, dynamic>;
-      final score = data['score'];
-      print('   ├─ ${categoryId.toUpperCase()}: ${score != null ? score.toStringAsFixed(1) : 'N/A'}%');
+      final score = data['score']; // Ya es string
+      print('   ├─ ${categoryId.toUpperCase()}: ${score ?? 'N/A'}%');
       
       data.forEach((key, value) {
         if (key != 'score') {

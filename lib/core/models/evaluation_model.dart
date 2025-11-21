@@ -144,7 +144,7 @@ class Evaluation {
     return true;
   }
 
-  // 🔥 JSON GENÉRICO - Funciona para todas las especies
+  // 🔥 JSON GENÉRICO - TODO EN STRINGS
   Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
@@ -153,7 +153,7 @@ class Evaluation {
     final user = await _storage.getUser();
 
     final structuredJson = <String, dynamic>{
-      'user_id': user?.id,
+      'user_id': user?.id?.toString() ?? '',
       'evaluation_id': id,
       'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,
@@ -162,8 +162,8 @@ class Evaluation {
       'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
       'status': status,
-      'overall_score': results['overall_score'],
-      'compliance_level': results['compliance_level'],
+      'overall_score': results['overall_score'].toString(),
+      'compliance_level': results['compliance_level'].toString(),
       'categories': _buildGenericCategories(species, results),
       'critical_points': _formatCriticalPoints(results['critical_points']),
       'strong_points': _formatStrongPoints(results['strong_points']),
@@ -173,7 +173,7 @@ class Evaluation {
     return structuredJson;
   }
 
-  // ✅ Construir categorías de forma genérica
+  // ✅ Construir categorías de forma genérica - TODO EN STRINGS
   Map<String, dynamic> _buildGenericCategories(
     Species species,
     Map<String, dynamic> results,
@@ -183,21 +183,21 @@ class Evaluation {
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
 
-      // Agregar score de la categoría
+      // Agregar score de la categoría COMO STRING
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
-        categoryData['score'] = results['category_scores'][category.id];
+        categoryData['score'] = results['category_scores'][category.id].toString();
       }
 
-      // Agregar respuestas de los campos de forma genérica
-      categoryData['responses'] = {};
+      // Agregar respuestas de los campos de forma genérica COMO STRINGS
+      categoryData['responses'] = <String, String>{};
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
         final value = responses[key];
         
         // Usar el ID del campo sin el sufijo de especie
         final genericFieldId = _getGenericFieldId(field.id);
-        categoryData['responses'][genericFieldId] = value;
+        categoryData['responses'][genericFieldId] = value?.toString() ?? '';
       }
 
       categories[category.id] = categoryData;
@@ -215,7 +215,7 @@ class Evaluation {
   }
 
   // ✅ Formatear puntos críticos de forma legible
-  List<Map<String, dynamic>> _formatCriticalPoints(List criticalPoints) {
+  List<Map<String, String>> _formatCriticalPoints(List criticalPoints) {
     return criticalPoints.map((point) {
       final parts = point.toString().split('_');
       final categoryId = parts[0];
@@ -230,7 +230,7 @@ class Evaluation {
   }
 
   // ✅ Formatear puntos fuertes
-  List<Map<String, dynamic>> _formatStrongPoints(List strongPoints) {
+  List<Map<String, String>> _formatStrongPoints(List strongPoints) {
     return strongPoints.map((point) {
       return {
         'category': point.toString(),

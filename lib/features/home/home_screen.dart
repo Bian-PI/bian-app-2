@@ -783,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    species.namePlural,
+                    AppLocalizations.of(context).translate(species.id),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,

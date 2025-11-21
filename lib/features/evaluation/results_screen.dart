@@ -103,48 +103,104 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _downloadPDF(BuildContext context) async {
-    final loc = AppLocalizations.of(context);
-    
-    // Mostrar loading
+  // ✅ ANIMACIÓN MEJORADA
+  void _showLoadingDialog(BuildContext context, AppLocalizations loc) {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black54,
       builder: (context) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(loc.translate('generating_pdf')),
-            ],
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 6,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      BianTheme.primaryRed,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  loc.translate('generating_pdf'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: BianTheme.darkGray,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Por favor espera...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: BianTheme.mediumGray,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // ✅ GUARDAR PDF MEJORADO - Guarda en Descargas/Downloads
+  Future<void> _downloadPDF(BuildContext context) async {
+    final loc = AppLocalizations.of(context);
+    
+    _showLoadingDialog(context, loc);
 
     try {
       final pdf = await _buildPDF(context);
-      final output = await getApplicationDocumentsDirectory();
-      final fileName = 'BIAN_${evaluation.farmName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${output.path}/$fileName');
+      
+      Directory? directory;
+      if (Platform.isAndroid) {
+        // En Android, usar directorio de Descargas
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else if (Platform.isIOS) {
+        directory = await getApplicationDocumentsDirectory();
+      } else {
+        directory = await getDownloadsDirectory();
+      }
+      
+      final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory!.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
       if (!context.mounted) return;
       Navigator.pop(context); // Cerrar loading
 
-      // Mostrar diálogo de éxito con opciones
+      // Mostrar diálogo de éxito mejorado
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
           title: Row(
             children: [
@@ -152,18 +208,19 @@ class ResultsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: BianTheme.successGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.check_circle,
                   color: BianTheme.successGreen,
+                  size: 32,
                 ),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  '¡PDF Generado!',
-                  style: TextStyle(fontSize: 18),
+                  '¡PDF Guardado!',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -172,26 +229,79 @@ class ResultsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('El PDF se ha guardado exitosamente.'),
+              const Text(
+                'El PDF se ha guardado exitosamente en:',
+                style: TextStyle(fontSize: 14),
+              ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BianTheme.lightGray.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: BianTheme.lightGray),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.folder, size: 18, color: BianTheme.primaryRed),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            directory?.path ?? '',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: BianTheme.mediumGray,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.description, size: 18, color: BianTheme.primaryRed),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            fileName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BianTheme.infoBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.folder, size: 20, color: BianTheme.mediumGray),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.info_outline, size: 20, color: BianTheme.infoBlue),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        fileName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: BianTheme.mediumGray,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                        Platform.isAndroid
+                            ? 'Busca en la carpeta "Descargas" o "Downloads" de tu dispositivo'
+                            : 'Busca en la carpeta de Documentos de tu dispositivo',
+                        style: const TextStyle(fontSize: 11, color: BianTheme.darkGray),
                       ),
                     ),
                   ],
@@ -214,6 +324,9 @@ class ResultsScreen extends StatelessWidget {
               },
               icon: const Icon(Icons.share),
               label: const Text('Compartir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BianTheme.infoBlue,
+              ),
             ),
           ],
         ),
@@ -228,7 +341,7 @@ class ResultsScreen extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(child: Text('${loc.translate('error_generating_pdf')}: $e')),
+              Expanded(child: Text('Error al generar PDF: $e')),
             ],
           ),
           backgroundColor: BianTheme.errorRed,
@@ -241,33 +354,12 @@ class ResultsScreen extends StatelessWidget {
   Future<void> _generateAndSharePDF(BuildContext context) async {
     final loc = AppLocalizations.of(context);
     
-    // Mostrar loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(loc.translate('generating_pdf')),
-            ],
-          ),
-        ),
-      ),
-    );
+    _showLoadingDialog(context, loc);
 
     try {
       final pdf = await _buildPDF(context);
       final output = await getTemporaryDirectory();
-      final fileName = 'BIAN_${evaluation.farmName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName = 'BIAN_${evaluation.farmName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${output.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
@@ -303,7 +395,7 @@ class ResultsScreen extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(child: Text('${loc.translate('error_generating_pdf')}: $e')),
+              Expanded(child: Text('Error al generar PDF: $e')),
             ],
           ),
           backgroundColor: BianTheme.errorRed,
