@@ -147,7 +147,7 @@ class ApiService {
               'success': false,
               'message': 'user_not_verified',
               'email': data['email'],
-              'userId': data['userId'], // ✅ Capturar userId del backend
+              'userId': data['userId'],
             };
           }
         } catch (_) {}
@@ -191,7 +191,6 @@ class ApiService {
           'token': data['token'],
         };
       } else if (response.statusCode == 403) {
-        // Usuario registrado pero no verificado
         try {
           final data = jsonDecode(response.body);
           if (data['code'] == 'USER_NOT_VERIFIED') {
@@ -199,7 +198,7 @@ class ApiService {
               'success': true,
               'user_not_verified': true,
               'email': userData['email'],
-              'userId': data['userId'], // ✅ Capturar userId del backend
+              'userId': data['userId'],
             };
           }
         } catch (_) {}
@@ -209,14 +208,12 @@ class ApiService {
           'email': userData['email'],
         };
       } else if (response.statusCode == 409) {
-        // Conflict - usuario ya existe
         final data = jsonDecode(response.body);
         return {
           'success': false,
           'message': data['error'] ?? 'user_exists',
         };
       } else if (response.statusCode == 400) {
-        // Bad request - validación fallida
         final data = jsonDecode(response.body);
         return {
           'success': false,
@@ -352,32 +349,32 @@ class ApiService {
   }
 
   /// PUT /users/{id}
-Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
-  try {
-    final response = await put(ApiConfig.userById(id), userData);
-    
-    print('📥 Update status: ${response.statusCode}'); // ✅ Debug
-    print('📥 Update body: ${response.body}'); // ✅ Debug
-    
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return {
-        'success': true,
-        'message': data['message'],
-      };
-    } else if (response.statusCode == 404) {
-      return {'success': false, 'message': 'user_not_found'};
-    } else if (response.statusCode == 409) {
-      return {'success': false, 'message': 'user_exists'};
-    } else {
-      print('❌ Error response: ${response.body}'); // ✅ Debug
-      return {'success': false, 'message': 'server_error'};
+  Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
+    try {
+      final response = await put(ApiConfig.userById(id), userData);
+      
+      print('📥 Update status: ${response.statusCode}');
+      print('📥 Update body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'],
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'user_not_found'};
+      } else if (response.statusCode == 409) {
+        return {'success': false, 'message': 'user_exists'};
+      } else {
+        print('❌ Error response: ${response.body}');
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      print('💥 Exception: $e');
+      return {'success': false, 'message': 'connection_error'};
     }
-  } catch (e) {
-    print('💥 Exception: $e'); // ✅ Debug
-    return {'success': false, 'message': 'connection_error'};
   }
-}
 
   /// DELETE /users/{id}
   Future<Map<String, dynamic>> deleteUser(int id) async {
@@ -388,6 +385,77 @@ Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) a
         return {
           'success': true,
           'message': 'user_deleted',
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'user_not_found'};
+      } else {
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  // ========== SYNC ENDPOINTS ==========
+
+  /// POST /evaluations/sync - Sincronizar reporte offline
+  Future<Map<String, dynamic>> syncOfflineReport(Map<String, dynamic> reportData) async {
+    try {
+      print('📤 Sincronizando reporte offline...');
+      print('📦 Data: $reportData');
+      
+      final response = await post(
+        '/evaluations/sync',
+        reportData,
+        requiresAuth: false,
+      );
+      
+      print('📥 Sync response status: ${response.statusCode}');
+      print('📥 Sync response body: ${response.body}');
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'report_synced',
+          'data': data,
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'message': 'user_not_found',
+        };
+      } else if (response.statusCode == 400) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['error'] ?? 'validation_error',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'server_error',
+        };
+      }
+    } catch (e) {
+      print('❌ Error sincronizando reporte: $e');
+      if (e.toString().contains('TimeoutException')) {
+        return {'success': false, 'message': 'timeout_error'};
+      }
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// GET /users/document/{document} - Buscar usuario por documento
+  Future<Map<String, dynamic>> getUserByDocument(String document) async {
+    try {
+      final response = await get('/users/document/$document', requiresAuth: false);
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'user': data,
         };
       } else if (response.statusCode == 404) {
         return {'success': false, 'message': 'user_not_found'};

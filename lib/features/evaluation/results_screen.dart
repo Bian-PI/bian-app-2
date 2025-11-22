@@ -747,14 +747,17 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                           style: pw.TextStyle(
                             fontSize: 32,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.white,
+                            color:  PdfColor.fromInt(
+                          0xFFDB7093),
                           ),
                         ),
                         pw.Text(
                           '%',
-                          style: const pw.TextStyle(
-                            fontSize: 14,
-                            color: PdfColors.white,
+                          style: pw.TextStyle(
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColor.fromInt(
+                          0xFFDB7093),
                           ),
                         ),
                       ],
