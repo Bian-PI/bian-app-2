@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> {
   final _storage = SecureStorage();
   final _apiService = ApiService();
   
@@ -40,23 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _loadAllData();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // ✅ CERRAR SESIÓN AL SALIR DE LA APP
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      // App cerrada o en segundo plano - cerrar sesión
-      _storage.clearAll();
-    }
   }
 
   Future<void> _loadAllData() async {
@@ -227,7 +211,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _viewReport(Evaluation report) async {
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     
-    // Recalcular resultados para mostrar
     final results = _recalculateResults(report, species);
 
     final translatedRecommendations = _translateRecommendations(
@@ -417,7 +400,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     
-    // ✅ ENVOLVER CON ConnectivityWrapper
     return ConnectivityWrapper(
       child: Scaffold(
         appBar: AppBar(
