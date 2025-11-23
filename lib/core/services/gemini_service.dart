@@ -205,4 +205,72 @@ Be concise and specific. Maximum 2 lines per recommendation.
       rethrow;
     }
   }
+
+  /// Chat interactivo sobre el reporte (respuestas BREVES y PUNTUALES)
+  Future<String> chatAboutReport({
+    required String userQuestion,
+    required String speciesType,
+    required double overallScore,
+    required Map<String, double> categoryScores,
+    required List<String> criticalPoints,
+    required List<String> strongPoints,
+    required String language,
+  }) async {
+    if (!_isInitialized) {
+      throw Exception('Gemini AI no está disponible');
+    }
+
+    try {
+      final isSpanish = language == 'es';
+      final speciesName = speciesType == 'birds'
+          ? (isSpanish ? 'aves de postura' : 'laying hens')
+          : (isSpanish ? 'cerdos' : 'pigs');
+
+      final systemPrompt = isSpanish
+          ? '''Eres un experto veterinario especializado en bienestar animal de $speciesName.
+
+CONTEXTO DEL REPORTE:
+- Puntuación: ${overallScore.toStringAsFixed(1)}%
+- Categorías: ${categoryScores.entries.map((e) => '${_translateCategory(e.key, true)}: ${e.value.toStringAsFixed(0)}%').join(', ')}
+- Puntos críticos: ${criticalPoints.length}
+- Fortalezas: ${strongPoints.length}
+
+IMPORTANTE - REGLAS ESTRICTAS:
+1. Responde BREVE y DIRECTO (máximo 100 palabras)
+2. Responde SOLO lo que preguntan
+3. Usa BULLET POINTS cuando sea posible
+4. Sé ESPECÍFICO y PRÁCTICO
+5. Usa markdown simple (**, -, ###)
+
+Pregunta del usuario: $userQuestion'''
+          : '''You are an expert veterinarian specialized in $speciesName welfare.
+
+REPORT CONTEXT:
+- Score: ${overallScore.toStringAsFixed(1)}%
+- Categories: ${categoryScores.entries.map((e) => '${_translateCategory(e.key, false)}: ${e.value.toStringAsFixed(0)}%').join(', ')}
+- Critical points: ${criticalPoints.length}
+- Strengths: ${strongPoints.length}
+
+IMPORTANT - STRICT RULES:
+1. Answer BRIEF and DIRECT (max 100 words)
+2. Answer ONLY what is asked
+3. Use BULLET POINTS when possible
+4. Be SPECIFIC and PRACTICAL
+5. Use simple markdown (**, -, ###)
+
+User question: $userQuestion''';
+
+      final content = [Content.text(systemPrompt)];
+      final response = await _model.generateContent(content);
+
+      if (response.text == null || response.text!.isEmpty) {
+        throw Exception('Respuesta vacía de Gemini');
+      }
+
+      return response.text!;
+    } catch (e) {
+      print('❌ Error en chat: $e');
+      rethrow;
+    }
+  }
 }

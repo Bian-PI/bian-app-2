@@ -14,7 +14,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/utils/connectivity_service.dart';
 import 'package:open_filex/open_filex.dart';
-import 'ai_analysis_screen.dart';
+import 'ai_chat_screen.dart';
 
 class ResultsScreen extends StatelessWidget {
   final Evaluation evaluation;
@@ -1740,7 +1740,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
     );
   }
 
-  /// Botón para análisis extendido con IA (GRATIS)
+  /// Botón para chat con IA - Diseño discreto y bonito 🌸✨
   Widget _buildAIAnalysisButton(
     BuildContext context,
     AppLocalizations loc,
@@ -1751,18 +1751,25 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
   ) {
     return Container(
       width: double.infinity,
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            BianTheme.infoBlue,
-            BianTheme.infoBlue.withOpacity(0.8),
+            Color(0xFFF8F9FA),
+            Color(0xFFFFFFFF),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: BianTheme.primaryRed.withOpacity(0.2),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: BianTheme.infoBlue.withOpacity(0.3),
-            blurRadius: 10,
+            color: BianTheme.primaryRed.withOpacity(0.08),
+            blurRadius: 20,
             offset: Offset(0, 4),
           ),
         ],
@@ -1781,18 +1788,18 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               CustomSnackbar.showError(
                 context,
                 evaluation.language == 'es'
-                    ? 'Necesitas conexión a internet para usar el análisis con IA'
-                    : 'You need internet connection to use AI analysis',
+                    ? 'Necesitas conexión a internet'
+                    : 'You need internet connection',
               );
               return;
             }
 
-            // Navegar a pantalla de análisis con IA
+            // Navegar al chat con IA
             if (!context.mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AIAnalysisScreen(
+                builder: (_) => AIChatScreen(
                   speciesType: species.id,
                   overallScore: overallScore,
                   categoryScores: categoryScores,
@@ -1803,83 +1810,97 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               ),
             );
           },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.psychology,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        evaluation.language == 'es'
-                            ? 'Análisis Extendido con IA'
-                            : 'AI Extended Analysis',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: BianTheme.successGreen,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'GRATIS',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              evaluation.language == 'es'
-                                  ? 'Recomendaciones personalizadas'
-                                  : 'Personalized recommendations',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Row(
+            children: [
+              // Decoración con flores y pompones literales 🌸🎀✨
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          BianTheme.primaryRed,
+                          BianTheme.primaryRed.withOpacity(0.8),
                         ],
                       ),
-                    ],
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: BianTheme.primaryRed.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Text('✨', style: TextStyle(fontSize: 16)),
+                  ),
+                  Positioned(
+                    bottom: -2,
+                    left: -6,
+                    child: Text('🌸', style: TextStyle(fontSize: 14)),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          evaluation.language == 'es'
+                              ? '¿Más detalles?'
+                              : 'Want more details?',
+                          style: TextStyle(
+                            color: BianTheme.darkGray,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Text('🎀', style: TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            evaluation.language == 'es'
+                                ? 'Pregunta lo que quieras sobre tu reporte'
+                                : 'Ask anything about your report',
+                            style: TextStyle(
+                              color: BianTheme.mediumGray,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Text('💬', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: BianTheme.primaryRed.withOpacity(0.6),
+                size: 28,
+              ),
+            ],
           ),
         ),
       ),
