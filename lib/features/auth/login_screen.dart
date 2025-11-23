@@ -6,10 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/services/biometric_service.dart';
+import '../../core/services/session_manager.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/app_mode_provider.dart';
+import '../../core/widgets/custom_snackbar.dart';
+import '../../core/widgets/privacy_consent_dialog.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
 import 'offline_mode_screen.dart';
@@ -30,46 +34,90 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordController = TextEditingController();
   final _apiService = ApiService();
   final _storage = SecureStorage();
+  final _biometricService = BiometricService();
+  final _sessionManager = SessionManager();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _hasConnection = false;
+  bool _rememberAccount = false;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+  String? _biometricType;
+
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   DateTime? _lastBackPress;
-@override
-void initState() {
-  super.initState();
-  _animController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 800),
-  );
-  _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-    CurvedAnimation(parent: _animController, curve: Curves.easeIn),
-  );
-  _animController.forward();
-  
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _checkInitialConnection();
-  });
-}
 
-Future<void> _checkInitialConnection() async {
-  print('🔍 LoginScreen: Verificando conexión inicial...');
-  await Future.delayed(Duration(milliseconds: 500));
-  
-  final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
-  final hasConnection = await connectivityService.checkConnection();
-  
-  print('📡 LoginScreen: Conexión inicial detectada = $hasConnection');
-  
-  if (mounted) {
-    setState(() {
-      _hasConnection = hasConnection;
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeIn),
+    );
+    _animController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialConnection();
+      _loadSavedCredentials();
+      _checkBiometricAvailability();
     });
-    print('✅ LoginScreen: Estado actualizado a $_hasConnection');
   }
-}
+
+  Future<void> _checkInitialConnection() async {
+    print('🔍 LoginScreen: Verificando conexión inicial...');
+    await Future.delayed(Duration(milliseconds: 500));
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+    final hasConnection = await connectivityService.checkConnection();
+
+    print('📡 LoginScreen: Conexión inicial detectada = $hasConnection');
+
+    if (mounted) {
+      setState(() {
+        _hasConnection = hasConnection;
+      });
+      print('✅ LoginScreen: Estado actualizado a $_hasConnection');
+    }
+  }
+
+  /// Cargar credenciales guardadas si existen
+  Future<void> _loadSavedCredentials() async {
+    final rememberEnabled = await _biometricService.isRememberAccountEnabled();
+    final savedEmail = await _biometricService.getSavedEmail();
+    final biometricEnabled = await _biometricService.isBiometricEnabled();
+
+    if (mounted && savedEmail != null) {
+      setState(() {
+        _rememberAccount = rememberEnabled;
+        _biometricEnabled = biometricEnabled;
+        _emailController.text = savedEmail;
+      });
+      print('✅ Credenciales cargadas: $savedEmail');
+    }
+  }
+
+  /// Verificar disponibilidad de biometría
+  Future<void> _checkBiometricAvailability() async {
+    final isAvailable = await _biometricService.hasBiometricCapability();
+    if (isAvailable) {
+      final biometrics = await _biometricService.getAvailableBiometrics();
+      final typeName = _biometricService.getBiometricTypeName(biometrics);
+
+      if (mounted) {
+        setState(() {
+          _biometricAvailable = true;
+          _biometricType = typeName;
+        });
+        print('✅ Biometría disponible: $typeName');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -100,7 +148,19 @@ Future<void> _checkInitialConnection() async {
           await _storage.saveUser(user);
         }
 
+        // Guardar credenciales si "Recordar cuenta" está activado
+        if (_rememberAccount) {
+          await _biometricService.saveRememberedAccount(
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
+          print('💾 Credenciales guardadas');
+        }
+
         Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
+
+        // Iniciar monitoreo de sesión
+        _sessionManager.startMonitoring();
 
         setState(() => _isLoading = false);
 
@@ -143,27 +203,115 @@ Future<void> _checkInitialConnection() async {
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
-        duration: const Duration(seconds: 3),
-      ),
+  /// Login con biometría
+  Future<void> _loginWithBiometric() async {
+    if (!_biometricEnabled) {
+      CustomSnackbar.showWarning(
+        context,
+        'La autenticación biométrica no está habilitada',
+      );
+      return;
+    }
+
+    final loc = AppLocalizations.of(context);
+    final authenticated = await _biometricService.authenticate(
+      reason: loc.translate('authenticate_with', [_biometricType ?? 'Biometría']),
     );
+
+    if (!authenticated) {
+      CustomSnackbar.showError(context, 'Autenticación biométrica fallida');
+      return;
+    }
+
+    // Obtener credenciales guardadas
+    final credentials = await _biometricService.getSavedCredentials();
+    if (credentials == null) {
+      CustomSnackbar.showError(context, 'No hay credenciales guardadas');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await _apiService.login(
+        credentials['email']!,
+        credentials['password']!,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        await _storage.saveToken(result['token']);
+
+        if (result['user'] != null) {
+          final user = User.fromJson(result['user']);
+          await _storage.saveUser(user);
+        }
+
+        Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
+        _sessionManager.startMonitoring();
+
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      } else {
+        setState(() => _isLoading = false);
+        _showSnackBar(loc.translate('invalid_credentials'), isError: true);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showSnackBar(loc.translate('connection_error'), isError: true);
+    }
+  }
+
+  /// Activar/desactivar "Recordar cuenta"
+  Future<void> _toggleRememberAccount(bool value) async {
+    if (value && _biometricAvailable) {
+      // Mostrar diálogo de consentimiento
+      final accepted = await PrivacyConsentDialog.show(context);
+      if (!accepted) return;
+
+      setState(() {
+        _rememberAccount = true;
+        _biometricEnabled = true;
+      });
+
+      await _biometricService.enableBiometric();
+      CustomSnackbar.showSuccess(
+        context,
+        'Biometría activada. Inicia sesión para guardar tus credenciales.',
+      );
+    } else if (value) {
+      // Solo recordar sin biometría
+      setState(() => _rememberAccount = true);
+    } else {
+      // Desactivar
+      setState(() {
+        _rememberAccount = false;
+        _biometricEnabled = false;
+      });
+      await _biometricService.disableBiometric();
+      await _biometricService.clearRememberedAccount();
+      _passwordController.clear();
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (isError) {
+      CustomSnackbar.showError(context, message);
+    } else {
+      CustomSnackbar.showSuccess(context, message);
+    }
   }
 
   void _handleOfflineModeClick() {
-    Provider.of<AppModeProvider>(context, listen: false).setMode(AppMode.offline);
+    Provider.of<AppModeProvider>(context, listen: false)
+        .setMode(AppMode.offline);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -180,31 +328,27 @@ Future<void> _checkInitialConnection() async {
         Provider.of<ConnectivityService>(context, listen: false);
 
     return WillPopScope(
-  onWillPop: () async {
-    // Si el teclado está abierto, cerrarlo primero
-    if (MediaQuery.of(context).viewInsets.bottom > 0) {
-      FocusScope.of(context).unfocus();
-      return false;
-    }
-    
-    // Si no hay teclado, entonces mostrar diálogo de salida
-    final now = DateTime.now();
-    if (_lastBackPress == null || 
-        now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
-      _lastBackPress = now;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Presiona de nuevo para salir'),
-          duration: Duration(seconds: 2),
-          backgroundColor: BianTheme.mediumGray,
-        ),
-      );
-      return false;
-    }
-    SystemNavigator.pop();
-    return true;
-  },
-  child: Scaffold(
+      onWillPop: () async {
+        if (MediaQuery.of(context).viewInsets.bottom > 0) {
+          FocusScope.of(context).unfocus();
+          return false;
+        }
+
+        final now = DateTime.now();
+        if (_lastBackPress == null ||
+            now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+          _lastBackPress = now;
+          CustomSnackbar.showInfo(
+            context,
+            loc.translate('press_again_to_exit'),
+            duration: Duration(seconds: 2),
+          );
+          return false;
+        }
+        SystemNavigator.pop();
+        return true;
+      },
+      child: Scaffold(
         body: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
@@ -217,9 +361,10 @@ Future<void> _checkInitialConnection() async {
                 padding: const EdgeInsets.all(BianTheme.paddingLarge),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height - 
-                        MediaQuery.of(context).padding.top - 
-                        MediaQuery.of(context).padding.bottom - 48,
+                    minHeight: MediaQuery.of(context).size.height -
+                        MediaQuery.of(context).padding.top -
+                        MediaQuery.of(context).padding.bottom -
+                        48,
                   ),
                   child: IntrinsicHeight(
                     child: Form(
@@ -229,6 +374,7 @@ Future<void> _checkInitialConnection() async {
                         children: [
                           const SizedBox(height: 20),
 
+                          // Selector de idioma
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -311,6 +457,8 @@ Future<void> _checkInitialConnection() async {
                           ),
 
                           const SizedBox(height: 20),
+
+                          // Logo
                           Hero(
                             tag: 'bian_logo',
                             child: Image.asset(
@@ -323,9 +471,13 @@ Future<void> _checkInitialConnection() async {
 
                           const SizedBox(height: 24),
 
+                          // Título
                           Text(
                             loc.translate('welcome'),
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayLarge
+                                ?.copyWith(
                                   color: BianTheme.primaryRed,
                                 ),
                             textAlign: TextAlign.center,
@@ -341,6 +493,7 @@ Future<void> _checkInitialConnection() async {
 
                           const SizedBox(height: 40),
 
+                          // Campo Email/Documento
                           TextFormField(
                             controller: _emailController,
                             enabled: !_isLoading,
@@ -360,6 +513,7 @@ Future<void> _checkInitialConnection() async {
 
                           const SizedBox(height: 20),
 
+                          // Campo Contraseña
                           TextFormField(
                             controller: _passwordController,
                             enabled: !_isLoading,
@@ -387,8 +541,64 @@ Future<void> _checkInitialConnection() async {
                             },
                           ),
 
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 16),
 
+                          // Checkbox "Recordar cuenta"
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _rememberAccount,
+                                onChanged: _isLoading
+                                    ? null
+                                    : (value) => _toggleRememberAccount(value ?? false),
+                                activeColor: BianTheme.primaryRed,
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: _isLoading
+                                      ? null
+                                      : () => _toggleRememberAccount(!_rememberAccount),
+                                  child: Text(
+                                    loc.translate('remember_account'),
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                              if (_rememberAccount && _biometricAvailable)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: BianTheme.infoBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.fingerprint,
+                                        color: BianTheme.infoBlue,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _biometricType ?? 'Biometría',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: BianTheme.infoBlue,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // StreamBuilder para conexión
                           StreamBuilder<bool>(
                             stream: connectivityService.connectionStatus,
                             builder: (context, snapshot) {
@@ -396,7 +606,8 @@ Future<void> _checkInitialConnection() async {
                                   ? snapshot.data!
                                   : _hasConnection;
 
-                              if (snapshot.hasData && currentConnection != _hasConnection) {
+                              if (snapshot.hasData &&
+                                  currentConnection != _hasConnection) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
                                   if (mounted) {
                                     setState(() {
@@ -408,19 +619,24 @@ Future<void> _checkInitialConnection() async {
 
                               return Column(
                                 children: [
+                                  // Botón de login normal
                                   ElevatedButton(
-                                    onPressed:
-                                        (_isLoading || !currentConnection) ? null : _doLogin,
+                                    onPressed: (_isLoading || !currentConnection)
+                                        ? null
+                                        : _doLogin,
                                     child: _isLoading
                                         ? Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               const SizedBox(
                                                 width: 20,
                                                 height: 20,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(
                                                     Colors.white,
                                                   ),
                                                 ),
@@ -431,6 +647,33 @@ Future<void> _checkInitialConnection() async {
                                           )
                                         : Text(loc.translate('sign_in')),
                                   ),
+
+                                  // Botón de login con biometría
+                                  if (_biometricEnabled &&
+                                      !_isLoading &&
+                                      currentConnection)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: OutlinedButton.icon(
+                                        onPressed: _loginWithBiometric,
+                                        icon: const Icon(Icons.fingerprint),
+                                        label: Text(
+                                            loc.translate('biometric_login')),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor:
+                                              BianTheme.infoBlue,
+                                          side: const BorderSide(
+                                            color: BianTheme.infoBlue,
+                                            width: 2,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 14),
+                                          minimumSize:
+                                              const Size(double.infinity, 52),
+                                        ),
+                                      ),
+                                    ),
+
                                   const SizedBox(height: 16),
                                   Container(
                                     width: double.infinity,
@@ -438,30 +681,45 @@ Future<void> _checkInitialConnection() async {
                                     color: BianTheme.lightGray,
                                   ),
                                   const SizedBox(height: 16),
+
+                                  // Botón offline
                                   OutlinedButton.icon(
-                                    onPressed: _isLoading ? null : _handleOfflineModeClick,
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _handleOfflineModeClick,
                                     icon: Icon(Icons.offline_bolt),
-                                    label: Text(loc.translate('continue_offline')),
+                                    label:
+                                        Text(loc.translate('continue_offline')),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: currentConnection ? BianTheme.infoBlue : BianTheme.warningYellow,
+                                      foregroundColor: currentConnection
+                                          ? BianTheme.infoBlue
+                                          : BianTheme.warningYellow,
                                       side: BorderSide(
-                                        color: currentConnection ? BianTheme.infoBlue : BianTheme.warningYellow,
+                                        color: currentConnection
+                                            ? BianTheme.infoBlue
+                                            : BianTheme.warningYellow,
                                         width: 2,
                                       ),
-                                      padding: EdgeInsets.symmetric(vertical: 14),
-                                      minimumSize: Size(double.infinity, 52),
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 14),
+                                      minimumSize:
+                                          Size(double.infinity, 52),
                                     ),
                                   ),
                                   if (!currentConnection)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 12),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.wifi_off, size: 16, color: BianTheme.warningYellow),
+                                          Icon(Icons.wifi_off,
+                                              size: 16,
+                                              color: BianTheme.warningYellow),
                                           const SizedBox(width: 8),
                                           Text(
-                                            loc.translate('no_internet_connection'),
+                                            loc.translate(
+                                                'no_internet_connection'),
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: BianTheme.warningYellow,
@@ -478,6 +736,7 @@ Future<void> _checkInitialConnection() async {
 
                           const SizedBox(height: 20),
 
+                          // Link a registro
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -491,7 +750,8 @@ Future<void> _checkInitialConnection() async {
                                     : () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => const RegisterScreen(),
+                                            builder: (_) =>
+                                                const RegisterScreen(),
                                           ),
                                         ),
                                 child: Text(

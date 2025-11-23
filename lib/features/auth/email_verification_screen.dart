@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../core/api/api_service.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/widgets/custom_snackbar.dart';
 import 'login_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -120,36 +121,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   // ✅ Método mejorado para mostrar toasts/snackbars
   void _showToast(String message, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
-        duration: Duration(seconds: isError ? 4 : 3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    if (isError) {
+      CustomSnackbar.showError(context, message, duration: Duration(seconds: 4));
+    } else {
+      CustomSnackbar.showSuccess(context, message, duration: Duration(seconds: 3));
+    }
   }
 
   void _goToLogin() {

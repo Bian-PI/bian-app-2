@@ -12,6 +12,7 @@ import '../../core/providers/language_provider.dart';
 import '../../core/providers/app_mode_provider.dart';
 import '../../core/utils/connectivity_service.dart';
 import '../../core/api/api_service.dart';
+import '../../core/widgets/custom_snackbar.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import '../auth/login_screen.dart';
@@ -248,18 +249,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       _loadLocalReports();
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Reporte eliminado'),
-              ],
-            ),
-            backgroundColor: BianTheme.successGreen,
-          ),
-        );
+        CustomSnackbar.showSuccess(context, 'Reporte eliminado');
       }
     }
   }
@@ -277,35 +267,13 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     
     if (!hasConnection) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.wifi_off, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(child: Text(loc.translate('no_connection'))),
-            ],
-          ),
-          backgroundColor: BianTheme.errorRed,
-        ),
-      );
+      CustomSnackbar.showError(context, loc.translate('no_connection'));
       return;
     }
 
     if (_pendingSyncCount == 0) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.white),
-              SizedBox(width: 12),
-              Text('No hay reportes pendientes de sincronizar'),
-            ],
-          ),
-          backgroundColor: BianTheme.infoBlue,
-        ),
-      );
+      CustomSnackbar.showInfo(context, 'No hay reportes pendientes de sincronizar');
       return;
     }
 
@@ -413,12 +381,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           ElevatedButton.icon(
             onPressed: () {
               if (documentController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(
-                    content: Text('Ingresa tu documento'),
-                    backgroundColor: BianTheme.errorRed,
-                  ),
-                );
+                CustomSnackbar.showError(dialogContext, 'Ingresa tu documento');
                 return;
               }
               Navigator.pop(dialogContext, documentController.text.trim());
@@ -536,52 +499,22 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       // Mostrar resultado
       if (mounted) {
         if (errorCount == 0 && syncedCount > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text('$syncedCount reporte(s) sincronizado(s) correctamente'),
-                  ),
-                ],
-              ),
-              backgroundColor: BianTheme.successGreen,
-              duration: Duration(seconds: 4),
-            ),
+          CustomSnackbar.showSuccess(
+            context,
+            '$syncedCount reporte(s) sincronizado(s) correctamente',
+            duration: Duration(seconds: 4),
           );
         } else if (errorCount > 0 && syncedCount > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.warning_amber, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text('$syncedCount sincronizado(s), $errorCount con error'),
-                  ),
-                ],
-              ),
-              backgroundColor: BianTheme.warningYellow,
-              duration: Duration(seconds: 4),
-            ),
+          CustomSnackbar.showWarning(
+            context,
+            '$syncedCount sincronizado(s), $errorCount con error',
+            duration: Duration(seconds: 4),
           );
         } else if (errorCount > 0 && syncedCount == 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text('Error al sincronizar. Intenta más tarde.'),
-                  ),
-                ],
-              ),
-              backgroundColor: BianTheme.errorRed,
-              duration: Duration(seconds: 4),
-            ),
+          CustomSnackbar.showError(
+            context,
+            'Error al sincronizar. Intenta más tarde.',
+            duration: Duration(seconds: 4),
           );
         }
       }
@@ -589,18 +522,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       print('💥 Error en sincronización: $e');
       if (mounted) {
         Navigator.pop(context); // Cerrar loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(child: Text('Error de conexión: $e')),
-              ],
-            ),
-            backgroundColor: BianTheme.errorRed,
-          ),
-        );
+        CustomSnackbar.showError(context, 'Error de conexión: $e');
       }
     } finally {
       setState(() => _isSyncing = false);

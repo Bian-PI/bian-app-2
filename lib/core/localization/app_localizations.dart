@@ -105,6 +105,9 @@ class AppLocalizations {
       'location_error': 'Error al obtener ubicación',
       'enable_gps': 'Habilitar GPS',
       'manual_location': 'Ingresar manualmente',
+      'gps_disabled': 'El GPS está desactivado',
+      'permission_denied_permanently': 'Permiso de ubicación denegado permanentemente',
+      'open_settings': 'Abrir configuración',
 
       'field_required': 'Este campo es requerido',
       'invalid_email': 'Correo electrónico inválido',
@@ -346,6 +349,50 @@ class AppLocalizations {
 
       'no_critical_points': 'No se identificaron puntos críticos',
       'no_strong_points': 'No se identificaron puntos fuertes destacables',
+
+      // Traducciones adicionales para notificaciones y UI
+      'report_deleted': 'Reporte eliminado',
+      'no_pending_reports_to_sync': 'No hay reportes pendientes de sincronizar',
+      'enter_id_to_link_reports': 'Ingresa tu documento de identidad para asociar los reportes:',
+      'enter_your_document': 'Ingresa tu documento',
+      'reports_synced_successfully': 'reporte(s) sincronizado(s) correctamente',
+      'reports_synced_with_errors': 'sincronizado(s), {0} con error',
+      'could_not_open_pdf_automatically': 'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
+      'share': 'Compartir',
+      'pdf_report_options': 'Opciones de Reporte PDF',
+      'share_pdf': 'Compartir PDF',
+      'please_wait': 'Por favor espera...',
+      'storage_permissions_required': 'Se requieren permisos de almacenamiento',
+      'view_pdf': 'Ver PDF',
+      'try_sharing': 'Intentar Compartir',
+      'press_again_to_exit': 'Presiona de nuevo para salir',
+      'resending': 'Reenviando...',
+      'download_pdf_title': 'Descargar PDF',
+      'download_on_device': 'Guardar en el dispositivo',
+      'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
+
+      // Biometría y privacidad
+      'biometric_consent_title': 'Autenticación Biométrica',
+      'biometric_consent_message':
+          'Para habilitar el inicio de sesión con huella dactilar o Face ID, necesitamos tu consentimiento para almacenar tus credenciales de forma segura en tu dispositivo.',
+      'important_information': 'Información Importante',
+      'biometric_local_only':
+          'Tus credenciales se almacenan solo en tu dispositivo',
+      'biometric_device_only':
+          'La huella o Face ID solo se usa en este dispositivo',
+      'biometric_disable_anytime':
+          'Puedes desactivar esta función en cualquier momento',
+      'biometric_no_external_sharing':
+          'Nunca compartimos tus datos biométricos con terceros',
+      'decline': 'Rechazar',
+      'accept_and_continue': 'Aceptar y Continuar',
+      'remember_account': 'Recordar cuenta',
+      'use_biometric': 'Usar huella/Face ID',
+      'biometric_login': 'Iniciar con biometría',
+      'authenticate_with': 'Autenticarse con {0}',
+      'session_expired': 'Sesión expirada',
+      'session_expired_message':
+          'Tu sesión expiró por inactividad. Por favor, inicia sesión nuevamente.',
     },
     'en': {
       'app_name': 'BIAN - Animal Welfare',
@@ -437,6 +484,9 @@ class AppLocalizations {
       'location_error': 'Error getting location',
       'enable_gps': 'Enable GPS',
       'manual_location': 'Enter manually',
+      'gps_disabled': 'GPS is disabled',
+      'permission_denied_permanently': 'Location permission permanently denied',
+      'open_settings': 'Open settings',
 
       'field_required': 'This field is required',
       'invalid_email': 'Invalid email',
@@ -670,6 +720,50 @@ class AppLocalizations {
 
       'no_critical_points': 'No critical points identified',
       'no_strong_points': 'No strong points identified',
+
+      // Additional translations for notifications and UI
+      'report_deleted': 'Report deleted',
+      'no_pending_reports_to_sync': 'No pending reports to sync',
+      'enter_id_to_link_reports': 'Enter your ID document to link reports:',
+      'enter_your_document': 'Enter your document',
+      'reports_synced_successfully': 'report(s) synced successfully',
+      'reports_synced_with_errors': 'synced, {0} with error',
+      'could_not_open_pdf_automatically': 'Could not open automatically. Look for the file in Downloads.',
+      'share': 'Share',
+      'pdf_report_options': 'PDF Report Options',
+      'share_pdf': 'Share PDF',
+      'please_wait': 'Please wait...',
+      'storage_permissions_required': 'Storage permissions required',
+      'view_pdf': 'View PDF',
+      'try_sharing': 'Try Sharing',
+      'press_again_to_exit': 'Press again to exit',
+      'resending': 'Resending...',
+      'download_pdf_title': 'Download PDF',
+      'download_on_device': 'Save on device',
+      'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
+
+      // Biometrics and privacy
+      'biometric_consent_title': 'Biometric Authentication',
+      'biometric_consent_message':
+          'To enable login with fingerprint or Face ID, we need your consent to securely store your credentials on your device.',
+      'important_information': 'Important Information',
+      'biometric_local_only':
+          'Your credentials are stored only on your device',
+      'biometric_device_only':
+          'Fingerprint or Face ID is only used on this device',
+      'biometric_disable_anytime':
+          'You can disable this feature at any time',
+      'biometric_no_external_sharing':
+          'We never share your biometric data with third parties',
+      'decline': 'Decline',
+      'accept_and_continue': 'Accept and Continue',
+      'remember_account': 'Remember account',
+      'use_biometric': 'Use fingerprint/Face ID',
+      'biometric_login': 'Login with biometrics',
+      'authenticate_with': 'Authenticate with {0}',
+      'session_expired': 'Session expired',
+      'session_expired_message':
+          'Your session expired due to inactivity. Please log in again.',
     },
   };
 

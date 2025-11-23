@@ -52,6 +52,10 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Necesitamos tu ubicación para registrar la ubicación de la granja en las evaluaciones</string>
 
+	<!-- ✅ PERMISOS DE BIOMETRÍA (Face ID / Touch ID) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usamos Face ID / Touch ID para un inicio de sesión rápido y seguro</string>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
