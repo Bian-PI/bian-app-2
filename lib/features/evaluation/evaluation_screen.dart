@@ -97,6 +97,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         farmLocation: '',
         evaluationDate: DateTime.now(),
         evaluatorName: '',
+        evaluatorDocument: '',
         responses: {},
         status: 'draft',
         language: widget.currentLanguage,
@@ -308,6 +309,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   farmName: _farmNameController.text,
                   farmLocation: _farmLocationController.text,
                   evaluatorName: _evaluatorNameController.text,
+                  evaluatorDocument: _evaluatorDocumentController.text,
                   language: widget.currentLanguage,
                 );
                 _hasUnsavedChanges = true;

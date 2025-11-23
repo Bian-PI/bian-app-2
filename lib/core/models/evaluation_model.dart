@@ -11,6 +11,7 @@ class Evaluation {
   final String farmLocation;
   final DateTime evaluationDate;
   final String evaluatorName;
+  final String evaluatorDocument;
   final Map<String, dynamic> responses;
   final double? overallScore;
   final Map<String, double>? categoryScores;
@@ -30,6 +31,7 @@ class Evaluation {
     required this.farmLocation,
     required this.evaluationDate,
     required this.evaluatorName,
+    required this.evaluatorDocument,
     required this.responses,
     this.overallScore,
     this.categoryScores,
@@ -48,6 +50,7 @@ class Evaluation {
       farmLocation: json['farmLocation'],
       evaluationDate: DateTime.parse(json['evaluationDate']),
       evaluatorName: json['evaluatorName'],
+      evaluatorDocument: json['evaluatorDocument'] ?? '',
       responses: Map<String, dynamic>.from(json['responses']),
       overallScore: json['overallScore']?.toDouble(),
       categoryScores: json['categoryScores'] != null
@@ -69,6 +72,7 @@ class Evaluation {
       'farmLocation': farmLocation,
       'evaluationDate': evaluationDate.toIso8601String(),
       'evaluatorName': evaluatorName,
+      'evaluatorDocument': evaluatorDocument,
       'responses': responses,
       'overallScore': overallScore,
       'categoryScores': categoryScores,
@@ -86,6 +90,7 @@ class Evaluation {
     String? farmLocation,
     DateTime? evaluationDate,
     String? evaluatorName,
+    String? evaluatorDocument,
     Map<String, dynamic>? responses,
     double? overallScore,
     Map<String, double>? categoryScores,
@@ -102,6 +107,7 @@ class Evaluation {
       farmLocation: farmLocation ?? this.farmLocation,
       evaluationDate: evaluationDate ?? this.evaluationDate,
       evaluatorName: evaluatorName ?? this.evaluatorName,
+      evaluatorDocument: evaluatorDocument ?? this.evaluatorDocument,
       responses: responses ?? this.responses,
       overallScore: overallScore ?? this.overallScore,
       categoryScores: categoryScores ?? this.categoryScores,
@@ -171,6 +177,7 @@ class Evaluation {
       'farm_name': farmName,
       'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
+      'evaluator_document': evaluatorDocument,
       'status': status,
       'completed_offline': isOfflineMode,
       'overall_score': (results['overall_score'] ?? 0.0).toString(),
