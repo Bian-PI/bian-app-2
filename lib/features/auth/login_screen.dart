@@ -10,6 +10,7 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/app_mode_provider.dart';
+import '../../core/widgets/custom_snackbar.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
 import 'offline_mode_screen.dart';
@@ -144,22 +145,11 @@ Future<void> _checkInitialConnection() async {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (isError) {
+      CustomSnackbar.showError(context, message);
+    } else {
+      CustomSnackbar.showSuccess(context, message);
+    }
   }
 
   void _handleOfflineModeClick() {
@@ -189,15 +179,13 @@ Future<void> _checkInitialConnection() async {
     
     // Si no hay teclado, entonces mostrar diálogo de salida
     final now = DateTime.now();
-    if (_lastBackPress == null || 
+    if (_lastBackPress == null ||
         now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
       _lastBackPress = now;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Presiona de nuevo para salir'),
-          duration: Duration(seconds: 2),
-          backgroundColor: BianTheme.mediumGray,
-        ),
+      CustomSnackbar.showInfo(
+        context,
+        'Presiona de nuevo para salir',
+        duration: Duration(seconds: 2),
       );
       return false;
     }

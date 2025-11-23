@@ -12,6 +12,7 @@ import 'results_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/utils/location_service.dart';
+import '../../core/widgets/custom_snackbar.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -242,18 +243,47 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       setState(() {
         _farmLocationController.text = location;
       });
+
+      if (mounted) {
+        CustomSnackbar.showSuccess(
+          context,
+          '${loc.translate('location')}: $location',
+        );
+      }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(loc.translate('location_permission_denied')),
-            backgroundColor: BianTheme.errorRed,
-            action: SnackBarAction(
-              label: loc.translate('enable_gps'),
-              textColor: Colors.white,
-              onPressed: () => LocationService.openLocationSettings(),
-            ),
-          ),
+        final permissionStatus = await LocationService.checkAndRequestPermission();
+
+        String message;
+        String? actionLabel;
+        VoidCallback? onAction;
+
+        switch (permissionStatus) {
+          case LocationPermissionStatus.serviceDisabled:
+            message = loc.translate('gps_disabled');
+            actionLabel = loc.translate('enable_gps');
+            onAction = () => LocationService.openLocationSettings();
+            break;
+          case LocationPermissionStatus.deniedForever:
+            message = loc.translate('permission_denied_permanently');
+            actionLabel = loc.translate('open_settings');
+            onAction = () => LocationService.openAppSettings();
+            break;
+          case LocationPermissionStatus.denied:
+          default:
+            message = loc.translate('location_permission_denied');
+            actionLabel = loc.translate('open_settings');
+            onAction = () => LocationService.openAppSettings();
+            break;
+        }
+
+        CustomSnackbar.show(
+          context,
+          message,
+          isError: true,
+          actionLabel: actionLabel,
+          onActionPressed: onAction,
+          duration: Duration(seconds: 5),
         );
       }
     }
@@ -353,11 +383,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                     _farmNameController.text.isEmpty ||
                     _farmLocationController.text.isEmpty ||
                     _evaluatorNameController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(loc.translate('complete_all_fields')),
-                      backgroundColor: BianTheme.errorRed,
-                    ),
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('complete_all_fields'),
                   );
                   return;
                 }

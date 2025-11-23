@@ -1,32 +1,35 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 class LocationService {
-  static Future<bool> checkPermission() async {
+  static Future<LocationPermissionStatus> checkAndRequestPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return false;
+      return LocationPermissionStatus.serviceDisabled;
     }
 
     LocationPermission permission = await Geolocator.checkPermission();
+
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return false;
+        return LocationPermissionStatus.denied;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return false;
+      return LocationPermissionStatus.deniedForever;
     }
 
-    return true;
+    return LocationPermissionStatus.granted;
   }
 
   static Future<String?> getCurrentLocation() async {
     try {
-      bool hasPermission = await checkPermission();
-      if (!hasPermission) {
+      final permissionStatus = await checkAndRequestPermission();
+
+      if (permissionStatus != LocationPermissionStatus.granted) {
         return null;
       }
 
@@ -69,4 +72,15 @@ class LocationService {
   static Future<void> openLocationSettings() async {
     await Geolocator.openLocationSettings();
   }
+
+  static Future<void> openAppSettings() async {
+    await ph.openAppSettings();
+  }
+}
+
+enum LocationPermissionStatus {
+  granted,
+  denied,
+  deniedForever,
+  serviceDisabled,
 }

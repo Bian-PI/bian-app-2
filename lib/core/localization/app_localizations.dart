@@ -105,6 +105,9 @@ class AppLocalizations {
       'location_error': 'Error al obtener ubicación',
       'enable_gps': 'Habilitar GPS',
       'manual_location': 'Ingresar manualmente',
+      'gps_disabled': 'El GPS está desactivado',
+      'permission_denied_permanently': 'Permiso de ubicación denegado permanentemente',
+      'open_settings': 'Abrir configuración',
 
       'field_required': 'Este campo es requerido',
       'invalid_email': 'Correo electrónico inválido',
@@ -437,6 +440,9 @@ class AppLocalizations {
       'location_error': 'Error getting location',
       'enable_gps': 'Enable GPS',
       'manual_location': 'Enter manually',
+      'gps_disabled': 'GPS is disabled',
+      'permission_denied_permanently': 'Location permission permanently denied',
+      'open_settings': 'Open settings',
 
       'field_required': 'This field is required',
       'invalid_email': 'Invalid email',
