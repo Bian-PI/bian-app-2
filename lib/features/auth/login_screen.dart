@@ -17,7 +17,6 @@ import '../../core/widgets/custom_snackbar.dart';
 import '../../core/widgets/privacy_consent_dialog.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
-import 'offline_mode_screen.dart';
 import '../home/home_screen.dart';
 import '../home/offline_home_screen.dart';
 

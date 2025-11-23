@@ -5,7 +5,6 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/services/gemini_service.dart';
 import '../../core/utils/connectivity_service.dart';
-import '../../core/widgets/custom_snackbar.dart';
 
 class AIAnalysisScreen extends StatefulWidget {
   final String speciesType;
