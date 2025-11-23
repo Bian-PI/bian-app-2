@@ -1,7 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ApiConfig {
-  static final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8080';
-  static final String mailServiceUrl = dotenv.env['MAIL_SERVICE_URL'] ?? 'http://10.0.2.2:8081';
+  static final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8081';
+  static final String mailServiceUrl = dotenv.env['MAIL_SERVICE_URL'] ?? 'http://10.0.2.2:8080';
 
   static const String login = "/auth/login";
   static const String register = "/auth/register";
