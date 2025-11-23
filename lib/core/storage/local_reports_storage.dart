@@ -1,4 +1,3 @@
-// lib/core/storage/local_reports_storage.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/evaluation_model.dart';
@@ -8,13 +7,11 @@ class LocalReportsStorage {
   static const String _keyPendingSync = 'pending_sync_reports';
   static const int maxReports = 20;
 
-  // ✅ Guardar reporte local (persistente)
   static Future<bool> saveLocalReport(Evaluation evaluation) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final existingReports = await getAllLocalReports();
 
-      // Verificar si ya existe (actualizar)
       final existingIndex = existingReports.indexWhere((r) => r.id == evaluation.id);
       
       if (existingIndex != -1) {
@@ -31,7 +28,6 @@ class LocalReportsStorage {
       final encoded = jsonEncode(reportsJson);
       await prefs.setString(_keyLocalReports, encoded);
 
-      // Marcar como pendiente de sincronización
       await _markAsPendingSync(evaluation.id);
 
       print('✅ Reporte local guardado: ${evaluation.id}');
@@ -42,7 +38,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Obtener todos los reportes locales
   static Future<List<Evaluation>> getAllLocalReports() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -66,7 +61,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Obtener reporte por ID
   static Future<Evaluation?> getLocalReportById(String id) async {
     try {
       final reports = await getAllLocalReports();
@@ -80,7 +74,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Eliminar reporte local
   static Future<bool> deleteLocalReport(String id) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -92,7 +85,6 @@ class LocalReportsStorage {
       final encoded = jsonEncode(reportsJson);
       await prefs.setString(_keyLocalReports, encoded);
 
-      // Quitar de pendientes de sincronización
       await _removeFromPendingSync(id);
 
       print('✅ Reporte local eliminado: $id');
@@ -103,7 +95,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Limpiar todos los reportes locales
   static Future<bool> clearAllLocalReports() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -117,17 +108,12 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Obtener cantidad de reportes locales
   static Future<int> getLocalReportsCount() async {
     final reports = await getAllLocalReports();
     return reports.length;
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // GESTIÓN DE SINCRONIZACIÓN
-  // ═══════════════════════════════════════════════════════════
 
-  // ✅ Marcar reporte como pendiente de sincronización
   static Future<void> _markAsPendingSync(String reportId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -142,7 +128,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Quitar reporte de pendientes de sincronización
   static Future<void> _removeFromPendingSync(String reportId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -155,7 +140,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Obtener IDs de reportes pendientes de sincronización
   static Future<List<String>> getPendingSyncIds() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -166,7 +150,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Obtener reportes pendientes de sincronización
   static Future<List<Evaluation>> getPendingSyncReports() async {
     try {
       final pendingIds = await getPendingSyncIds();
@@ -179,7 +162,6 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Marcar reporte como sincronizado (moverlo a reportes normales)
   static Future<bool> markAsSynced(String reportId) async {
     try {
       await _removeFromPendingSync(reportId);
@@ -191,13 +173,11 @@ class LocalReportsStorage {
     }
   }
 
-  // ✅ Verificar si hay reportes pendientes de sincronización
   static Future<bool> hasPendingSyncReports() async {
     final pendingIds = await getPendingSyncIds();
     return pendingIds.isNotEmpty;
   }
 
-  // ✅ Obtener cantidad de reportes pendientes
   static Future<int> getPendingSyncCount() async {
     final pendingIds = await getPendingSyncIds();
     return pendingIds.length;

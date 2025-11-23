@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/bian_theme.dart';
 import '../localization/app_localizations.dart';
 
-/// Diálogo de consentimiento para tratamiento de datos biométricos
 class PrivacyConsentDialog extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -158,7 +157,6 @@ class PrivacyConsentDialog extends StatelessWidget {
     );
   }
 
-  /// Mostrar diálogo y retornar si aceptó o no
   static Future<bool> show(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,

@@ -1,4 +1,3 @@
-// lib/features/evaluation/ai_analysis_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bian_theme.dart';
@@ -47,7 +46,6 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
     });
 
     try {
-      // Verificar conexión
       final connectivityService =
           Provider.of<ConnectivityService>(context, listen: false);
       final hasConnection = await connectivityService.checkConnection();
@@ -56,12 +54,10 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
         throw Exception('No hay conexión a internet');
       }
 
-      // Verificar disponibilidad de Gemini
       if (!_geminiService.isAvailable) {
         throw Exception('El servicio de IA no está disponible');
       }
 
-      // Generar análisis
       final analysis = await _geminiService.analyzeAnimalWelfareReport(
         speciesType: widget.speciesType,
         overallScore: widget.overallScore,
@@ -157,7 +153,6 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
   }
 
   Widget _buildErrorView() {
-    // Detectar tipo de error
     final isApiKeyError = _errorMessage!.contains('API key') ||
                           _errorMessage!.contains('not valid');
     final isConnectionError = _errorMessage!.contains('conexión') ||
@@ -306,7 +301,6 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header informativo
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -366,7 +360,6 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
 
           const SizedBox(height: 24),
 
-          // Contenido del análisis
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -395,7 +388,6 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
 
           const SizedBox(height: 24),
 
-          // Footer
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

@@ -1,4 +1,3 @@
-// lib/core/providers/app_mode_provider.dart
 import 'package:flutter/material.dart';
 import '../storage/secure_storage.dart';
 

@@ -9,7 +9,6 @@ class SecureStorage {
 
   final _storage = const FlutterSecureStorage();
 
-  // Keys
   static const String _keyToken = 'jwt_token';
   static const String _keyUser = 'user_data';
   static const String _keyUserId = 'user_id';
@@ -19,7 +18,6 @@ class SecureStorage {
   static const String _keySavedEmail = 'saved_email';
   static const String _keySavedPassword = 'saved_password';
 
-  // ========== TOKEN ==========
   
   Future<void> saveToken(String token) async {
     await _storage.write(key: _keyToken, value: token);
@@ -33,7 +31,6 @@ class SecureStorage {
     await _storage.delete(key: _keyToken);
   }
 
-  // ========== USER DATA ==========
   
   Future<void> saveUser(User user) async {
     final userJson = jsonEncode(user.toJson());
@@ -74,7 +71,6 @@ class SecureStorage {
     await _storage.write(key: _keyIsVerified, value: verified.toString());
   }
 
-  // ========== SESSION ==========
   
   Future<bool> hasActiveSession() async {
     final token = await getToken();
@@ -85,7 +81,6 @@ class SecureStorage {
     await _storage.deleteAll();
   }
 
-  // ========== COMPLETE SESSION DATA ==========
   
   Future<void> saveSession({
     required String token,
@@ -114,7 +109,6 @@ class SecureStorage {
     await _storage.delete(key: _keyIsVerified);
   }
 
-  // ========== BIOMETRIC & REMEMBER ACCOUNT ==========
 
   Future<void> saveBiometricEnabled(bool enabled) async {
     await _storage.write(key: _keyBiometricEnabled, value: enabled.toString());
@@ -158,7 +152,6 @@ class SecureStorage {
     await _storage.delete(key: _keySavedPassword);
   }
 
-  /// Limpiar solo sesión activa (mantiene credenciales guardadas)
   Future<void> clearSession() async {
     await deleteToken();
     await deleteUser();

@@ -1,5 +1,4 @@
 class Validators {
-  // Regex patterns (mismos del backend)
   static final RegExp emailRegex = RegExp(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
@@ -8,14 +7,12 @@ class Validators {
     r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$',
   );
   
-  // Límites
   static const int phoneMaxLength = 10;
   static const int documentMaxLength = 15;
   static const int nameMaxLength = 100;
   static const int emailMaxLength = 100;
   static const int passwordMinLength = 8;
 
-  /// Valida email
   static String? validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'field_required';
@@ -29,7 +26,6 @@ class Validators {
     return null;
   }
 
-  /// Valida contraseña
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'field_required';
@@ -43,7 +39,6 @@ class Validators {
     return null;
   }
 
-  /// Valida confirmación de contraseña
   static String? validateConfirmPassword(String? value, String password) {
     if (value == null || value.isEmpty) {
       return 'field_required';
@@ -54,7 +49,6 @@ class Validators {
     return null;
   }
 
-  /// Valida nombre completo
   static String? validateFullName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'field_required';
@@ -71,7 +65,6 @@ class Validators {
     return null;
   }
 
-  /// Valida documento
   static String? validateDocument(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'field_required';
@@ -82,7 +75,6 @@ class Validators {
     return null;
   }
 
-  /// Valida teléfono
   static String? validatePhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'field_required';
@@ -96,7 +88,6 @@ class Validators {
     return null;
   }
 
-  /// Valida campo requerido genérico
   static String? validateRequired(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'field_required';

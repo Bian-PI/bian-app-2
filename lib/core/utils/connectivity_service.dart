@@ -20,7 +20,6 @@ class ConnectivityService {
       print('📡 Cambio detectado en conectividad: $results');
       final hasConnection = await _validateRealConnection(results);
       
-      // ✅ SOLO emitir si cambió
       if (_lastKnownState != hasConnection) {
         print('🔄 Estado cambió de $_lastKnownState a $hasConnection - EMITIENDO');
         _lastKnownState = hasConnection;
@@ -69,7 +68,7 @@ class ConnectivityService {
 
     try {
       print('🌐 Haciendo ping a Google...');
-      final response = await http.get(Uri.parse('https://www.google.com'))
+      final response = await http.get(Uri.parse('https:
           .timeout(Duration(seconds: 5));
       final hasInternet = response.statusCode == 200;
       print(hasInternet ? '✅ Ping exitoso (200)' : '❌ Ping falló (${response.statusCode})');

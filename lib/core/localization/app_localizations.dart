@@ -12,7 +12,6 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-// lib/core/localization/app_localizations.dart - AGREGAR TRADUCCIONES
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'es': {
@@ -52,7 +51,6 @@ class AppLocalizations {
       'login_subtitle': 'Inicia sesión para continuar',
       'register_subtitle': 'Únete a nuestra comunidad BIAN',
 
-      // ✅ TRADUCCIONES DE CONECTIVIDAD Y MODO OFFLINE
       'offline_mode': 'Modo sin conexión',
       'no_connection': 'Sin conexión',
       'connection_lost': 'Conexión Perdida',
@@ -92,7 +90,6 @@ class AppLocalizations {
       'delete_local_report_confirm':
           '¿Seguro que deseas eliminar este reporte local?',
 
-      // Textos adicionales de UX
       'continue_offline': 'Continuar sin conexión',
       'no_internet_connection': 'Sin conexión a internet',
       'exit_question': '¿Salir?',
@@ -350,7 +347,6 @@ class AppLocalizations {
       'no_critical_points': 'No se identificaron puntos críticos',
       'no_strong_points': 'No se identificaron puntos fuertes destacables',
 
-      // Traducciones adicionales para notificaciones y UI
       'report_deleted': 'Reporte eliminado',
       'no_pending_reports_to_sync': 'No hay reportes pendientes de sincronizar',
       'enter_id_to_link_reports': 'Ingresa tu documento de identidad para asociar los reportes:',
@@ -371,7 +367,6 @@ class AppLocalizations {
       'download_on_device': 'Guardar en el dispositivo',
       'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
 
-      // Biometría y privacidad
       'biometric_consent_title': 'Autenticación Biométrica',
       'biometric_consent_message':
           'Para habilitar el inicio de sesión con huella dactilar o Face ID, necesitamos tu consentimiento para almacenar tus credenciales de forma segura en tu dispositivo.',
@@ -431,7 +426,6 @@ class AppLocalizations {
       'login_subtitle': 'Sign in to continue',
       'register_subtitle': 'Join our BIAN community',
 
-      // ✅ CONNECTIVITY AND OFFLINE MODE TRANSLATIONS
       'offline_mode': 'Offline Mode',
       'no_connection': 'No connection',
       'connection_lost': 'Connection Lost',
@@ -471,7 +465,6 @@ class AppLocalizations {
       'delete_local_report_confirm':
           'Are you sure you want to delete this local report?',
 
-      // Additional UX texts
       'continue_offline': 'Continue offline',
       'no_internet_connection': 'No internet connection',
       'exit_question': 'Exit?',
@@ -721,7 +714,6 @@ class AppLocalizations {
       'no_critical_points': 'No critical points identified',
       'no_strong_points': 'No strong points identified',
 
-      // Additional translations for notifications and UI
       'report_deleted': 'Report deleted',
       'no_pending_reports_to_sync': 'No pending reports to sync',
       'enter_id_to_link_reports': 'Enter your ID document to link reports:',
@@ -742,7 +734,6 @@ class AppLocalizations {
       'download_on_device': 'Save on device',
       'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
 
-      // Biometrics and privacy
       'biometric_consent_title': 'Biometric Authentication',
       'biometric_consent_message':
           'To enable login with fingerprint or Face ID, we need your consent to securely store your credentials on your device.',

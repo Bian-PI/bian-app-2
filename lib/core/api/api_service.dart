@@ -6,7 +6,6 @@ import '../storage/secure_storage.dart';
 class ApiService {
   final _storage = SecureStorage();
 
-  // Helper para hacer peticiones GET
   Future<http.Response> get(String endpoint, {bool requiresAuth = true}) async {
     final url = Uri.parse('${ApiConfig.baseUrl}$endpoint');
     
@@ -29,7 +28,6 @@ class ApiService {
     }
   }
 
-  // Helper para hacer peticiones POST
   Future<http.Response> post(
     String endpoint,
     Map<String, dynamic> body, {
@@ -66,7 +64,6 @@ class ApiService {
     }
   }
 
-  // Helper para hacer peticiones PUT
   Future<http.Response> put(
     String endpoint,
     Map<String, dynamic> body, {
@@ -96,7 +93,6 @@ class ApiService {
     }
   }
 
-  // Helper para hacer peticiones DELETE
   Future<http.Response> delete(
     String endpoint, {
     bool requiresAuth = true,
@@ -121,9 +117,7 @@ class ApiService {
     }
   }
 
-  // ========== AUTH ENDPOINTS ==========
   
-  /// POST /auth/login
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await post(
@@ -139,7 +133,6 @@ class ApiService {
           'user': data['user'],
         };
       } else if (response.statusCode == 403) {
-        // Usuario no verificado
         try {
           final data = jsonDecode(response.body);
           if (data['code'] == 'USER_NOT_VERIFIED') {
@@ -175,7 +168,6 @@ class ApiService {
     }
   }
 
-  /// POST /auth/register
   Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
     try {
       final response = await post(ApiConfig.register, userData);
@@ -234,7 +226,6 @@ class ApiService {
     }
   }
 
-  /// POST /auth/refresh
   Future<Map<String, dynamic>> refreshToken(String token) async {
     try {
       final response = await post(
@@ -257,7 +248,6 @@ class ApiService {
     }
   }
 
-  /// Reenviar email de verificación
   Future<Map<String, dynamic>> resendVerificationEmail(int userId, String email) async {
     try {
       final url = Uri.parse('${ApiConfig.mailServiceUrl}/api/email/send/$userId?email=$email');
@@ -285,9 +275,7 @@ class ApiService {
     }
   }
 
-  // ========== USER ENDPOINTS ==========
   
-  /// GET /users
   Future<Map<String, dynamic>> getAllUsers() async {
     try {
       final response = await get(ApiConfig.users);
@@ -306,7 +294,6 @@ class ApiService {
     }
   }
 
-  /// GET /users/{id}
   Future<Map<String, dynamic>> getUserById(int id) async {
     try {
       final response = await get(ApiConfig.userById(id));
@@ -327,7 +314,6 @@ class ApiService {
     }
   }
 
-  /// POST /users
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> userData) async {
     try {
       final response = await post(ApiConfig.users, userData, requiresAuth: true);
@@ -348,7 +334,6 @@ class ApiService {
     }
   }
 
-  /// PUT /users/{id}
   Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
     try {
       final response = await put(ApiConfig.userById(id), userData);
@@ -376,7 +361,6 @@ class ApiService {
     }
   }
 
-  /// DELETE /users/{id}
   Future<Map<String, dynamic>> deleteUser(int id) async {
     try {
       final response = await delete(ApiConfig.userById(id));
@@ -396,9 +380,7 @@ class ApiService {
     }
   }
 
-  // ========== SYNC ENDPOINTS ==========
 
-  /// POST /evaluations/sync - Sincronizar reporte offline
   Future<Map<String, dynamic>> syncOfflineReport(Map<String, dynamic> reportData) async {
     try {
       print('📤 Sincronizando reporte offline...');
@@ -446,7 +428,6 @@ class ApiService {
     }
   }
 
-  /// GET /evaluations/user?limit=X&offset=Y - Obtener reportes del usuario con paginación
   Future<Map<String, dynamic>> getUserEvaluations({
     int limit = 20,
     int offset = 0,
@@ -478,7 +459,6 @@ class ApiService {
     }
   }
 
-  /// GET /users/document/{document} - Buscar usuario por documento
   Future<Map<String, dynamic>> getUserByDocument(String document) async {
     try {
       final response = await get('/users/document/$document', requiresAuth: false);

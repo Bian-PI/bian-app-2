@@ -1,4 +1,3 @@
-// lib/features/evaluation/ai_chat_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -78,7 +77,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   void _startRateLimitTimer() {
-    // Timer que actualiza cada segundo para mostrar el tiempo restante dinámicamente
     _rateLimitTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (mounted && _questionCount >= _maxQuestionsPerPeriod) {
         setState(() {
@@ -139,7 +137,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    // Validar rate limit
     if (!_canSendMessage()) {
       CustomSnackbar.showWarning(
         context,
@@ -150,7 +147,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       return;
     }
 
-    // Validar conexión
     final connectivityService =
         Provider.of<ConnectivityService>(context, listen: false);
     final hasConnection = await connectivityService.checkConnection();
@@ -166,7 +162,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       return;
     }
 
-    // Agregar mensaje del usuario
     setState(() {
       _messages.add(ChatMessage(
         text: message,
@@ -180,7 +175,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Generar respuesta
     try {
       final response = await _geminiService.chatAboutReport(
         userQuestion: message,
@@ -218,7 +212,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             timestamp: DateTime.now(),
           ));
           _isLoading = false;
-          _questionCount--; // Descontar si falló
+          _questionCount--;
         });
         _scrollToBottom();
       }
@@ -269,7 +263,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
       body: Column(
         children: [
-          // Mensajes
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -282,7 +275,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
           ),
 
-          // Loading indicator
           if (_isLoading)
             Container(
               padding: EdgeInsets.all(16),
@@ -306,7 +298,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ),
             ),
 
-          // Banner de límite (abajo, discreto)
           if (remainingQuestions <= 1)
             Container(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -356,7 +347,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ),
             ),
 
-          // Input
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(

@@ -95,7 +95,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       print('📊 Resultado de apertura: ${result.type} - ${result.message}');
       
       if (result.type != ResultType.done) {
-        // Si no se pudo abrir, mostrar mensaje
         if (!context.mounted) return;
 
         CustomSnackbar.show(
@@ -124,7 +123,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
     }
   }
 
-  // ✅ MÉTODO EXTRAÍDO Y SIMPLIFICADO
   void _showPDFOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -165,8 +163,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               title: const Text('Descargar PDF'),
               subtitle: const Text('Guardar en el dispositivo'),
               onTap: () {
-                Navigator.pop(bottomSheetContext); // Cerrar BottomSheet
-                // ✅ USAR EL CONTEXT ORIGINAL (context), NO bottomSheetContext
+                Navigator.pop(bottomSheetContext);
                 _downloadPDF(context);
               },
             ),
@@ -186,8 +183,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               title: const Text('Compartir PDF'),
               subtitle: const Text('WhatsApp, Gmail, Drive, etc.'),
               onTap: () {
-                Navigator.pop(bottomSheetContext); // Cerrar BottomSheet
-                // ✅ USAR EL CONTEXT ORIGINAL
+                Navigator.pop(bottomSheetContext);
                 _generateAndSharePDF(context);
               },
             ),
@@ -263,7 +259,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
     );
   }
 
-  // ✅ MÉTODO COMPLETAMENTE REFACTORIZADO
   Future<void> _downloadPDF(BuildContext context) async {
     print('🔵 === INICIANDO DESCARGA DE PDF ===');
     final loc = AppLocalizations.of(context);
@@ -346,12 +341,10 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
 
       if (!context.mounted) return;
 
-      // ✅ CERRAR DIÁLOGO DE CARGA
       Navigator.pop(context);
 
       print('✅ === PDF GUARDADO EXITOSAMENTE ===');
 
-      // ✅ MOSTRAR DIÁLOGO DE ÉXITO
       if (!context.mounted) return;
       showDialog(
         context: context,
@@ -497,7 +490,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       print(stackTrace);
       print('═══════════════════════');
 
-      // ✅ CERRAR DIÁLOGO DE CARGA SI ESTÁ ABIERTO
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).popUntil((route) {
           return route.isFirst || !route.willHandlePopInternally;
@@ -577,7 +569,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       final pdf = await _buildPDFNoContext(loc);
 
       if (!context.mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
       final output = await getTemporaryDirectory();
       final fileName =
@@ -654,7 +646,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
         build: (context) {
           print('📄 Construyendo página PDF...');
           return [
-            // Header
             pw.Container(
               padding: const pw.EdgeInsets.all(20),
               decoration: pw.BoxDecoration(
@@ -695,7 +686,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                         horizontal: 16, vertical: 10),
                     decoration: pw.BoxDecoration(
                       color: PdfColor.fromInt(
-                          0xFFF5F5F5), // Color sólido gris claro
+                          0xFFF5F5F5),
                       borderRadius: pw.BorderRadius.circular(8),
                     ),
                     child: pw.Column(
@@ -741,7 +732,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             pw.Container(
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFEEEEEE), // Color sólido blanco-gris
+                color: PdfColor.fromInt(0xFFEEEEEE),
                 borderRadius: pw.BorderRadius.circular(12),
                 border: pw.Border.all(color: scoreColor, width: 2),
               ),
@@ -1304,7 +1295,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 (rec) => _buildRecommendationCard(context, rec.toString())),
             const SizedBox(height: 32),
 
-            // Botón de análisis con IA
             _buildAIAnalysisButton(context, loc, overallScore, categoryScores, criticalPoints, strongPoints),
 
             const SizedBox(height: 16),
@@ -1740,7 +1730,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
     );
   }
 
-  /// Botón para chat con IA - Diseño discreto y bonito 🌸✨
   Widget _buildAIAnalysisButton(
     BuildContext context,
     AppLocalizations loc,
@@ -1778,7 +1767,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            // Validar conexión
             final connectivityService =
                 Provider.of<ConnectivityService>(context, listen: false);
             final hasConnection = await connectivityService.checkConnection();
@@ -1794,7 +1782,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               return;
             }
 
-            // Navegar al chat con IA
             if (!context.mounted) return;
             Navigator.push(
               context,
@@ -1816,7 +1803,6 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
           borderRadius: BorderRadius.circular(20),
           child: Row(
             children: [
-              // Icono circular sin decoraciones
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(

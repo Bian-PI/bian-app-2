@@ -1,4 +1,3 @@
-// lib/core/widgets/connectivity_wrapper.dart - NUEVO ARCHIVO
 import 'package:bian_app/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,7 +28,6 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper> {
       builder: (context, snapshot) {
         final hasConnection = snapshot.data ?? true;
 
-        // Si está en modo online y pierde conexión
         if (!hasConnection && 
             appModeProvider.isLoggedIn && 
             !appModeProvider.isOfflineMode && 
@@ -55,7 +53,6 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper> {
     );
   }
 
-// lib/core/widgets/connectivity_wrapper.dart - ACTUALIZAR TRADUCCIONES
 
 Widget _buildConnectionBanner() {
   return Container(
@@ -69,7 +66,7 @@ Widget _buildConnectionBanner() {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Sin conexión a internet', // Podría usar loc.translate('no_connection')
+              'Sin conexión a internet',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,

@@ -1,4 +1,3 @@
-// lib/features/auth/offline_mode_screen.dart - ACTUALIZAR CON TRADUCCIONES
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

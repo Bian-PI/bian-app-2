@@ -1,4 +1,3 @@
-// lib/features/home/offline_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -254,15 +253,11 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // SINCRONIZACIÓN
-  // ═══════════════════════════════════════════════════════════
 
   Future<void> _showSyncDialog() async {
     final loc = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
 
-    // Verificar conexión
     final hasConnection = await connectivityService.checkConnection();
 
     if (!hasConnection) {
@@ -296,7 +291,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   Future<void> _performSync() async {
     setState(() => _isSyncing = true);
 
-    // Mostrar loading moderno (estilo PDF)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -383,7 +377,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
 
       for (var report in pendingReports) {
         try {
-          // Preparar datos para sincronización
           final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
           final results = _recalculateResults(report, species);
           final translatedRecommendations = _translateRecommendations(
@@ -397,20 +390,15 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             isOfflineMode: true,
           );
 
-          // Usar el documento del evaluador que ya está en el reporte
           structuredJson['user_document'] = report.evaluatorDocument;
 
-          // Llamar al endpoint de sincronización
           final syncResult = await apiService.syncOfflineReport(structuredJson);
 
           if (syncResult['success'] == true) {
-            // Marcar como sincronizado
             await LocalReportsStorage.markAsSynced(report.id);
 
-            // Mover a reportes normales
             await ReportsStorage.saveReport(report.copyWith(status: 'synced'));
 
-            // Eliminar de reportes locales
             await LocalReportsStorage.deleteLocalReport(report.id);
 
             syncedCount++;
@@ -424,13 +412,10 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         }
       }
 
-      // Cerrar loading
       if (mounted) Navigator.pop(context);
 
-      // Recargar datos
       await _loadLocalReports();
 
-      // Mostrar resultado
       if (mounted) {
         if (errorCount == 0 && syncedCount > 0) {
           CustomSnackbar.showSuccess(
@@ -455,7 +440,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     } catch (e) {
       print('💥 Error en sincronización: $e');
       if (mounted) {
-        Navigator.pop(context); // Cerrar loading
+        Navigator.pop(context);
         CustomSnackbar.showError(context, 'Error de conexión: $e');
       }
     } finally {
@@ -579,7 +564,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           ),
           backgroundColor: BianTheme.warningYellow,
           actions: [
-            // Botón de sincronización
             if (_pendingSyncCount > 0)
               Stack(
                 alignment: Alignment.center,
@@ -619,7 +603,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         ),
         body: Column(
           children: [
-            // Banner informativo
             if (_pendingSyncCount > 0)
               InkWell(
                 onTap: _isSyncing ? null : _showSyncDialog,
@@ -681,7 +664,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                       ),
 
                       const SizedBox(height: 32),
-                      
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -696,7 +679,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       if (_localReports.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(24),
@@ -901,7 +884,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                     ),
                     Column(
                       children: [
-                        // Badge de pendiente
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(

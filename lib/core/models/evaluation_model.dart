@@ -1,4 +1,3 @@
-// lib/core/models/evaluation_model.dart
 
 import 'package:bian_app/core/models/species_model.dart';
 import 'package:bian_app/core/models/user_model.dart';
@@ -150,7 +149,6 @@ class Evaluation {
     return true;
   }
 
-  // 🔥 JSON GENÉRICO - TODO EN STRINGS - ✅ SOPORTA MODO OFFLINE
   Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
@@ -191,7 +189,6 @@ class Evaluation {
     return structuredJson;
   }
 
-  // ✅ Construir categorías de forma genérica - TODO EN STRINGS
   Map<String, dynamic> _buildGenericCategories(
     Species species,
     Map<String, dynamic> results,
@@ -201,7 +198,6 @@ class Evaluation {
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
 
-      // Agregar score de la categoría COMO STRING
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
         categoryData['score'] =
@@ -210,7 +206,6 @@ class Evaluation {
         categoryData['score'] = '0.0';
       }
 
-      // Agregar respuestas de los campos de forma genérica COMO STRINGS
       categoryData['responses'] = <String, String>{};
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
@@ -225,12 +220,10 @@ class Evaluation {
     return categories;
   }
 
-  // ✅ Obtener ID genérico del campo (sin sufijos como _pigs, _birds)
   String _getGenericFieldId(String fieldId) {
     return fieldId.replaceAll('_pigs', '').replaceAll('_birds', '');
   }
 
-  // ✅ Formatear puntos críticos de forma legible
   List<Map<String, String>> _formatCriticalPoints(List criticalPoints) {
     return criticalPoints.map((point) {
       final parts = point.toString().split('_');
@@ -244,7 +237,6 @@ class Evaluation {
     }).toList();
   }
 
-  // ✅ Formatear puntos fuertes
   List<Map<String, String>> _formatStrongPoints(List strongPoints) {
     return strongPoints.map((point) {
       return {
@@ -253,7 +245,6 @@ class Evaluation {
     }).toList();
   }
 
-  // 🔹 Método seguro para resultados offline
   Map<String, dynamic> recalculateResults(Species species) {
     return {
       'overall_score': overallScore ?? 0.0,

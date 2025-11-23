@@ -33,13 +33,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void initState() {
     super.initState();
     if (widget.fromLogin) {
-      // ✅ Viene de login → Habilitar botón de una
       setState(() {
         _canResend = true;
         _countdown = 0;
       });
     } else {
-      // ✅ Viene de registro → Countdown de 60s
       _startCountdown();
     }
   }
@@ -70,7 +68,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _resendEmail() async {
     if (!_canResend || _isResending) return;
 
-    // ✅ Validar que tenemos userId
     if (widget.userId == null) {
       _showToast(
         'Error: No se pudo reenviar el email. Intenta registrarte nuevamente.',
@@ -92,14 +89,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       final loc = AppLocalizations.of(context);
 
       if (result['success']) {
-        // ✅ Toast de éxito
         _showToast(
           loc.translate('verification_sent'),
           isError: false,
         );
         _startCountdown();
       } else {
-        // ✅ Toast de error
         _showToast(
           loc.translate('server_error'),
           isError: true,
@@ -119,7 +114,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
-  // ✅ Método mejorado para mostrar toasts/snackbars
   void _showToast(String message, {required bool isError}) {
     if (isError) {
       CustomSnackbar.showError(context, message, duration: Duration(seconds: 4));
@@ -141,7 +135,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final loc = AppLocalizations.of(context);
 
     return WillPopScope(
-      onWillPop: () async => false, // Evitar que salgan con back button
+      onWillPop: () async => false,
       child: Scaffold(
         body: Container(
           decoration: BoxDecoration(
@@ -161,7 +155,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 children: [
                   const SizedBox(height: 40),
 
-                  // Icono grande de email
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
@@ -177,7 +170,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 40),
 
-                  // Título
                   Text(
                     loc.translate('verify_account_title'),
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
@@ -189,7 +181,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Mensaje principal
                   Text(
                     loc.translate('check_email'),
                     style: Theme.of(context).textTheme.bodyLarge,
@@ -198,7 +189,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Email destacado
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -234,7 +224,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 40),
 
-                  // Instrucciones
                   _buildInstructionCard(
                     icon: Icons.looks_one,
                     title: loc.translate('step_1_title'),
@@ -259,7 +248,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 40),
 
-                  // Botón reenviar
                   ElevatedButton.icon(
                     onPressed: (_canResend && !_isResending) ? _resendEmail : null,
                     icon: _isResending
@@ -289,7 +277,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Botón ir a login
                   OutlinedButton.icon(
                     onPressed: _goToLogin,
                     icon: const Icon(Icons.login),
@@ -303,7 +290,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Aviso importante
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

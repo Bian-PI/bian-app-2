@@ -5,13 +5,11 @@ import '../models/evaluation_model.dart';
 class ReportsStorage {
   static const String _keyReports = 'completed_reports';
 
-  // ✅ Guardar reporte completado
   static Future<bool> saveReport(Evaluation evaluation) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final existingReports = await getAllReports();
 
-      // Verificar si ya existe (por ID)
       final existingIndex = existingReports.indexWhere((r) => r.id == evaluation.id);
 
       if (existingIndex != -1) {
@@ -20,7 +18,6 @@ class ReportsStorage {
         existingReports.add(evaluation);
       }
 
-      // Ordenar por fecha (más reciente primero)
       existingReports.sort((a, b) => b.evaluationDate.compareTo(a.evaluationDate));
 
       final reportsJson = existingReports.map((r) => r.toJson()).toList();
@@ -35,7 +32,6 @@ class ReportsStorage {
     }
   }
 
-  // ✅ Obtener todos los reportes
   static Future<List<Evaluation>> getAllReports() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -59,7 +55,6 @@ class ReportsStorage {
     }
   }
 
-  // ✅ Obtener reporte por ID
   static Future<Evaluation?> getReportById(String id) async {
     try {
       final reports = await getAllReports();
@@ -73,7 +68,6 @@ class ReportsStorage {
     }
   }
 
-  // ✅ Eliminar reporte
   static Future<bool> deleteReport(String id) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -93,19 +87,16 @@ class ReportsStorage {
     }
   }
 
-  // ✅ Obtener reportes por especie
   static Future<List<Evaluation>> getReportsBySpecies(String speciesId) async {
     final reports = await getAllReports();
     return reports.where((r) => r.speciesId == speciesId).toList();
   }
 
-  // ✅ Obtener cantidad de reportes
   static Future<int> getReportsCount() async {
     final reports = await getAllReports();
     return reports.length;
   }
 
-  // ✅ Obtener granjas únicas
   static Future<Set<String>> getUniqueFarms() async {
     final reports = await getAllReports();
     return reports.map((r) => r.farmName).toSet();

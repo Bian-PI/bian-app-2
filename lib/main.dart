@@ -63,7 +63,6 @@ class _BianAppState extends State<BianApp> {
   void initState() {
     super.initState();
 
-    // Configurar callback de sesión expirada
     _sessionManager.onSessionExpired = _handleSessionExpired;
   }
 
@@ -76,13 +75,11 @@ class _BianAppState extends State<BianApp> {
   void _handleSessionExpired() {
     print('⏰ Sesión expirada, redirigiendo a login...');
 
-    // Navegar a login
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
 
-    // Mostrar mensaje
     Future.delayed(const Duration(milliseconds: 500), () {
       final context = _navigatorKey.currentContext;
       if (context != null && mounted) {

@@ -1,4 +1,3 @@
-// lib/core/services/gemini_service.dart
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
@@ -17,7 +16,7 @@ class GeminiService {
   void _initializeModel() {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.5-flash', // Modelo 2.5 Flash (gratuito, rápido, 1M tokens)
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
       );
       _isInitialized = true;
@@ -29,7 +28,6 @@ class GeminiService {
 
   bool get isAvailable => _isInitialized;
 
-  /// Genera análisis extendido de un reporte de bienestar animal
   Future<String> analyzeAnimalWelfareReport({
     required String speciesType,
     required double overallScore,
@@ -66,7 +64,6 @@ class GeminiService {
     }
   }
 
-  /// Construye el prompt para el análisis
   String _buildAnalysisPrompt({
     required String speciesType,
     required double overallScore,
@@ -160,7 +157,6 @@ Be specific, professional, and constructive. Use clear, accessible language for 
     }
   }
 
-  /// Traduce nombres de categorías
   String _translateCategory(String categoryId, bool isSpanish) {
     final translations = {
       'feeding': isSpanish ? 'Alimentación' : 'Feeding',
@@ -171,7 +167,6 @@ Be specific, professional, and constructive. Use clear, accessible language for 
     return translations[categoryId] ?? categoryId;
   }
 
-  /// Construye un resumen de respuestas críticas del formulario
   String _buildCriticalResponsesSummary(
     Map<String, dynamic> formResponses,
     List<String> criticalPoints,
@@ -184,7 +179,6 @@ Be specific, professional, and constructive. Use clear, accessible language for 
         ? '\nRESPUESTAS DEL FORMULARIO (Puntos Críticos):'
         : '\nFORM RESPONSES (Critical Points):');
 
-    // Obtener hasta 5 respuestas críticas para no saturar el contexto
     final limitedCriticalPoints = criticalPoints.take(5).toList();
 
     for (final point in limitedCriticalPoints) {
@@ -198,7 +192,6 @@ Be specific, professional, and constructive. Use clear, accessible language for 
     return buffer.toString();
   }
 
-  /// Genera recomendaciones rápidas (para casos con conectividad limitada)
   Future<String> generateQuickRecommendations({
     required String speciesType,
     required double overallScore,
@@ -234,7 +227,6 @@ Be concise and specific. Maximum 2 lines per recommendation.
     }
   }
 
-  /// Chat interactivo sobre el reporte (respuestas BREVES y PUNTUALES)
   Future<String> chatAboutReport({
     required String userQuestion,
     required String speciesType,
@@ -257,7 +249,6 @@ Be concise and specific. Maximum 2 lines per recommendation.
           ? (isSpanish ? 'aves de postura' : 'laying hens')
           : (isSpanish ? 'cerdos' : 'pigs');
 
-      // Construir resumen de respuestas críticas del formulario
       final criticalResponsesText = _buildCriticalResponsesSummary(
         formResponses,
         criticalPoints,

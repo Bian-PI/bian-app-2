@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Evaluation> _reports = [];
   int _farmsCount = 0;
 
-  // Paginación de reportes
   int _reportLimit = 20;
   int _reportOffset = 0;
   int _reportTotal = 0;
@@ -56,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadAllData() async {
     setState(() {
       _isLoading = true;
-      _reportOffset = 0; // Reset offset
+      _reportOffset = 0;
     });
 
     final user = await _storage.getUser();
@@ -64,7 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final drafts = await DraftsStorage.getAllDrafts();
     final farms = await ReportsStorage.getUniqueFarms();
 
-    // Cargar reportes con paginación desde el servidor
     List<Evaluation> reports = [];
     bool hasMore = false;
     int total = 0;
@@ -88,7 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('❌ Error cargando reportes: $e');
-      // Fallback a storage local si falla
       reports = await ReportsStorage.getAllReports();
     }
 
@@ -105,7 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Cargar más reportes (paginación)
   Future<void> _loadMoreReports() async {
     if (_isLoadingMore || !_hasMoreReports) return;
 
@@ -471,7 +467,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Envolver en GestureDetector para detectar actividad del usuario
     return GestureDetector(
       onTap: () => _sessionManager.recordActivity(),
       onPanDown: (_) => _sessionManager.recordActivity(),
@@ -591,7 +586,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       else ...[
                         ..._reports.map((report) => _buildReportCard(context, report)),
 
-                        // Botón "Cargar más" si hay más reportes
                         if (_hasMoreReports) ...[
                           const SizedBox(height: 20),
                           Center(
@@ -618,7 +612,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
 
-                        // Indicador de reportes totales
                         if (!_hasMoreReports && _reportTotal > 0) ...[
                           const SizedBox(height: 20),
                           Center(

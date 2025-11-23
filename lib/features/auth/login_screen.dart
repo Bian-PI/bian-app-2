@@ -1,4 +1,3 @@
-// lib/features/auth/login_screen.dart
 import 'package:bian_app/core/providers/language_provider.dart';
 import 'package:bian_app/core/utils/connectivity_service.dart';
 import 'package:flutter/material.dart';
@@ -65,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialConnection();
       _loadSavedCredentials();
-      _checkBiometricAvailability();
+        _checkBiometricAvailability();
       _loadPendingReportsCount();
     });
   }
@@ -88,7 +87,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Cargar credenciales guardadas si existen
   Future<void> _loadSavedCredentials() async {
     final rememberEnabled = await _biometricService.isRememberAccountEnabled();
     final savedEmail = await _biometricService.getSavedEmail();
@@ -104,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Verificar disponibilidad de biometría
   Future<void> _checkBiometricAvailability() async {
     final isAvailable = await _biometricService.hasBiometricCapability();
     if (isAvailable) {
@@ -121,7 +118,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Cargar contador de reportes pendientes de sincronización
   Future<void> _loadPendingReportsCount() async {
     final count = await LocalReportsStorage.getPendingSyncCount();
     if (mounted) {
@@ -161,7 +157,6 @@ class _LoginScreenState extends State<LoginScreen>
           await _storage.saveUser(user);
         }
 
-        // Guardar credenciales si "Recordar cuenta" está activado
         if (_rememberAccount) {
           await _biometricService.saveRememberedAccount(
             _emailController.text.trim(),
@@ -172,7 +167,6 @@ class _LoginScreenState extends State<LoginScreen>
 
         Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
 
-        // Iniciar monitoreo de sesión
         _sessionManager.startMonitoring();
 
         setState(() => _isLoading = false);
@@ -216,7 +210,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Login con biometría
   Future<void> _loginWithBiometric() async {
     if (!_biometricEnabled) {
       CustomSnackbar.showWarning(
@@ -236,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    // Obtener credenciales guardadas
     final credentials = await _biometricService.getSavedCredentials();
     if (credentials == null) {
       CustomSnackbar.showError(context, 'No hay credenciales guardadas');
@@ -282,10 +274,8 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Activar/desactivar "Recordar cuenta"
   Future<void> _toggleRememberAccount(bool value) async {
     if (value && _biometricAvailable) {
-      // Mostrar diálogo de consentimiento
       final accepted = await PrivacyConsentDialog.show(context);
       if (!accepted) return;
 
@@ -300,10 +290,8 @@ class _LoginScreenState extends State<LoginScreen>
         'Biometría activada. Inicia sesión para guardar tus credenciales.',
       );
     } else if (value) {
-      // Solo recordar sin biometría
       setState(() => _rememberAccount = true);
     } else {
-      // Desactivar
       setState(() {
         _rememberAccount = false;
         _biometricEnabled = false;
@@ -387,7 +375,6 @@ class _LoginScreenState extends State<LoginScreen>
                         children: [
                           const SizedBox(height: 20),
 
-                          // Selector de idioma
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -471,7 +458,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 20),
 
-                          // Logo
                           Hero(
                             tag: 'bian_logo',
                             child: Image.asset(
@@ -484,7 +470,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 24),
 
-                          // Título
                           Text(
                             loc.translate('welcome'),
                             style: Theme.of(context)
@@ -506,13 +491,11 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 24),
 
-                          // Banner de reportes pendientes
                           if (_pendingReportsCount > 0)
                             _buildPendingReportsBanner(loc),
 
                           const SizedBox(height: 24),
 
-                          // Campo Email/Documento
                           TextFormField(
                             controller: _emailController,
                             enabled: !_isLoading,
@@ -532,7 +515,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 20),
 
-                          // Campo Contraseña
                           TextFormField(
                             controller: _passwordController,
                             enabled: !_isLoading,
@@ -562,7 +544,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 16),
 
-                          // Checkbox "Recordar cuenta"
                           Row(
                             children: [
                               Checkbox(
@@ -617,7 +598,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 24),
 
-                          // StreamBuilder para conexión
                           StreamBuilder<bool>(
                             stream: connectivityService.connectionStatus,
                             builder: (context, snapshot) {
@@ -638,7 +618,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                               return Column(
                                 children: [
-                                  // Botón de login normal
                                   ElevatedButton(
                                     onPressed: (_isLoading || !currentConnection)
                                         ? null
@@ -667,7 +646,6 @@ class _LoginScreenState extends State<LoginScreen>
                                         : Text(loc.translate('sign_in')),
                                   ),
 
-                                  // Botón de login con biometría
                                   if (_biometricEnabled &&
                                       !_isLoading &&
                                       currentConnection)
@@ -701,7 +679,6 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                   const SizedBox(height: 16),
 
-                                  // Botón offline
                                   OutlinedButton.icon(
                                     onPressed: _isLoading
                                         ? null
@@ -755,7 +732,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 20),
 
-                          // Link a registro
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -801,7 +777,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Widget de banner de reportes pendientes - Diseño moderno y discreto
   Widget _buildPendingReportsBanner(AppLocalizations loc) {
     return InkWell(
       onTap: _isLoading ? null : _handleOfflineModeClick,
