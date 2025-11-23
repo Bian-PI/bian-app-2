@@ -1813,84 +1813,55 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
           borderRadius: BorderRadius.circular(20),
           child: Row(
             children: [
-              // Decoración con flores y pompones literales 🌸🎀✨
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          BianTheme.primaryRed,
-                          BianTheme.primaryRed.withOpacity(0.8),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: BianTheme.primaryRed.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+              // Icono circular sin decoraciones
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      BianTheme.primaryRed,
+                      BianTheme.primaryRed.withOpacity(0.8),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: BianTheme.primaryRed.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
                     ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                  ),
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Text('✨', style: TextStyle(fontSize: 16)),
-                  ),
-                  Positioned(
-                    bottom: -2,
-                    left: -6,
-                    child: Text('🌸', style: TextStyle(fontSize: 14)),
-                  ),
-                ],
+                  ],
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          evaluation.language == 'es'
-                              ? '¿Más detalles?'
-                              : 'Want more details?',
-                          style: TextStyle(
-                            color: BianTheme.darkGray,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(width: 6),
-                        Text('🎀', style: TextStyle(fontSize: 14)),
-                      ],
+                    Text(
+                      evaluation.language == 'es'
+                          ? '¿Más detalles?'
+                          : 'Want more details?',
+                      style: TextStyle(
+                        color: BianTheme.darkGray,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            evaluation.language == 'es'
-                                ? 'Pregunta lo que quieras sobre tu reporte'
-                                : 'Ask anything about your report',
-                            style: TextStyle(
-                              color: BianTheme.mediumGray,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Text('💬', style: TextStyle(fontSize: 12)),
-                      ],
+                    Text(
+                      evaluation.language == 'es'
+                          ? 'Pregunta lo que quieras sobre tu reporte'
+                          : 'Ask anything about your report',
+                      style: TextStyle(
+                        color: BianTheme.mediumGray,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
