@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/services/gemini_service.dart';
 import '../../core/utils/connectivity_service.dart';
@@ -64,9 +65,32 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   void initState() {
     super.initState();
-    _lastResetTime = DateTime.now();
+    _loadRateLimitState();
     _sendWelcomeMessage();
     _startRateLimitTimer();
+  }
+
+  Future<void> _loadRateLimitState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCount = prefs.getInt('ai_chat_question_count') ?? 0;
+    final savedTimeMs = prefs.getInt('ai_chat_last_reset_time');
+
+    setState(() {
+      _questionCount = savedCount;
+      if (savedTimeMs != null) {
+        _lastResetTime = DateTime.fromMillisecondsSinceEpoch(savedTimeMs);
+      } else {
+        _lastResetTime = DateTime.now();
+      }
+    });
+  }
+
+  Future<void> _saveRateLimitState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('ai_chat_question_count', _questionCount);
+    if (_lastResetTime != null) {
+      await prefs.setInt('ai_chat_last_reset_time', _lastResetTime!.millisecondsSinceEpoch);
+    }
   }
 
   @override
@@ -100,7 +124,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     });
   }
 
-  void _checkAndResetRateLimit() {
+  Future<void> _checkAndResetRateLimit() async {
     final now = DateTime.now();
     if (_lastResetTime != null &&
         now.difference(_lastResetTime!) >= _rateLimitPeriod) {
@@ -108,6 +132,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         _questionCount = 0;
         _lastResetTime = now;
       });
+      await _saveRateLimitState();
     }
   }
 
@@ -169,6 +194,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _questionCount++;
     });
 
+    await _saveRateLimitState();
+
     _messageController.clear();
     _scrollToBottom();
 
@@ -210,6 +237,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           _isLoading = false;
           _questionCount--;
         });
+        await _saveRateLimitState();
         _scrollToBottom();
       }
     }

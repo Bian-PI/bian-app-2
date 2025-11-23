@@ -73,17 +73,22 @@ $categoryScoresText
 
 $criticalResponsesText
 
-⚠️ IMPORTANTE: Todo el análisis y las respuestas se basan completamente en el ICA (Índice de Calidad Animal), que refleja el bienestar de los animales en esta granja.
+⚠️ IMPORTANTE: Todo el análisis y las respuestas se basan en el ICA (Índice de Calidad Animal), que mide el bienestar de los animales en esta granja.
 
 Puntos Críticos detectados: ${criticalPoints.length}
 Puntos Fuertes: ${strongPoints.length}
 
-INSTRUCCIONES:
-- Responde en ${isSpanish ? 'español' : 'inglés'}.
-- Sé conciso pero informativo.
-- Enfoca tus respuestas en el ICA y los indicadores de bienestar animal.
-- Si preguntan por recomendaciones, prioriza los puntos críticos.
-- Usa un tono profesional pero accesible.
+INSTRUCCIONES CRÍTICAS:
+- Responde en ${isSpanish ? 'español' : 'inglés'} de forma CLARA y SIMPLE.
+- NUNCA uses términos técnicos del formulario (como "lighting_false", "water_access", etc).
+- SIEMPRE habla en lenguaje natural que cualquier persona pueda entender.
+- En lugar de decir "lighting_false indica que...", di "La iluminación es inadecuada..."
+- En lugar de mencionar nombres de campos técnicos, describe el problema directamente.
+- Sé conciso pero informativo (máximo 3-4 párrafos).
+- Enfoca tus respuestas en QUÉ está mal y CÓMO afecta a los animales.
+- Si preguntan por recomendaciones, da acciones específicas y prácticas.
+- Usa un tono profesional pero conversacional, como si hablaras con el dueño de la granja.
+- Evita jerga técnica y términos científicos innecesarios.
 ''';
 
       final userPrompt = '''
@@ -127,8 +132,8 @@ CONTEXTO (basado en ICA):
 
     final buffer = StringBuffer();
     buffer.writeln(isSpanish
-        ? '🔍 RESPUESTAS CRÍTICAS DEL FORMULARIO PSI:'
-        : '🔍 CRITICAL PSI FORM RESPONSES:');
+        ? '🔍 ASPECTOS CRÍTICOS DETECTADOS EN LA GRANJA:'
+        : '🔍 CRITICAL ASPECTS DETECTED ON THE FARM:');
     buffer.writeln();
 
     final limitedCriticalPoints = criticalPoints.take(5).toList();
@@ -136,22 +141,123 @@ CONTEXTO (basado en ICA):
     for (final point in limitedCriticalPoints) {
       final value = formResponses[point];
       if (value != null) {
-        final parts = point.split('_');
-        final fieldName = parts.length > 1
-            ? parts.sublist(1).join(' ').replaceAll('_', ' ')
-            : point;
+        final humanReadableName = _convertFieldToHumanReadable(point, isSpanish);
+        final humanReadableValue = _convertValueToHumanReadable(value, isSpanish);
 
-        buffer.writeln('• $fieldName: $value');
+        buffer.writeln('• $humanReadableName: $humanReadableValue');
       }
     }
 
     if (criticalPoints.length > 5) {
       buffer.writeln(isSpanish
-          ? '\n... y ${criticalPoints.length - 5} puntos críticos más.'
-          : '\n... and ${criticalPoints.length - 5} more critical points.');
+          ? '\n... y ${criticalPoints.length - 5} aspectos críticos más detectados.'
+          : '\n... and ${criticalPoints.length - 5} more critical aspects detected.');
     }
 
     return buffer.toString();
+  }
+
+  String _convertFieldToHumanReadable(String fieldName, bool isSpanish) {
+    // Remover prefijos comunes de categorías (pigs_, birds_, etc)
+    String cleanName = fieldName;
+    if (cleanName.contains('_')) {
+      final parts = cleanName.split('_');
+      if (parts.length > 1) {
+        // Si empieza con pigs, birds, etc, removerlo
+        if (['pigs', 'birds', 'cattle', 'sheep'].contains(parts[0])) {
+          cleanName = parts.sublist(1).join('_');
+        }
+      }
+    }
+
+    // Mapa de traducciones de campos técnicos a lenguaje humano
+    final translations = {
+      // Iluminación
+      'lighting': isSpanish ? 'Iluminación' : 'Lighting',
+      'natural_light': isSpanish ? 'Luz natural' : 'Natural light',
+      'artificial_light': isSpanish ? 'Luz artificial' : 'Artificial light',
+
+      // Ventilación
+      'ventilation': isSpanish ? 'Ventilación' : 'Ventilation',
+      'air_quality': isSpanish ? 'Calidad del aire' : 'Air quality',
+      'temperature': isSpanish ? 'Temperatura' : 'Temperature',
+
+      // Espacio
+      'space': isSpanish ? 'Espacio disponible' : 'Available space',
+      'overcrowding': isSpanish ? 'Hacinamiento' : 'Overcrowding',
+      'pen_size': isSpanish ? 'Tamaño de corrales' : 'Pen size',
+
+      // Agua
+      'water': isSpanish ? 'Agua' : 'Water',
+      'water_access': isSpanish ? 'Acceso al agua' : 'Water access',
+      'water_quality': isSpanish ? 'Calidad del agua' : 'Water quality',
+      'water_availability': isSpanish ? 'Disponibilidad de agua' : 'Water availability',
+
+      // Alimentación
+      'feeding': isSpanish ? 'Alimentación' : 'Feeding',
+      'feed_quality': isSpanish ? 'Calidad del alimento' : 'Feed quality',
+      'feed_access': isSpanish ? 'Acceso al alimento' : 'Feed access',
+
+      // Salud
+      'health': isSpanish ? 'Salud' : 'Health',
+      'injuries': isSpanish ? 'Lesiones' : 'Injuries',
+      'diseases': isSpanish ? 'Enfermedades' : 'Diseases',
+      'veterinary_care': isSpanish ? 'Atención veterinaria' : 'Veterinary care',
+
+      // Comportamiento
+      'behavior': isSpanish ? 'Comportamiento' : 'Behavior',
+      'aggression': isSpanish ? 'Agresividad' : 'Aggression',
+      'stress': isSpanish ? 'Estrés' : 'Stress',
+
+      // Instalaciones
+      'facilities': isSpanish ? 'Instalaciones' : 'Facilities',
+      'floor_condition': isSpanish ? 'Condición del piso' : 'Floor condition',
+      'cleanliness': isSpanish ? 'Limpieza' : 'Cleanliness',
+      'maintenance': isSpanish ? 'Mantenimiento' : 'Maintenance',
+    };
+
+    // Buscar traducción exacta
+    if (translations.containsKey(cleanName)) {
+      return translations[cleanName]!;
+    }
+
+    // Si no hay traducción, hacer el campo más legible
+    return cleanName
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  String _convertValueToHumanReadable(dynamic value, bool isSpanish) {
+    if (value == null) {
+      return isSpanish ? 'No registrado' : 'Not recorded';
+    }
+
+    // Convertir valores booleanos y comunes
+    final valueStr = value.toString().toLowerCase();
+
+    final translations = {
+      'true': isSpanish ? 'Sí' : 'Yes',
+      'false': isSpanish ? 'No' : 'No',
+      'yes': isSpanish ? 'Sí' : 'Yes',
+      'no': isSpanish ? 'No' : 'No',
+      'good': isSpanish ? 'Bueno' : 'Good',
+      'bad': isSpanish ? 'Malo' : 'Bad',
+      'poor': isSpanish ? 'Pobre' : 'Poor',
+      'excellent': isSpanish ? 'Excelente' : 'Excellent',
+      'adequate': isSpanish ? 'Adecuado' : 'Adequate',
+      'inadequate': isSpanish ? 'Inadecuado' : 'Inadequate',
+      'sufficient': isSpanish ? 'Suficiente' : 'Sufficient',
+      'insufficient': isSpanish ? 'Insuficiente' : 'Insufficient',
+      'present': isSpanish ? 'Presente' : 'Present',
+      'absent': isSpanish ? 'Ausente' : 'Absent',
+    };
+
+    if (translations.containsKey(valueStr)) {
+      return translations[valueStr]!;
+    }
+
+    return value.toString();
   }
 
   Future<String> analyzeAnimalWelfareReport({
