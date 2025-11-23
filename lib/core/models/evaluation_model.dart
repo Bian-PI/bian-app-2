@@ -148,10 +148,11 @@ class Evaluation {
   Future<Map<String, dynamic>> generateStructuredJSON(
     Species species,
     Map<String, dynamic> results,
-    List<String> translatedRecommendations,
-  ) async {
+    List<String> translatedRecommendations, {
+    bool isOfflineMode = false,
+  }) async {
     String userId = 'OFFLINE';
-    
+
     try {
       final user = await _storage.getUser();
       if (user?.id != null) {
@@ -171,6 +172,7 @@ class Evaluation {
       'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
       'status': status,
+      'completed_offline': isOfflineMode,
       'overall_score': (results['overall_score'] ?? 0.0).toString(),
       'compliance_level': (results['compliance_level'] ?? 0.0).toString(),
       'categories': _buildGenericCategories(species, results),

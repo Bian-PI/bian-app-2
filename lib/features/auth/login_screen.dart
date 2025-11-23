@@ -326,65 +326,8 @@ Future<void> _checkInitialConnection() async {
                           const SizedBox(height: 20),
 
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              StreamBuilder<bool>(
-  stream: connectivityService.connectionStatus,
-  builder: (context, snapshot) {
-    // ✅ SOLO usar el valor del snapshot si tiene datos
-    final bool currentConnection = snapshot.hasData 
-        ? snapshot.data! 
-        : _hasConnection;
-    
-    print('🔄 StreamBuilder: hasData=${snapshot.hasData}, data=${snapshot.data}, currentConnection=$currentConnection, _hasConnection=$_hasConnection');
-    
-    // ✅ SOLO actualizar si realmente cambió
-    if (snapshot.hasData && currentConnection != _hasConnection) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          print('🔄 LoginScreen: Actualizando estado de $_hasConnection a $currentConnection');
-          setState(() {
-            _hasConnection = currentConnection;
-          });
-        }
-      });
-    }
-
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      child: TextButton.icon(
-        onPressed: _isLoading ? null : _handleOfflineModeClick,
-        icon: Icon(
-          currentConnection ? Icons.wifi : Icons.wifi_off,
-          size: 20,
-        ),
-        label: Text(
-          currentConnection
-              ? loc.translate('offline_mode')
-              : loc.translate('no_connection'),
-        ),
-        style: TextButton.styleFrom(
-          foregroundColor: currentConnection
-              ? BianTheme.infoBlue
-              : BianTheme.errorRed,
-          backgroundColor: currentConnection
-              ? BianTheme.infoBlue.withOpacity(0.1)
-              : BianTheme.errorRed.withOpacity(0.1),
-          padding: EdgeInsets.symmetric(
-              horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(
-              color: currentConnection
-                  ? BianTheme.infoBlue.withOpacity(0.3)
-                  : BianTheme.errorRed.withOpacity(0.3),
-            ),
-          ),
-        ),
-      ),
-    );
-  },
-),
                               PopupMenuButton<Locale>(
                                 icon: Container(
                                   padding: const EdgeInsets.all(8),
@@ -542,60 +485,142 @@ Future<void> _checkInitialConnection() async {
 
                           const SizedBox(height: 32),
 
-                          ElevatedButton(
-                            onPressed:
-                                (_isLoading || !_hasConnection) ? null : _doLogin,
-                            child: _isLoading
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(loc.translate('signing_in')),
-                                    ],
-                                  )
-                                : Text(loc.translate('sign_in')),
-                          ),
+                          StreamBuilder<bool>(
+                            stream: connectivityService.connectionStatus,
+                            builder: (context, snapshot) {
+                              final bool currentConnection = snapshot.hasData
+                                  ? snapshot.data!
+                                  : _hasConnection;
 
-                          if (!_hasConnection)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: BianTheme.errorRed.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: BianTheme.errorRed.withOpacity(0.3),
+                              if (snapshot.hasData && currentConnection != _hasConnection) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _hasConnection = currentConnection;
+                                    });
+                                  }
+                                });
+                              }
+
+                              return Column(
+                                children: [
+                                  ElevatedButton(
+                                    onPressed:
+                                        (_isLoading || !currentConnection) ? null : _doLogin,
+                                    child: _isLoading
+                                        ? Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(loc.translate('signing_in')),
+                                            ],
+                                          )
+                                        : Text(loc.translate('sign_in')),
                                   ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.wifi_off,
-                                        color: BianTheme.errorRed, size: 20),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        loc.translate('no_connection_use_offline'),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: BianTheme.darkGray,
+                                  const SizedBox(height: 16),
+                                  if (!currentConnection)
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            BianTheme.warningYellow,
+                                            BianTheme.warningYellow.withOpacity(0.8),
+                                          ],
                                         ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: BianTheme.warningYellow.withOpacity(0.3),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.all(12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Icon(
+                                                  Icons.offline_bolt,
+                                                  color: Colors.white,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Sin conexión a internet',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      'Continúa trabajando en modo offline',
+                                                      style: TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: _isLoading ? null : _handleOfflineModeClick,
+                                              icon: Icon(Icons.offline_bolt),
+                                              label: Text('Entrar en Modo Offline'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                foregroundColor: BianTheme.warningYellow,
+                                                padding: EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    OutlinedButton.icon(
+                                      onPressed: _isLoading ? null : _handleOfflineModeClick,
+                                      icon: Icon(Icons.offline_bolt),
+                                      label: Text('Modo Offline'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: BianTheme.infoBlue,
+                                        side: BorderSide(color: BianTheme.infoBlue),
+                                        padding: EdgeInsets.symmetric(vertical: 12),
+                                        minimumSize: Size(double.infinity, 48),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                ],
+                              );
+                            },
+                          ),
 
                           const SizedBox(height: 20),
 
@@ -606,27 +631,36 @@ Future<void> _checkInitialConnection() async {
                                 '${loc.translate('no_account')} ',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                              GestureDetector(
-                                onTap: (_isLoading || !_hasConnection)
-                                    ? null
-                                    : () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const RegisterScreen(),
+                              StreamBuilder<bool>(
+                                stream: connectivityService.connectionStatus,
+                                builder: (context, snapshot) {
+                                  final bool currentConnection = snapshot.hasData
+                                      ? snapshot.data!
+                                      : _hasConnection;
+
+                                  return GestureDetector(
+                                    onTap: (_isLoading || !currentConnection)
+                                        ? null
+                                        : () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => const RegisterScreen(),
+                                              ),
+                                            ),
+                                    child: Text(
+                                      loc.translate('register'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: (currentConnection && !_isLoading)
+                                                ? BianTheme.primaryRed
+                                                : BianTheme.mediumGray,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                        ),
-                                child: Text(
-                                  loc.translate('register'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: (_hasConnection && !_isLoading)
-                                            ? BianTheme.primaryRed
-                                            : BianTheme.mediumGray,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),

@@ -40,6 +40,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
+  final _evaluatorDocumentController = TextEditingController();
   
   final Map<String, TextEditingController> _textControllers = {};
   
@@ -64,6 +65,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _farmNameController.dispose();
     _farmLocationController.dispose();
     _evaluatorNameController.dispose();
+    _evaluatorDocumentController.dispose();
     _textControllers.values.forEach((controller) => controller.dispose());
     super.dispose();
   }
@@ -226,7 +228,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   void _showFarmInfoDialog() {
     final loc = AppLocalizations.of(context);
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -239,6 +241,16 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TextField(
+                controller: _evaluatorDocumentController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: '${loc.translate('document')} *',
+                  hintText: '1234567890',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _farmNameController,
                 decoration: InputDecoration(
@@ -278,7 +290,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (_farmNameController.text.isEmpty ||
+              if (_evaluatorDocumentController.text.isEmpty ||
+                  _farmNameController.text.isEmpty ||
                   _farmLocationController.text.isEmpty ||
                   _evaluatorNameController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -289,7 +302,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                 );
                 return;
               }
-              
+
               setState(() {
                 _evaluation = _evaluation.copyWith(
                   farmName: _farmNameController.text,
@@ -299,7 +312,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                 );
                 _hasUnsavedChanges = true;
               });
-              
+
               Navigator.pop(context);
             },
             child: Text(loc.translate('continue')),
@@ -604,6 +617,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         widget.species,
         results,
         translatedRecommendations,
+        isOfflineMode: widget.isOfflineMode,
       );
 
       _logEvaluationResults(structuredJson);
@@ -734,14 +748,12 @@ Widget build(BuildContext context) {
 
   return WillPopScope(
     onWillPop: () async {
-      // 1️⃣ Si el teclado está abierto, cerrarlo primero
       if (MediaQuery.of(context).viewInsets.bottom > 0) {
         FocusScope.of(context).unfocus();
         return false;
       }
-      
-      // 2️⃣ Si está en modo ONLINE y hay cambios sin guardar, preguntar
-      if (!widget.isOfflineMode && _hasUnsavedChanges) {
+
+      if (_hasUnsavedChanges) {
         final confirm = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
@@ -753,19 +765,19 @@ Widget build(BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: BianTheme.warningYellow.withOpacity(0.1),
+                    color: BianTheme.errorRed.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.warning_amber_rounded,
-                    color: BianTheme.warningYellow,
+                    Icons.warning_rounded,
+                    color: BianTheme.errorRed,
                     size: 32,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    loc.translate('exit_without_saving'),
+                    '¿Salir?',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -776,7 +788,7 @@ Widget build(BuildContext context) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc.translate('data_will_be_lost'),
+                  'Si sales ahora, perderás todo el progreso de esta evaluación.',
                   style: TextStyle(fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -795,7 +807,9 @@ Widget build(BuildContext context) {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Puedes guardar un borrador para continuar después',
+                          widget.isOfflineMode
+                              ? 'En modo offline no se pueden guardar borradores'
+                              : 'Puedes guardar un borrador para continuar después',
                           style: TextStyle(fontSize: 12, color: BianTheme.darkGray),
                         ),
                       ),
@@ -814,20 +828,21 @@ Widget build(BuildContext context) {
                 style: TextButton.styleFrom(
                   foregroundColor: BianTheme.errorRed,
                 ),
-                child: Text('Salir sin guardar'),
+                child: Text('Salir y perder progreso'),
               ),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context, 'save'),
-                icon: Icon(Icons.save),
-                label: Text(loc.translate('save_draft')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BianTheme.successGreen,
+              if (!widget.isOfflineMode)
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, 'save'),
+                  icon: Icon(Icons.save),
+                  label: Text(loc.translate('save_draft')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BianTheme.successGreen,
+                  ),
                 ),
-              ),
             ],
           ),
         );
-        
+
         if (confirm == 'save') {
           await _saveDraft();
           return true;
@@ -836,8 +851,7 @@ Widget build(BuildContext context) {
         }
         return false;
       }
-      
-      // 3️⃣ Si está en modo OFFLINE, permitir salir sin preguntar
+
       return true;
     },
     child: Scaffold(
