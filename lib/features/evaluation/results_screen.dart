@@ -6,12 +6,15 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/widgets/custom_snackbar.dart';
+import '../../core/utils/connectivity_service.dart';
 import 'package:open_filex/open_filex.dart';
+import 'ai_analysis_screen.dart';
 
 class ResultsScreen extends StatelessWidget {
   final Evaluation evaluation;
@@ -1299,6 +1302,11 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             ...recommendations.map(
                 (rec) => _buildRecommendationCard(context, rec.toString())),
             const SizedBox(height: 32),
+
+            // Botón de análisis con IA
+            _buildAIAnalysisButton(context, loc, overallScore, categoryScores, criticalPoints, strongPoints),
+
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: Text(loc.translate('close')),
@@ -1727,6 +1735,152 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Botón para análisis extendido con IA (GRATIS)
+  Widget _buildAIAnalysisButton(
+    BuildContext context,
+    AppLocalizations loc,
+    double overallScore,
+    Map<String, double> categoryScores,
+    List criticalPoints,
+    List strongPoints,
+  ) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            BianTheme.infoBlue,
+            BianTheme.infoBlue.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: BianTheme.infoBlue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            // Validar conexión
+            final connectivityService =
+                Provider.of<ConnectivityService>(context, listen: false);
+            final hasConnection = await connectivityService.checkConnection();
+
+            if (!hasConnection) {
+              if (!context.mounted) return;
+              CustomSnackbar.showError(
+                context,
+                evaluation.language == 'es'
+                    ? 'Necesitas conexión a internet para usar el análisis con IA'
+                    : 'You need internet connection to use AI analysis',
+              );
+              return;
+            }
+
+            // Navegar a pantalla de análisis con IA
+            if (!context.mounted) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AIAnalysisScreen(
+                  speciesType: species.id,
+                  overallScore: overallScore,
+                  categoryScores: categoryScores,
+                  criticalPoints: criticalPoints,
+                  strongPoints: strongPoints,
+                  language: evaluation.language,
+                ),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.psychology,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        evaluation.language == 'es'
+                            ? 'Análisis Extendido con IA'
+                            : 'AI Extended Analysis',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: BianTheme.successGreen,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'GRATIS',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              evaluation.language == 'es'
+                                  ? 'Recomendaciones personalizadas'
+                                  : 'Personalized recommendations',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

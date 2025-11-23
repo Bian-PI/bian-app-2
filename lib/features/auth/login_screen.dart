@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/storage/local_reports_storage.dart';
 import '../../core/services/biometric_service.dart';
 import '../../core/services/session_manager.dart';
 import '../../core/theme/bian_theme.dart';
@@ -44,6 +45,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
   String? _biometricType;
+  int _pendingReportsCount = 0;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
@@ -65,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen>
       _checkInitialConnection();
       _loadSavedCredentials();
       _checkBiometricAvailability();
+      _loadPendingReportsCount();
     });
   }
 
@@ -116,6 +119,17 @@ class _LoginScreenState extends State<LoginScreen>
         });
         print('✅ Biometría disponible: $typeName');
       }
+    }
+  }
+
+  /// Cargar contador de reportes pendientes de sincronización
+  Future<void> _loadPendingReportsCount() async {
+    final count = await LocalReportsStorage.getPendingSyncCount();
+    if (mounted) {
+      setState(() {
+        _pendingReportsCount = count;
+      });
+      print('📊 Reportes pendientes de sincronización: $count');
     }
   }
 
@@ -491,7 +505,13 @@ class _LoginScreenState extends State<LoginScreen>
                             textAlign: TextAlign.center,
                           ),
 
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 24),
+
+                          // Banner de reportes pendientes
+                          if (_pendingReportsCount > 0)
+                            _buildPendingReportsBanner(loc),
+
+                          const SizedBox(height: 24),
 
                           // Campo Email/Documento
                           TextFormField(
@@ -777,6 +797,78 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Widget de banner de reportes pendientes de sincronización
+  Widget _buildPendingReportsBanner(AppLocalizations loc) {
+    return InkWell(
+      onTap: _isLoading ? null : _handleOfflineModeClick,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              BianTheme.warningYellow,
+              BianTheme.warningYellow.withOpacity(0.8),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: BianTheme.warningYellow.withOpacity(0.3),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.cloud_off,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$_pendingReportsCount ${_pendingReportsCount == 1 ? "reporte" : "reportes"} sin sincronizar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Toca para ver y sincronizar',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 20,
+            ),
+          ],
         ),
       ),
     );

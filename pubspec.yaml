@@ -25,6 +25,7 @@ dependencies:
   geolocator: ^13.0.2
   geocoding: ^3.0.0
   local_auth: ^2.3.0
+  google_generative_ai: ^0.4.6
 
   google_fonts: ^6.3.2
   lottie: ^2.7.0
