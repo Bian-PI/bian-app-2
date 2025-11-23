@@ -16,7 +16,7 @@ class GeminiService {
   void _initializeModel() {
     try {
       _model = GenerativeModel(
-        model: 'gemini-1.5-flash', // Modelo gratuito y rápido
+        model: 'gemini-pro', // Modelo gratuito estable
         apiKey: _apiKey,
       );
       _isInitialized = true;
