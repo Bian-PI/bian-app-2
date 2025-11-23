@@ -10,9 +10,6 @@ class BiometricService {
   final LocalAuthentication _localAuth = LocalAuthentication();
   final _storage = SecureStorage();
 
-  static const String _biometricEnabledKey = 'biometric_enabled';
-  static const String _rememberAccountKey = 'remember_account';
-  static const String _savedEmailKey = 'saved_email';
 
   Future<bool> isDeviceSupported() async {
     try {

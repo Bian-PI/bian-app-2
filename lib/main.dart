@@ -2,28 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // <-- Nuevo
+
 import 'core/providers/language_provider.dart';
 import 'core/providers/app_mode_provider.dart';
 import 'core/utils/connectivity_service.dart';
 import 'core/services/session_manager.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/theme/bian_theme.dart';
-import 'core/widgets/custom_snackbar.dart';
 import 'features/splash/splash_screen.dart';
-import 'features/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // 🟩 Cargar variables desde el archivo .env
+  await dotenv.load(fileName: ".env");
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky,
   );
-  
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -32,10 +35,10 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   final connectivityService = ConnectivityService();
   await connectivityService.initialize();
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -63,33 +66,15 @@ class _BianAppState extends State<BianApp> {
   void initState() {
     super.initState();
 
-    _sessionManager.onSessionExpired = _handleSessionExpired;
+    print("GEMINI_API_KEY: ${dotenv.env['GEMINI_API_KEY']}");
+    print("API_BASE_URL: ${dotenv.env['API_BASE_URL']}");
+    print("MAIL_SERVICE_URL: ${dotenv.env['MAIL_SERVICE_URL']}");
   }
 
   @override
   void dispose() {
     _sessionManager.stopMonitoring();
     super.dispose();
-  }
-
-  void _handleSessionExpired() {
-    print('⏰ Sesión expirada, redirigiendo a login...');
-
-    _navigatorKey.currentState?.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final context = _navigatorKey.currentContext;
-      if (context != null && mounted) {
-        CustomSnackbar.showWarning(
-          context,
-          AppLocalizations.of(context).translate('session_expired_message'),
-          duration: const Duration(seconds: 5),
-        );
-      }
-    });
   }
 
   @override
@@ -100,7 +85,6 @@ class _BianAppState extends State<BianApp> {
           navigatorKey: _navigatorKey,
           title: 'BIAN - Bienestar Animal',
           debugShowCheckedModeBanner: false,
-
           locale: languageProvider.locale,
           supportedLocales: const [
             Locale('es'),
@@ -112,9 +96,7 @@ class _BianAppState extends State<BianApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-
           theme: BianTheme.lightTheme,
-
           home: const SplashScreen(),
         );
       },

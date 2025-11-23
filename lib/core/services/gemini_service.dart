@@ -1,10 +1,8 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
-  static const String _apiKey = String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: 'YOUR_GEMINI_API_KEY_HERE',
-  );
+  static final String apiKey = dotenv.env['GEMINI_API_KEY'] ?? 'YOUR_GEMINI_API_KEY_HERE';
 
   late final GenerativeModel _model;
   bool _isInitialized = false;
@@ -17,7 +15,7 @@ class GeminiService {
     try {
       _model = GenerativeModel(
         model: 'gemini-2.5-flash',
-        apiKey: _apiKey,
+        apiKey: apiKey,
       );
       _isInitialized = true;
     } catch (e) {
