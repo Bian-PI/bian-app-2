@@ -261,10 +261,10 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   Future<void> _showSyncDialog() async {
     final loc = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
-    
+
     // Verificar conexión
     final hasConnection = await connectivityService.checkConnection();
-    
+
     if (!hasConnection) {
       if (!mounted) return;
       CustomSnackbar.showError(context, loc.translate('no_connection'));
@@ -277,10 +277,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       return;
     }
 
-    // Mostrar diálogo para ingresar documento
-    final documentController = TextEditingController();
-    
-    final result = await showDialog<String>(
+    // Mostrar diálogo de confirmación simple
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
@@ -334,37 +332,24 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Ingresa tu documento de identidad para asociar los reportes:',
+              '¿Deseas sincronizar los reportes con el servidor?',
               style: TextStyle(fontSize: 14, color: BianTheme.darkGray),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: documentController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: loc.translate('document'),
-                hintText: '1234567890',
-                prefixIcon: Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: BianTheme.warningYellow.withOpacity(0.1),
+                color: BianTheme.successGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BianTheme.warningYellow.withOpacity(0.3)),
+                border: Border.all(color: BianTheme.successGreen.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: BianTheme.warningYellow, size: 20),
+                  Icon(Icons.info_outline, color: BianTheme.successGreen, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Los reportes se vincularán a tu cuenta',
+                      'Los reportes se enviarán con la información del evaluador capturada',
                       style: TextStyle(fontSize: 12, color: BianTheme.darkGray),
                     ),
                   ),
@@ -375,17 +360,11 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, null),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(loc.translate('cancel')),
           ),
           ElevatedButton.icon(
-            onPressed: () {
-              if (documentController.text.trim().isEmpty) {
-                CustomSnackbar.showError(dialogContext, 'Ingresa tu documento');
-                return;
-              }
-              Navigator.pop(dialogContext, documentController.text.trim());
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             icon: Icon(Icons.cloud_upload),
             label: Text('Sincronizar'),
             style: ElevatedButton.styleFrom(
@@ -396,12 +375,12 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       ),
     );
 
-    if (result != null && result.isNotEmpty) {
-      await _performSync(result);
+    if (result == true) {
+      await _performSync();
     }
   }
 
-  Future<void> _performSync(String userDocument) async {
+  Future<void> _performSync() async {
     setState(() => _isSyncing = true);
 
     // Mostrar loading
@@ -443,7 +422,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     try {
       final pendingReports = await LocalReportsStorage.getPendingSyncReports();
       final apiService = ApiService();
-      
+
       int syncedCount = 0;
       int errorCount = 0;
 
@@ -463,8 +442,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             isOfflineMode: true,
           );
 
-          // Agregar documento del usuario
-          structuredJson['user_document'] = userDocument;
+          // Usar el documento del evaluador que ya está en el reporte
+          structuredJson['user_document'] = report.evaluatorDocument;
 
           // Llamar al endpoint de sincronización
           final syncResult = await apiService.syncOfflineReport(structuredJson);
@@ -472,13 +451,13 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           if (syncResult['success'] == true) {
             // Marcar como sincronizado
             await LocalReportsStorage.markAsSynced(report.id);
-            
+
             // Mover a reportes normales
             await ReportsStorage.saveReport(report.copyWith(status: 'synced'));
-            
+
             // Eliminar de reportes locales
             await LocalReportsStorage.deleteLocalReport(report.id);
-            
+
             syncedCount++;
           } else {
             errorCount++;
