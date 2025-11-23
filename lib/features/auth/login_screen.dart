@@ -163,109 +163,13 @@ Future<void> _checkInitialConnection() async {
   }
 
   void _handleOfflineModeClick() {
-    final loc = AppLocalizations.of(context);
-
-    if (_hasConnection) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: BianTheme.successGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.wifi,
-                  color: BianTheme.successGreen,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  loc.translate('you_have_connection'),
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                loc.translate('internet_connection_detected'),
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: BianTheme.warningYellow.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: BianTheme.warningYellow.withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: BianTheme.warningYellow, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        loc.translate('continue_offline_anyway') +
-                            ' ' +
-                            loc.translate('reports_wont_sync'),
-                        style:
-                            TextStyle(fontSize: 12, color: BianTheme.darkGray),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(loc.translate('cancel')),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Provider.of<AppModeProvider>(context, listen: false)
-                    .setMode(AppMode.offline);
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const OfflineHomeScreen(),
-                  ),
-                );
-              },
-              icon: Icon(Icons.offline_bolt),
-              label: Text(loc.translate('continue_without_connection')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BianTheme.warningYellow,
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const OfflineModeScreen(),
-        ),
-      );
-    }
+    Provider.of<AppModeProvider>(context, listen: false).setMode(AppMode.offline);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const OfflineHomeScreen(),
+      ),
+    );
   }
 
   @override
@@ -528,93 +432,43 @@ Future<void> _checkInitialConnection() async {
                                         : Text(loc.translate('sign_in')),
                                   ),
                                   const SizedBox(height: 16),
-                                  if (!currentConnection)
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            BianTheme.warningYellow,
-                                            BianTheme.warningYellow.withOpacity(0.8),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: BianTheme.warningYellow.withOpacity(0.3),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 4),
-                                          ),
-                                        ],
+                                  Container(
+                                    width: double.infinity,
+                                    height: 1,
+                                    color: BianTheme.lightGray,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _handleOfflineModeClick,
+                                    icon: Icon(Icons.offline_bolt),
+                                    label: Text('Continuar sin conexión'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: currentConnection ? BianTheme.infoBlue : BianTheme.warningYellow,
+                                      side: BorderSide(
+                                        color: currentConnection ? BianTheme.infoBlue : BianTheme.warningYellow,
+                                        width: 2,
                                       ),
-                                      child: Column(
+                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                      minimumSize: Size(double.infinity, 52),
+                                    ),
+                                  ),
+                                  if (!currentConnection)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding: EdgeInsets.all(12),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.2),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Icon(
-                                                  Icons.offline_bolt,
-                                                  color: Colors.white,
-                                                  size: 28,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 16),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      'Sin conexión a internet',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      'Continúa trabajando en modo offline',
-                                                      style: TextStyle(
-                                                        color: Colors.white70,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 16),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton.icon(
-                                              onPressed: _isLoading ? null : _handleOfflineModeClick,
-                                              icon: Icon(Icons.offline_bolt),
-                                              label: Text('Entrar en Modo Offline'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.white,
-                                                foregroundColor: BianTheme.warningYellow,
-                                                padding: EdgeInsets.symmetric(vertical: 12),
-                                              ),
+                                          Icon(Icons.wifi_off, size: 16, color: BianTheme.warningYellow),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Sin conexión a internet',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: BianTheme.warningYellow,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    )
-                                  else
-                                    OutlinedButton.icon(
-                                      onPressed: _isLoading ? null : _handleOfflineModeClick,
-                                      icon: Icon(Icons.offline_bolt),
-                                      label: Text('Modo Offline'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: BianTheme.infoBlue,
-                                        side: BorderSide(color: BianTheme.infoBlue),
-                                        padding: EdgeInsets.symmetric(vertical: 12),
-                                        minimumSize: Size(double.infinity, 48),
                                       ),
                                     ),
                                 ],
@@ -631,36 +485,27 @@ Future<void> _checkInitialConnection() async {
                                 '${loc.translate('no_account')} ',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                              StreamBuilder<bool>(
-                                stream: connectivityService.connectionStatus,
-                                builder: (context, snapshot) {
-                                  final bool currentConnection = snapshot.hasData
-                                      ? snapshot.data!
-                                      : _hasConnection;
-
-                                  return GestureDetector(
-                                    onTap: (_isLoading || !currentConnection)
-                                        ? null
-                                        : () => Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => const RegisterScreen(),
-                                              ),
-                                            ),
-                                    child: Text(
-                                      loc.translate('register'),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: (currentConnection && !_isLoading)
-                                                ? BianTheme.primaryRed
-                                                : BianTheme.mediumGray,
-                                            fontWeight: FontWeight.bold,
+                              GestureDetector(
+                                onTap: (_isLoading || !_hasConnection)
+                                    ? null
+                                    : () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const RegisterScreen(),
                                           ),
-                                    ),
-                                  );
-                                },
+                                        ),
+                                child: Text(
+                                  loc.translate('register'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: (_hasConnection && !_isLoading)
+                                            ? BianTheme.primaryRed
+                                            : BianTheme.mediumGray,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
                               ),
                             ],
                           ),
