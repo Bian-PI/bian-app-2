@@ -446,6 +446,38 @@ class ApiService {
     }
   }
 
+  /// GET /evaluations/user?limit=X&offset=Y - Obtener reportes del usuario con paginación
+  Future<Map<String, dynamic>> getUserEvaluations({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      print('📥 Obteniendo reportes (limit: $limit, offset: $offset)...');
+
+      final response = await get(
+        '/evaluations/user?limit=$limit&offset=$offset',
+        requiresAuth: true,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'evaluations': data['evaluations'] ?? [],
+          'total': data['total'] ?? 0,
+          'hasMore': data['hasMore'] ?? false,
+        };
+      } else if (response.statusCode == 401) {
+        return {'success': false, 'message': 'unauthorized'};
+      } else {
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      print('❌ Error obteniendo reportes: $e');
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
   /// GET /users/document/{document} - Buscar usuario por documento
   Future<Map<String, dynamic>> getUserByDocument(String document) async {
     try {

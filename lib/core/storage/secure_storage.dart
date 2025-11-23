@@ -14,6 +14,10 @@ class SecureStorage {
   static const String _keyUser = 'user_data';
   static const String _keyUserId = 'user_id';
   static const String _keyIsVerified = 'is_verified';
+  static const String _keyBiometricEnabled = 'biometric_enabled';
+  static const String _keyRememberAccount = 'remember_account';
+  static const String _keySavedEmail = 'saved_email';
+  static const String _keySavedPassword = 'saved_password';
 
   // ========== TOKEN ==========
   
@@ -95,12 +99,68 @@ class SecureStorage {
     final token = await getToken();
     final user = await getUser();
     final isVerified = await isUserVerified();
-    
+
     return {
       'token': token,
       'user': user,
       'isVerified': isVerified,
       'hasSession': token != null,
     };
+  }
+
+  Future<void> deleteUser() async {
+    await _storage.delete(key: _keyUser);
+    await _storage.delete(key: _keyUserId);
+    await _storage.delete(key: _keyIsVerified);
+  }
+
+  // ========== BIOMETRIC & REMEMBER ACCOUNT ==========
+
+  Future<void> saveBiometricEnabled(bool enabled) async {
+    await _storage.write(key: _keyBiometricEnabled, value: enabled.toString());
+  }
+
+  Future<bool> getBiometricEnabled() async {
+    final value = await _storage.read(key: _keyBiometricEnabled);
+    return value == 'true';
+  }
+
+  Future<void> saveRememberAccount(bool remember) async {
+    await _storage.write(key: _keyRememberAccount, value: remember.toString());
+  }
+
+  Future<bool> getRememberAccount() async {
+    final value = await _storage.read(key: _keyRememberAccount);
+    return value == 'true';
+  }
+
+  Future<void> saveSavedEmail(String email) async {
+    await _storage.write(key: _keySavedEmail, value: email);
+  }
+
+  Future<String?> getSavedEmail() async {
+    return await _storage.read(key: _keySavedEmail);
+  }
+
+  Future<void> deleteSavedEmail() async {
+    await _storage.delete(key: _keySavedEmail);
+  }
+
+  Future<void> saveSavedPassword(String password) async {
+    await _storage.write(key: _keySavedPassword, value: password);
+  }
+
+  Future<String?> getSavedPassword() async {
+    return await _storage.read(key: _keySavedPassword);
+  }
+
+  Future<void> deleteSavedPassword() async {
+    await _storage.delete(key: _keySavedPassword);
+  }
+
+  /// Limpiar solo sesión activa (mantiene credenciales guardadas)
+  Future<void> clearSession() async {
+    await deleteToken();
+    await deleteUser();
   }
 }
