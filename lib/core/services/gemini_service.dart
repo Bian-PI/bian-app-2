@@ -31,7 +31,9 @@ class GeminiService {
     required Map<String, dynamic> formResponses,
     required String farmName,
     required String farmLocation,
+    required String speciesType,
     required double overallScore,
+    required Map<String, double> categoryScores,
     required List<String> criticalPoints,
     required List<String> strongPoints,
     required String language,
@@ -45,17 +47,29 @@ class GeminiService {
     try {
       final isSpanish = language == 'es';
 
+      final speciesName = speciesType == 'birds'
+          ? (isSpanish ? 'aves' : 'birds')
+          : (isSpanish ? 'cerdos' : 'pigs');
+
       final criticalResponsesText = _buildCriticalResponsesSummary(
         formResponses,
         criticalPoints,
         isSpanish,
       );
 
+      final categoryScoresText = categoryScores.entries
+          .map((e) => '  • ${e.key}: ${e.value.toStringAsFixed(1)}%')
+          .join('\n');
+
       final systemPrompt = '''
 CONTEXTO COMPLETO DEL REPORTE - ICA (Índice de Calidad Animal):
 
 📍 Granja: $farmName (ubicación: $farmLocation)
+🐾 Especie: $speciesName
 📊 ICA General: ${overallScore.toStringAsFixed(1)}%
+
+📈 Puntuaciones por Categoría:
+$categoryScoresText
 
 $criticalResponsesText
 
@@ -77,6 +91,7 @@ PREGUNTA DEL USUARIO:
 $userQuestion
 
 CONTEXTO (basado en ICA):
+- Especie: $speciesName
 - ICA: ${overallScore.toStringAsFixed(1)}%
 - Granja: $farmName
 - Ubicación: $farmLocation
