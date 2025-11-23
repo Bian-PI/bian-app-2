@@ -491,11 +491,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                           const SizedBox(height: 24),
 
-                          if (_pendingReportsCount > 0)
-                            _buildPendingReportsBanner(loc),
-
-                          const SizedBox(height: 24),
-
                           TextFormField(
                             controller: _emailController,
                             enabled: !_isLoading,
@@ -702,6 +697,13 @@ class _LoginScreenState extends State<LoginScreen>
                                           Size(double.infinity, 52),
                                     ),
                                   ),
+
+                                  if (_pendingReportsCount > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: _buildPendingReportsBanner(loc),
+                                    ),
+
                                   if (!currentConnection)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 12),
