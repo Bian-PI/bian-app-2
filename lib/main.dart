@@ -66,6 +66,13 @@ class _BianAppState extends State<BianApp> {
   void initState() {
     super.initState();
 
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     print("GEMINI_API_KEY: ${dotenv.env['GEMINI_API_KEY']}");
     print("API_BASE_URL: ${dotenv.env['API_BASE_URL']}");
     print("MAIL_SERVICE_URL: ${dotenv.env['MAIL_SERVICE_URL']}");

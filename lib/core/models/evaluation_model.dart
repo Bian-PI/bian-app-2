@@ -1,4 +1,3 @@
-
 import 'package:bian_app/core/models/species_model.dart';
 import 'package:bian_app/core/models/user_model.dart';
 import 'package:bian_app/core/storage/secure_storage.dart';
@@ -156,33 +155,42 @@ class Evaluation {
     bool isOfflineMode = false,
   }) async {
     String userId = 'OFFLINE';
+    String connectionStatus = 'OFFLINE';
 
     try {
       final user = await _storage.getUser();
-      if (user?.id != null) {
+      if (user?.id != null && !isOfflineMode) {
         userId = user!.id.toString();
+        connectionStatus = 'ONLINE';
+      } else if (isOfflineMode && evaluatorDocument.isNotEmpty) {
+        // En modo offline, usar el documento como user_id
+        userId = evaluatorDocument;
+        connectionStatus = 'OFFLINE';
       }
     } catch (e) {
       print('ℹ️ Usuario en modo offline: $userId');
+      connectionStatus = 'OFFLINE';
+      if (evaluatorDocument.isNotEmpty) {
+        userId = evaluatorDocument;
+      }
     }
 
     final structuredJson = <String, dynamic>{
+      'connection_status': connectionStatus,
       'user_id': userId,
-      'evaluation_id': id,
       'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,
       'species': speciesId,
       'farm_name': farmName,
       'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
-      'evaluator_document': evaluatorDocument,
-      'status': status,
-      'completed_offline': isOfflineMode,
       'overall_score': (results['overall_score'] ?? 0.0).toString(),
       'compliance_level': (results['compliance_level'] ?? 0.0).toString(),
       'categories': _buildGenericCategories(species, results),
-      'critical_points': _formatCriticalPoints(results['critical_points'] as List? ?? []),
-      'strong_points': _formatStrongPoints(results['strong_points'] as List? ?? []),
+      'critical_points':
+          _formatCriticalPoints(results['critical_points'] as List? ?? []),
+      'strong_points':
+          _formatStrongPoints(results['strong_points'] as List? ?? []),
       'recommendations': translatedRecommendations,
     };
 

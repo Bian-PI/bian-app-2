@@ -767,7 +767,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     print('╚═══════════════════════════════════════════════════════════════╝');
     print('');
     print('📋 INFORMACIÓN GENERAL:');
-    print('   ID: ${json['evaluation_id']}');
     print('   Fecha: ${json['evaluation_date']}');
     print('   Idioma: ${json['language']}');
     print('   Especie: ${json['species']}');

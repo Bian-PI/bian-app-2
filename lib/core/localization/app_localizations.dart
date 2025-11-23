@@ -410,6 +410,9 @@ class AppLocalizations {
       'sync_reports_title': 'Sincronizar Reportes',
       'reports_pending_count': '{0} reporte(s) pendiente(s)',
       'sync_all': 'Sincronizar Todos',
+      'sync_report': 'Sincronizar Reporte',
+      'sync_report_confirm': '¿Deseas sincronizar este reporte?',
+      'sync_now': 'Sincronizar Ahora',
 
       'ai_chat_welcome_message': '¡Hola! 👋 Soy tu asistente de bienestar animal.\n\nHe analizado tu reporte ({0}% de cumplimiento). Puedes hacerme **2 preguntas cada 5 minutos** sobre:\n\n• Recomendaciones específicas\n• Cómo mejorar puntos críticos\n• Mejores prácticas\n• Interpretación de resultados\n\n¿En qué puedo ayudarte?',
       'wait_time_format': 'Espera {0}m {1}s',

@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -38,19 +38,20 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
-    
+
     Timer(const Duration(seconds: 2), _checkSession);
   }
 
   Future<void> _checkSession() async {
     print('🔍 Verificando conectividad desde Splash...');
     final connectivityService = ConnectivityService();
-    
-    await Future.delayed(Duration(milliseconds: 1000));
-    
+
+    // Dar más tiempo para inicializar
+    await Future.delayed(Duration(milliseconds: 1500));
+
     final hasConnection = await connectivityService.checkConnection();
     print('📡 Resultado final de conexión: $hasConnection');
-    
+
     if (!hasConnection) {
       print('❌ SIN CONEXIÓN - Navegando a LoginScreen');
       if (!mounted) return;
@@ -67,13 +68,13 @@ class _SplashScreenState extends State<SplashScreen>
       );
       return;
     }
-    
+
     print('✅ CON CONEXIÓN - Verificando sesión...');
     final hasSession = await _storage.hasActiveSession();
     print('🔐 Sesión activa: $hasSession');
-    
+
     if (!mounted) return;
-    
+
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
@@ -122,9 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
                       fit: BoxFit.contain,
                     ),
                   ),
-                  
                   const SizedBox(height: 32),
-                  
                   const Text(
                     'BIAN',
                     style: TextStyle(
@@ -141,9 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                     ),
                   ),
-                  
                   const SizedBox(height: 8),
-                  
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -163,9 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 50),
-                  
                   const SizedBox(
                     width: 40,
                     height: 40,
