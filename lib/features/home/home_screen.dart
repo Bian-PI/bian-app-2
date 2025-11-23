@@ -18,6 +18,7 @@ import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
+import '../../core/services/session_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,14 +30,22 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _storage = SecureStorage();
   final _apiService = ApiService();
+  final _sessionManager = SessionManager();
   
   User? _currentUser;
   bool _isVerified = false;
   bool _isLoading = true;
-  
+
   List<Evaluation> _drafts = [];
   List<Evaluation> _reports = [];
   int _farmsCount = 0;
+
+  // Paginación de reportes
+  int _reportLimit = 20;
+  int _reportOffset = 0;
+  int _reportTotal = 0;
+  bool _hasMoreReports = false;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -45,22 +54,95 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadAllData() async {
-    setState(() => _isLoading = true);
-    
+    setState(() {
+      _isLoading = true;
+      _reportOffset = 0; // Reset offset
+    });
+
     final user = await _storage.getUser();
     final verified = await _storage.isUserVerified();
     final drafts = await DraftsStorage.getAllDrafts();
-    final reports = await ReportsStorage.getAllReports();
     final farms = await ReportsStorage.getUniqueFarms();
-    
+
+    // Cargar reportes con paginación desde el servidor
+    List<Evaluation> reports = [];
+    bool hasMore = false;
+    int total = 0;
+
+    try {
+      final result = await _apiService.getUserEvaluations(
+        limit: _reportLimit,
+        offset: 0,
+      );
+
+      if (result['success'] == true) {
+        final evaluationsData = result['evaluations'] as List;
+        reports = evaluationsData
+            .map((e) => Evaluation.fromJson(e))
+            .toList();
+        total = result['total'] ?? 0;
+        hasMore = result['hasMore'] ?? false;
+        print('✅ Reportes cargados: ${reports.length} de $total');
+      } else {
+        print('⚠️ No se pudieron cargar reportes del servidor');
+      }
+    } catch (e) {
+      print('❌ Error cargando reportes: $e');
+      // Fallback a storage local si falla
+      reports = await ReportsStorage.getAllReports();
+    }
+
     setState(() {
       _currentUser = user;
       _isVerified = verified;
       _drafts = drafts;
       _reports = reports;
       _farmsCount = farms.length;
+      _reportTotal = total;
+      _hasMoreReports = hasMore;
+      _reportOffset = reports.length;
       _isLoading = false;
     });
+  }
+
+  /// Cargar más reportes (paginación)
+  Future<void> _loadMoreReports() async {
+    if (_isLoadingMore || !_hasMoreReports) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await _apiService.getUserEvaluations(
+        limit: _reportLimit,
+        offset: _reportOffset,
+      );
+
+      if (result['success'] == true) {
+        final evaluationsData = result['evaluations'] as List;
+        final newReports = evaluationsData
+            .map((e) => Evaluation.fromJson(e))
+            .toList();
+
+        setState(() {
+          _reports.addAll(newReports);
+          _reportOffset += newReports.length;
+          _hasMoreReports = result['hasMore'] ?? false;
+          _isLoadingMore = false;
+        });
+
+        print('✅ Más reportes cargados: +${newReports.length} (total: ${_reports.length})');
+      }
+    } catch (e) {
+      print('❌ Error cargando más reportes: $e');
+      setState(() => _isLoadingMore = false);
+
+      if (mounted) {
+        CustomSnackbar.showError(
+          context,
+          'Error cargando más reportes',
+        );
+      }
+    }
   }
 
   Future<void> _resendVerificationEmail() async {
@@ -384,12 +466,16 @@ class _HomeScreenState extends State<HomeScreen> {
 @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    
+
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
-    return ConnectivityWrapper(
+
+    // Envolver en GestureDetector para detectar actividad del usuario
+    return GestureDetector(
+      onTap: () => _sessionManager.recordActivity(),
+      onPanDown: (_) => _sessionManager.recordActivity(),
+      child: ConnectivityWrapper(
       child: Scaffold(
         appBar: AppBar(
           title: Text(loc.translate('home')),
@@ -499,11 +585,53 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       if (_reports.isEmpty)
                         _buildEmptyReportsCard(context)
-                      else
+                      else ...[
                         ..._reports.map((report) => _buildReportCard(context, report)),
+
+                        // Botón "Cargar más" si hay más reportes
+                        if (_hasMoreReports) ...[
+                          const SizedBox(height: 20),
+                          Center(
+                            child: _isLoadingMore
+                                ? const CircularProgressIndicator()
+                                : OutlinedButton.icon(
+                                    onPressed: _loadMoreReports,
+                                    icon: const Icon(Icons.expand_more),
+                                    label: Text(
+                                      'Cargar más (${_reports.length} de $_reportTotal)',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: BianTheme.primaryRed,
+                                      side: const BorderSide(
+                                        color: BianTheme.primaryRed,
+                                        width: 2,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ],
+
+                        // Indicador de reportes totales
+                        if (!_hasMoreReports && _reportTotal > 0) ...[
+                          const SizedBox(height: 20),
+                          Center(
+                            child: Text(
+                              'Mostrando todos los reportes ($_reportTotal)',
+                              style: TextStyle(
+                                color: BianTheme.mediumGray,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
@@ -511,6 +639,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
