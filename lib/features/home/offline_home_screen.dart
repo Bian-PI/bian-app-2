@@ -272,10 +272,12 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       return;
     }
 
+    final pendingReports = await LocalReportsStorage.getPendingSyncReports();
+
     await showDialog(
       context: context,
       builder: (dialogContext) => _SyncReportsDialog(
-        pendingReports: await LocalReportsStorage.getPendingSyncReports(),
+        pendingReports: pendingReports,
         onSyncAll: () async {
           Navigator.pop(dialogContext);
           await _performSync();
@@ -800,6 +802,8 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   Widget _buildReportCard(Evaluation report) {
+    final loc = AppLocalizations.of(context);
+
     Color scoreColor;
     if (report.overallScore! >= 80) {
       scoreColor = BianTheme.successGreen;
@@ -1010,10 +1014,15 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         isOfflineMode: true,
       );
 
-      final response = await apiService.submitEvaluation(structuredJson);
+      structuredJson['user_document'] = report.evaluatorDocument;
+
+      final response = await apiService.syncOfflineReport(structuredJson);
 
       if (response['success'] == true) {
         await LocalReportsStorage.markAsSynced(report.id);
+        await ReportsStorage.saveReport(report.copyWith(status: 'synced'));
+        await LocalReportsStorage.deleteLocalReport(report.id);
+
         if (!mounted) return;
         Navigator.pop(context);
         CustomSnackbar.showSuccess(context, loc.translate('report_synced_successfully'));
