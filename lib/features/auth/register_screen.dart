@@ -4,6 +4,7 @@ import '../../core/api/api_service.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/utils/validators.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/widgets/custom_snackbar.dart';
 import 'login_screen.dart';
 import 'email_verification_screen.dart';
 
@@ -129,22 +130,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? BianTheme.errorRed : BianTheme.successGreen,
-        duration: Duration(seconds: isError ? 4 : 2),
-      ),
-    );
+    if (isError) {
+      CustomSnackbar.showError(context, message, duration: Duration(seconds: 4));
+    } else {
+      CustomSnackbar.showSuccess(context, message, duration: Duration(seconds: 2));
+    }
   }
 
   @override

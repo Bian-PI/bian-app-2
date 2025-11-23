@@ -10,6 +10,7 @@ import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/widgets/custom_snackbar.dart';
 import 'package:open_filex/open_filex.dart';
 
 class ResultsScreen extends StatelessWidget {
@@ -93,51 +94,28 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       if (result.type != ResultType.done) {
         // Si no se pudo abrir, mostrar mensaje
         if (!context.mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: BianTheme.warningYellow,
-            duration: Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Compartir',
-              textColor: Colors.white,
-              onPressed: () async {
-                await Share.shareXFiles([XFile(filePath)]);
-              },
-            ),
-          ),
+
+        CustomSnackbar.showWarning(
+          context,
+          'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
+          duration: Duration(seconds: 4),
+          actionLabel: 'Compartir',
+          onActionPressed: () async {
+            await Share.shareXFiles([XFile(filePath)]);
+          },
         );
       } else {
         print('✅ PDF abierto exitosamente');
       }
     } catch (e) {
       print('❌ Error abriendo PDF: $e');
-      
+
       if (!context.mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('Error al abrir PDF: $e')),
-            ],
-          ),
-          backgroundColor: BianTheme.errorRed,
-          duration: Duration(seconds: 3),
-        ),
+
+      CustomSnackbar.showError(
+        context,
+        'Error al abrir PDF: $e',
+        duration: Duration(seconds: 3),
       );
     }
   }
@@ -294,12 +272,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       if (!hasPermission) {
         print('❌ Permisos denegados');
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Se requieren permisos de almacenamiento'),
-            backgroundColor: BianTheme.errorRed,
-          ),
-        );
+        CustomSnackbar.showError(context, 'Se requieren permisos de almacenamiento');
         return;
       }
 
@@ -623,18 +596,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text(loc.translate('pdf_generated'))),
-            ],
-          ),
-          backgroundColor: BianTheme.successGreen,
-        ),
-      );
+      CustomSnackbar.showSuccess(context, loc.translate('pdf_generated'));
     } catch (e, stackTrace) {
       print('💥 ERROR: $e');
       print('📍 Stack: $stackTrace');
@@ -647,18 +609,10 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('Error: $e')),
-            ],
-          ),
-          backgroundColor: BianTheme.errorRed,
-          duration: const Duration(seconds: 5),
-        ),
+      CustomSnackbar.showError(
+        context,
+        'Error: $e',
+        duration: Duration(seconds: 5),
       );
     }
   }

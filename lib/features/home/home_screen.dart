@@ -17,6 +17,7 @@ import '../profile/profile_screen.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
+import '../../core/widgets/custom_snackbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,28 +82,16 @@ class _HomeScreenState extends State<HomeScreen> {
       
       if (!mounted) return;
       Navigator.pop(context);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['success'] 
-              ? loc.translate('verification_sent')
-              : loc.translate('server_error')
-          ),
-          backgroundColor: result['success'] 
-            ? BianTheme.successGreen 
-            : BianTheme.errorRed,
-        ),
-      );
+
+      if (result['success']) {
+        CustomSnackbar.showSuccess(context, loc.translate('verification_sent'));
+      } else {
+        CustomSnackbar.showError(context, loc.translate('server_error'));
+      }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).translate('connection_error')),
-          backgroundColor: BianTheme.errorRed,
-        ),
-      );
+      CustomSnackbar.showError(context, AppLocalizations.of(context).translate('connection_error'));
     }
   }
 
@@ -408,9 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(loc.translate('no_notifications'))),
-                );
+                CustomSnackbar.showInfo(context, loc.translate('no_notifications'));
               },
             ),
           ],

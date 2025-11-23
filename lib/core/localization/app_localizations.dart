@@ -349,6 +349,27 @@ class AppLocalizations {
 
       'no_critical_points': 'No se identificaron puntos críticos',
       'no_strong_points': 'No se identificaron puntos fuertes destacables',
+
+      // Traducciones adicionales para notificaciones y UI
+      'report_deleted': 'Reporte eliminado',
+      'no_pending_reports_to_sync': 'No hay reportes pendientes de sincronizar',
+      'enter_id_to_link_reports': 'Ingresa tu documento de identidad para asociar los reportes:',
+      'enter_your_document': 'Ingresa tu documento',
+      'reports_synced_successfully': 'reporte(s) sincronizado(s) correctamente',
+      'reports_synced_with_errors': 'sincronizado(s), {0} con error',
+      'could_not_open_pdf_automatically': 'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
+      'share': 'Compartir',
+      'pdf_report_options': 'Opciones de Reporte PDF',
+      'share_pdf': 'Compartir PDF',
+      'please_wait': 'Por favor espera...',
+      'storage_permissions_required': 'Se requieren permisos de almacenamiento',
+      'view_pdf': 'Ver PDF',
+      'try_sharing': 'Intentar Compartir',
+      'press_again_to_exit': 'Presiona de nuevo para salir',
+      'resending': 'Reenviando...',
+      'download_pdf_title': 'Descargar PDF',
+      'download_on_device': 'Guardar en el dispositivo',
+      'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
     },
     'en': {
       'app_name': 'BIAN - Animal Welfare',
@@ -676,6 +697,27 @@ class AppLocalizations {
 
       'no_critical_points': 'No critical points identified',
       'no_strong_points': 'No strong points identified',
+
+      // Additional translations for notifications and UI
+      'report_deleted': 'Report deleted',
+      'no_pending_reports_to_sync': 'No pending reports to sync',
+      'enter_id_to_link_reports': 'Enter your ID document to link reports:',
+      'enter_your_document': 'Enter your document',
+      'reports_synced_successfully': 'report(s) synced successfully',
+      'reports_synced_with_errors': 'synced, {0} with error',
+      'could_not_open_pdf_automatically': 'Could not open automatically. Look for the file in Downloads.',
+      'share': 'Share',
+      'pdf_report_options': 'PDF Report Options',
+      'share_pdf': 'Share PDF',
+      'please_wait': 'Please wait...',
+      'storage_permissions_required': 'Storage permissions required',
+      'view_pdf': 'View PDF',
+      'try_sharing': 'Try Sharing',
+      'press_again_to_exit': 'Press again to exit',
+      'resending': 'Resending...',
+      'download_pdf_title': 'Download PDF',
+      'download_on_device': 'Save on device',
+      'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
     },
   };
 
