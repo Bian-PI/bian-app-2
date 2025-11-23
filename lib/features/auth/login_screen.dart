@@ -801,70 +801,61 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Widget de banner de reportes pendientes de sincronización
+  /// Widget de banner de reportes pendientes - Diseño moderno y discreto
   Widget _buildPendingReportsBanner(AppLocalizations loc) {
     return InkWell(
       onTap: _isLoading ? null : _handleOfflineModeClick,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              BianTheme.warningYellow,
-              BianTheme.warningYellow.withOpacity(0.8),
-            ],
+          color: BianTheme.warningYellow.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: BianTheme.warningYellow.withOpacity(0.4),
+            width: 1.5,
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: BianTheme.warningYellow.withOpacity(0.3),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
+                color: BianTheme.warningYellow,
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                Icons.cloud_off,
+                Icons.cloud_sync,
                 color: Colors.white,
-                size: 28,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$_pendingReportsCount ${_pendingReportsCount == 1 ? "reporte" : "reportes"} sin sincronizar',
+                    '$_pendingReportsCount pendiente${_pendingReportsCount == 1 ? "" : "s"}',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      color: BianTheme.darkGray,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
-                    'Toca para ver y sincronizar',
+                    'Sincronizar reportes',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12,
+                      color: BianTheme.mediumGray,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
+              Icons.chevron_right,
+              color: BianTheme.warningYellow,
               size: 20,
             ),
           ],

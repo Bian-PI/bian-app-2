@@ -383,7 +383,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   Future<void> _performSync() async {
     setState(() => _isSyncing = true);
 
-    // Mostrar loading
+    // Mostrar loading moderno (estilo PDF)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -391,25 +391,67 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         canPop: false,
         child: Center(
           child: Container(
-            margin: const EdgeInsets.all(32),
+            margin: const EdgeInsets.symmetric(horizontal: 40),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  BianTheme.successGreen,
+                  BianTheme.successGreen.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: BianTheme.successGreen.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(BianTheme.primaryRed),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.cloud_upload,
+                    size: 48,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Sincronizando reportes...',
+                  'Sincronizando Reportes',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: BianTheme.darkGray,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Subiendo a la nube...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 3,
                   ),
                 ),
               ],

@@ -157,8 +157,48 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
   }
 
   Widget _buildErrorView() {
+    // Detectar tipo de error
+    final isApiKeyError = _errorMessage!.contains('API key') ||
+                          _errorMessage!.contains('not valid');
+    final isConnectionError = _errorMessage!.contains('conexión') ||
+                              _errorMessage!.contains('connection');
+
+    String title;
+    String message;
+    IconData icon;
+    Color iconColor;
+
+    if (isApiKeyError) {
+      icon = Icons.vpn_key_off;
+      iconColor = BianTheme.warningYellow;
+      title = widget.language == 'es'
+          ? 'API Key no configurada'
+          : 'API Key not configured';
+      message = widget.language == 'es'
+          ? 'Necesitas configurar tu API key GRATUITA de Google Gemini.\n\nVe a GEMINI_SETUP.md en el proyecto para obtener tu key gratis (2 minutos).'
+          : 'You need to configure your FREE Google Gemini API key.\n\nCheck GEMINI_SETUP.md in the project to get your free key (2 minutes).';
+    } else if (isConnectionError) {
+      icon = Icons.wifi_off;
+      iconColor = BianTheme.errorRed;
+      title = widget.language == 'es'
+          ? 'Sin conexión a internet'
+          : 'No internet connection';
+      message = widget.language == 'es'
+          ? 'Necesitas conexión a internet para usar el análisis con IA'
+          : 'You need internet connection to use AI analysis';
+    } else {
+      icon = Icons.error_outline;
+      iconColor = BianTheme.errorRed;
+      title = widget.language == 'es'
+          ? 'Error al generar análisis'
+          : 'Error generating analysis';
+      message = widget.language == 'es'
+          ? 'El servicio de IA no está disponible en este momento'
+          : 'The AI service is not available at this time';
+    }
+
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -166,54 +206,89 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: BianTheme.errorRed.withOpacity(0.1),
+                color: iconColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.error_outline,
+                icon,
                 size: 64,
-                color: BianTheme.errorRed,
+                color: iconColor,
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              widget.language == 'es'
-                  ? 'Error al generar análisis'
-                  : 'Error generating analysis',
+              title,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: BianTheme.darkGray,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              _errorMessage!.contains('conexión') ||
-                      _errorMessage!.contains('connection')
-                  ? (widget.language == 'es'
-                      ? 'Necesitas conexión a internet para usar esta función'
-                      : 'You need internet connection to use this feature')
-                  : (widget.language == 'es'
-                      ? 'El servicio de IA no está disponible en este momento'
-                      : 'The AI service is not available at this time'),
+              message,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 color: BianTheme.mediumGray,
+                height: 1.5,
               ),
             ),
+            if (isApiKeyError) ...[
+              const SizedBox(height: 24),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: BianTheme.infoBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: BianTheme.infoBlue.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                             color: BianTheme.infoBlue, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          widget.language == 'es' ? 'Pasos:' : 'Steps:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: BianTheme.infoBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      widget.language == 'es'
+                          ? '1. Ve a makersuite.google.com\n2. Crea tu API key gratis\n3. Configúrala en gemini_service.dart'
+                          : '1. Go to makersuite.google.com\n2. Create your free API key\n3. Configure it in gemini_service.dart',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BianTheme.darkGray,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                _generateAnalysis();
-              },
-              icon: Icon(Icons.refresh),
-              label: Text(widget.language == 'es' ? 'Reintentar' : 'Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BianTheme.primaryRed,
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            if (!isApiKeyError)
+              ElevatedButton.icon(
+                onPressed: () => _generateAnalysis(),
+                icon: Icon(Icons.refresh),
+                label: Text(widget.language == 'es' ? 'Reintentar' : 'Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BianTheme.primaryRed,
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => Navigator.pop(context),
