@@ -889,34 +889,61 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                     ),
                     Column(
                       children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: BianTheme.warningYellow.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: BianTheme.warningYellow.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.cloud_off,
-                                size: 12,
-                                color: BianTheme.warningYellow,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                loc.translate('local_badge'),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: BianTheme.warningYellow,
-                                  fontWeight: FontWeight.bold,
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: BianTheme.warningYellow.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: BianTheme.warningYellow.withOpacity(0.3),
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.cloud_off,
+                                    size: 12,
+                                    color: BianTheme.warningYellow,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    loc.translate('local_badge'),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: BianTheme.warningYellow,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            InkWell(
+                              onTap: _isSyncing ? null : () => _syncSingleReport(report),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: BianTheme.successGreen.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: BianTheme.successGreen.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.cloud_upload,
+                                  size: 16,
+                                  color: _isSyncing
+                                      ? BianTheme.mediumGray
+                                      : BianTheme.successGreen,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         IconButton(
@@ -935,6 +962,87 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _syncSingleReport(Evaluation report) async {
+    final loc = AppLocalizations.of(context);
+    final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
+
+    // Verificar conexión
+    final hasConnection = await connectivityService.checkConnection();
+
+    if (!hasConnection) {
+      if (!mounted) return;
+      CustomSnackbar.showError(context, loc.translate('no_connection'));
+      return;
+    }
+
+    // Confirmar sincronización
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                loc.translate('sync_report'),
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(loc.translate('sync_report_confirm')),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: BianTheme.lightGray.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    report.farmName,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    report.farmLocation,
+                    style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(loc.translate('cancel')),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: Icon(Icons.cloud_upload),
+            label: Text(loc.translate('sync_now')),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BianTheme.successGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _performSingleSync(report);
+    }
   }
 
   Future<void> _performSingleSync(Evaluation report) async {
