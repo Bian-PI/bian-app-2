@@ -6,6 +6,7 @@ import '../../core/theme/bian_theme.dart';
 import '../../core/services/gemini_service.dart';
 import '../../core/utils/connectivity_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
+import '../../core/localization/app_localizations.dart';
 
 class AIChatScreen extends StatefulWidget {
   final String speciesType;
@@ -87,9 +88,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   void _sendWelcomeMessage() {
-    final welcomeText = widget.language == 'es'
-        ? '¡Hola! 👋 Soy tu asistente de bienestar animal.\n\nHe analizado tu reporte (${widget.overallScore.toStringAsFixed(0)}% de cumplimiento). Puedes hacerme **2 preguntas cada 5 minutos** sobre:\n\n• Recomendaciones específicas\n• Cómo mejorar puntos críticos\n• Mejores prácticas\n• Interpretación de resultados\n\n¿En qué puedo ayudarte?'
-        : 'Hi! 👋 I\'m your animal welfare assistant.\n\nI\'ve analyzed your report (${widget.overallScore.toStringAsFixed(0)}% compliance). You can ask me **2 questions every 5 minutes** about:\n\n• Specific recommendations\n• How to improve critical points\n• Best practices\n• Results interpretation\n\nHow can I help you?';
+    final loc = AppLocalizations(Locale(widget.language));
+    final welcomeText = loc.translate('ai_chat_welcome_message', ['${widget.overallScore.toStringAsFixed(0)}']);
 
     setState(() {
       _messages.add(ChatMessage(
@@ -128,9 +128,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final minutes = timeRemaining.inMinutes;
     final seconds = timeRemaining.inSeconds % 60;
 
-    return widget.language == 'es'
-        ? 'Espera ${minutes}m ${seconds}s'
-        : 'Wait ${minutes}m ${seconds}s';
+    final loc = AppLocalizations(Locale(widget.language));
+    return loc.translate('wait_time_format', ['$minutes', '$seconds']);
   }
 
   Future<void> _sendMessage() async {
@@ -138,11 +137,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
     if (message.isEmpty) return;
 
     if (!_canSendMessage()) {
+      final loc = AppLocalizations(Locale(widget.language));
       CustomSnackbar.showWarning(
         context,
-        widget.language == 'es'
-            ? 'Límite alcanzado. ${_getRemainingTimeText()} para más preguntas'
-            : 'Limit reached. ${_getRemainingTimeText()} for more questions',
+        loc.translate('rate_limit_reached', [_getRemainingTimeText()]),
       );
       return;
     }
@@ -153,11 +151,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
     if (!hasConnection) {
       if (!mounted) return;
+      final loc = AppLocalizations(Locale(widget.language));
       CustomSnackbar.showError(
         context,
-        widget.language == 'es'
-            ? 'Necesitas conexión a internet'
-            : 'You need internet connection',
+        loc.translate('need_internet_connection_ai'),
       );
       return;
     }
@@ -203,11 +200,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
     } catch (e) {
       print('❌ Error en chat: $e');
       if (mounted) {
+        final loc = AppLocalizations(Locale(widget.language));
         setState(() {
           _messages.add(ChatMessage(
-            text: widget.language == 'es'
-                ? '❌ Error al generar respuesta. Por favor intenta de nuevo.'
-                : '❌ Error generating response. Please try again.',
+            text: loc.translate('ai_error_generating_response'),
             isUser: false,
             timestamp: DateTime.now(),
           ));
@@ -250,9 +246,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                widget.language == 'es'
-                    ? 'Consulta con IA'
-                    : 'AI Consultation',
+                AppLocalizations(Locale(widget.language)).translate('ai_consultation'),
                 style: TextStyle(fontSize: 18),
               ),
             ),
@@ -286,9 +280,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   ),
                   SizedBox(width: 12),
                   Text(
-                    widget.language == 'es'
-                        ? 'Pensando...'
-                        : 'Thinking...',
+                    AppLocalizations(Locale(widget.language)).translate('thinking_status'),
                     style: TextStyle(
                       color: BianTheme.mediumGray,
                       fontStyle: FontStyle.italic,
@@ -328,12 +320,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   Expanded(
                     child: Text(
                       remainingQuestions == 0
-                          ? (widget.language == 'es'
-                              ? 'Espera ${_getRemainingTimeText()} para más preguntas'
-                              : 'Wait ${_getRemainingTimeText()} for more questions')
-                          : (widget.language == 'es'
-                              ? '$remainingQuestions pregunta restante'
-                              : '$remainingQuestions question remaining'),
+                          ? AppLocalizations(Locale(widget.language)).translate('wait_for_more_questions', [_getRemainingTimeText()])
+                          : AppLocalizations(Locale(widget.language)).translate('questions_remaining', ['$remainingQuestions']),
                       style: TextStyle(
                         fontSize: 11,
                         color: remainingQuestions == 0
@@ -368,9 +356,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     maxLines: null,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
-                      hintText: widget.language == 'es'
-                          ? 'Pregunta algo...'
-                          : 'Ask something...',
+                      hintText: AppLocalizations(Locale(widget.language)).translate('ask_something'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,

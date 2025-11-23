@@ -248,7 +248,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       _loadLocalReports();
       
       if (mounted) {
-        CustomSnackbar.showSuccess(context, 'Reporte eliminado');
+        CustomSnackbar.showSuccess(context, loc.translate('report_deleted_successfully'));
       }
     }
   }
@@ -268,7 +268,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
 
     if (_pendingSyncCount == 0) {
       if (!mounted) return;
-      CustomSnackbar.showInfo(context, 'No hay reportes pendientes de sincronizar');
+      CustomSnackbar.showInfo(context, loc.translate('no_pending_reports_sync'));
       return;
     }
 
@@ -335,7 +335,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Sincronizando Reportes',
+                  loc.translate('syncing_reports'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -345,7 +345,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Subiendo a la nube...',
+                  loc.translate('uploading_to_cloud'),
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
@@ -420,19 +420,19 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         if (errorCount == 0 && syncedCount > 0) {
           CustomSnackbar.showSuccess(
             context,
-            '$syncedCount reporte(s) sincronizado(s) correctamente',
+            loc.translate('reports_synced_successfully_count', ['$syncedCount']),
             duration: Duration(seconds: 4),
           );
         } else if (errorCount > 0 && syncedCount > 0) {
           CustomSnackbar.showWarning(
             context,
-            '$syncedCount sincronizado(s), $errorCount con error',
+            loc.translate('reports_synced_with_errors_count', ['$syncedCount', '$errorCount']),
             duration: Duration(seconds: 4),
           );
         } else if (errorCount > 0 && syncedCount == 0) {
           CustomSnackbar.showError(
             context,
-            'Error al sincronizar. Intenta más tarde.',
+            loc.translate('sync_error_try_later'),
             duration: Duration(seconds: 4),
           );
         }
@@ -441,7 +441,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       print('💥 Error en sincronización: $e');
       if (mounted) {
         Navigator.pop(context);
-        CustomSnackbar.showError(context, 'Error de conexión: $e');
+        CustomSnackbar.showError(context, loc.translate('connection_error_msg', [e.toString()]));
       }
     } finally {
       setState(() => _isSyncing = false);
@@ -468,7 +468,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Ir a Iniciar Sesión',
+                loc.translate('go_to_login'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
@@ -479,7 +479,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '¿Deseas ir a la pantalla de inicio de sesión?',
+              loc.translate('want_go_to_login_screen'),
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -497,7 +497,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Tus ${_localReports.length} reporte(s) local(es) se conservarán',
+                        loc.translate('local_reports_will_be_kept', ['${_localReports.length}']),
                         style: TextStyle(
                           fontSize: 12,
                           color: BianTheme.darkGray,
@@ -518,7 +518,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(dialogContext, true),
             icon: Icon(Icons.login),
-            label: Text('Ir a Login'),
+            label: Text(loc.translate('go_to_login_short')),
             style: ElevatedButton.styleFrom(
               backgroundColor: BianTheme.primaryRed,
             ),
@@ -571,7 +571,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                   IconButton(
                     icon: Icon(Icons.cloud_upload),
                     onPressed: _isSyncing ? null : _showSyncDialog,
-                    tooltip: 'Sincronizar',
+                    tooltip: loc.translate('sync_action'),
                   ),
                   Positioned(
                     right: 8,
@@ -597,7 +597,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             IconButton(
               icon: Icon(Icons.login),
               onPressed: _handleExitOfflineMode,
-              tooltip: 'Ir a Login',
+              tooltip: loc.translate('go_to_login_short'),
             ),
           ],
         ),
@@ -615,7 +615,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          '$_pendingSyncCount reporte(s) listo(s) para sincronizar',
+                          loc.translate('reports_ready_to_sync', ['$_pendingSyncCount']),
                           style: TextStyle(
                             fontSize: 13,
                             color: BianTheme.darkGray,
@@ -706,7 +706,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Los reportes que crees se guardarán aquí',
+                                loc.translate('reports_created_saved_here'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: BianTheme.mediumGray,
@@ -903,7 +903,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                               ),
                               SizedBox(width: 4),
                               Text(
-                                'Local',
+                                loc.translate('local_badge'),
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: BianTheme.warningYellow,
@@ -979,7 +979,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Sincronizando...',
+                  loc.translate('syncing_status'),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -1014,14 +1014,14 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         await LocalReportsStorage.markAsSynced(report.id);
         if (!mounted) return;
         Navigator.pop(context);
-        CustomSnackbar.showSuccess(context, 'Reporte sincronizado correctamente');
+        CustomSnackbar.showSuccess(context, loc.translate('report_synced_successfully'));
       } else {
         throw Exception(response['message'] ?? 'Error desconocido');
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      CustomSnackbar.showError(context, 'Error: ${e.toString()}');
+      CustomSnackbar.showError(context, loc.translate('error_prefix', [e.toString()]));
     } finally {
       setState(() => _isSyncing = false);
       await _loadLocalReports();
@@ -1067,11 +1067,11 @@ class _SyncReportsDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Sincronizar Reportes',
+                          AppLocalizations.of(context).translate('sync_reports_title'),
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${pendingReports.length} reporte(s) pendiente(s)',
+                          AppLocalizations.of(context).translate('reports_pending_count', ['${pendingReports.length}']),
                           style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
                         ),
                       ],
@@ -1099,7 +1099,7 @@ class _SyncReportsDialog extends StatelessWidget {
                     trailing: IconButton(
                       icon: Icon(Icons.upload, color: BianTheme.successGreen),
                       onPressed: () => onSyncSingle(report),
-                      tooltip: 'Sincronizar',
+                      tooltip: AppLocalizations.of(context).translate('sync_action'),
                     ),
                   );
                 },
@@ -1113,7 +1113,7 @@ class _SyncReportsDialog extends StatelessWidget {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancelar'),
+                      child: Text(AppLocalizations.of(context).translate('cancel')),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -1122,7 +1122,7 @@ class _SyncReportsDialog extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: onSyncAll,
                       icon: Icon(Icons.cloud_done),
-                      label: Text('Sincronizar Todos'),
+                      label: Text(AppLocalizations.of(context).translate('sync_all')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: BianTheme.successGreen,
                         padding: EdgeInsets.symmetric(vertical: 12),

@@ -144,7 +144,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             ),
             const SizedBox(height: 24),
             Text(
-              'Opciones de Reporte PDF',
+              AppLocalizations.of(context).translate('pdf_report_options'),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 24),
@@ -160,8 +160,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   color: BianTheme.primaryRed,
                 ),
               ),
-              title: const Text('Descargar PDF'),
-              subtitle: const Text('Guardar en el dispositivo'),
+              title: Text(AppLocalizations.of(context).translate('download_pdf')),
+              subtitle: Text(AppLocalizations.of(context).translate('download_on_device')),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
                 _downloadPDF(context);
@@ -180,8 +180,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   color: BianTheme.infoBlue,
                 ),
               ),
-              title: const Text('Compartir PDF'),
-              subtitle: const Text('WhatsApp, Gmail, Drive, etc.'),
+              title: Text(AppLocalizations.of(context).translate('share_pdf')),
+              subtitle: Text(AppLocalizations.of(context).translate('share_via_apps')),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
                 _generateAndSharePDF(context);
@@ -243,7 +243,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Por favor espera...',
+                    loc.translate('please_wait'),
                     style: TextStyle(
                       fontSize: 14,
                       color: BianTheme.mediumGray,
@@ -271,7 +271,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       if (!hasPermission) {
         print('❌ Permisos denegados');
         if (!context.mounted) return;
-        CustomSnackbar.showError(context, 'Se requieren permisos de almacenamiento');
+        CustomSnackbar.showError(context, loc.translate('storage_permissions_required'));
         return;
       }
 
@@ -308,7 +308,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       }
 
       if (directory == null) {
-        throw Exception('No se pudo determinar directorio de almacenamiento');
+        throw Exception(loc.translate('storage_directory_error'));
       }
 
       print('✅ Directorio seleccionado: ${directory.path}');
@@ -333,7 +333,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       print('📂 ¿Archivo existe?: $exists');
 
       if (!exists) {
-        throw Exception('El archivo no se creó correctamente');
+        throw Exception(loc.translate('file_not_created_correctly'));
       }
 
       final fileSize = await file.length();
@@ -363,9 +363,9 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                     color: BianTheme.successGreen, size: 32),
               ),
               const SizedBox(width: 12),
-              const Expanded(
-                  child: Text('¡PDF Guardado!',
-                      style: TextStyle(
+              Expanded(
+                  child: Text(loc.translate('pdf_saved_title'),
+                      style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold))),
             ],
           ),
@@ -373,8 +373,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('El PDF se ha guardado exitosamente en:',
-                  style: TextStyle(fontSize: 14)),
+              Text(loc.translate('pdf_saved_successfully_at'),
+                  style: const TextStyle(fontSize: 14)),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -440,8 +440,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                     Expanded(
                       child: Text(
                         Platform.isAndroid
-                            ? 'Busca en "Archivos" → "Descargas" de tu dispositivo'
-                            : 'Busca en la carpeta de Documentos',
+                            ? loc.translate('find_in_downloads_android')
+                            : loc.translate('find_in_documents_ios'),
                         style: const TextStyle(
                             fontSize: 11, color: BianTheme.darkGray),
                       ),
