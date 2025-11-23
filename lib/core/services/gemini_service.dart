@@ -138,4 +138,83 @@ CONTEXTO (basado en ICA):
 
     return buffer.toString();
   }
+
+  Future<String> analyzeAnimalWelfareReport({
+    required String speciesType,
+    required double overallScore,
+    required Map<String, double> categoryScores,
+    required List<String> criticalPoints,
+    required List<String> strongPoints,
+    required String language,
+  }) async {
+    if (!_isInitialized) {
+      return language == 'es'
+          ? 'El servicio de análisis con IA no está disponible en este momento.'
+          : 'AI analysis service is not available at the moment.';
+    }
+
+    try {
+      final isSpanish = language == 'es';
+
+      final speciesName = speciesType == 'birds'
+          ? (isSpanish ? 'aves' : 'birds')
+          : (isSpanish ? 'cerdos' : 'pigs');
+
+      String complianceLevel;
+      if (overallScore >= 90) {
+        complianceLevel = isSpanish ? 'Excelente' : 'Excellent';
+      } else if (overallScore >= 75) {
+        complianceLevel = isSpanish ? 'Bueno' : 'Good';
+      } else if (overallScore >= 60) {
+        complianceLevel = isSpanish ? 'Aceptable' : 'Acceptable';
+      } else if (overallScore >= 40) {
+        complianceLevel = isSpanish ? 'Necesita Mejora' : 'Needs Improvement';
+      } else {
+        complianceLevel = isSpanish ? 'Crítico' : 'Critical';
+      }
+
+      final categoryScoresText = categoryScores.entries
+          .map((e) => '• ${e.key}: ${e.value.toStringAsFixed(1)}%')
+          .join('\n');
+
+      final prompt = '''
+Eres un experto en bienestar animal especializado en ${isSpanish ? 'granjas de' : 'farms of'} $speciesName.
+
+${isSpanish ? 'DATOS DEL REPORTE - ICA (Índice de Calidad Animal):' : 'REPORT DATA - ICA (Animal Quality Index):'}
+
+${isSpanish ? '📊 ICA General:' : '📊 Overall ICA:'} ${overallScore.toStringAsFixed(1)}% ($complianceLevel)
+
+${isSpanish ? '📈 Puntuaciones por Categoría:' : '📈 Category Scores:'}
+$categoryScoresText
+
+${isSpanish ? '⚠️ Puntos Críticos:' : '⚠️ Critical Points:'} ${criticalPoints.length}
+${isSpanish ? '✅ Puntos Fuertes:' : '✅ Strong Points:'} ${strongPoints.length}
+
+${isSpanish ? 'INSTRUCCIONES:' : 'INSTRUCTIONS:'}
+1. ${isSpanish ? 'Genera un análisis profesional y conciso del bienestar animal en esta granja.' : 'Generate a professional and concise analysis of animal welfare on this farm.'}
+2. ${isSpanish ? 'Enfócate en el ICA y lo que significa para los animales.' : 'Focus on the ICA and what it means for the animals.'}
+3. ${isSpanish ? 'Identifica las 2-3 áreas más importantes que requieren atención inmediata basándote en los puntos críticos.' : 'Identify the 2-3 most important areas requiring immediate attention based on critical points.'}
+4. ${isSpanish ? 'Menciona los puntos fuertes brevemente.' : 'Mention the strong points briefly.'}
+5. ${isSpanish ? 'Proporciona 3-4 recomendaciones específicas y accionables priorizando los puntos críticos.' : 'Provide 3-4 specific and actionable recommendations prioritizing critical points.'}
+6. ${isSpanish ? 'Usa un tono profesional pero accesible.' : 'Use a professional but accessible tone.'}
+7. ${isSpanish ? 'Mantén el análisis enfocado en el bienestar animal y el ICA.' : 'Keep the analysis focused on animal welfare and the ICA.'}
+8. ${isSpanish ? 'NO uses markdown, emojis decorativos, ni formato especial. Solo texto plano estructurado.' : 'DO NOT use markdown, decorative emojis, or special formatting. Only structured plain text.'}
+
+${isSpanish ? 'Genera el análisis ahora:' : 'Generate the analysis now:'}
+''';
+
+      final content = [Content.text(prompt)];
+      final response = await _model.generateContent(content);
+
+      return response.text ?? (isSpanish
+          ? 'No se pudo generar el análisis. Por favor, intenta de nuevo.'
+          : 'Could not generate analysis. Please try again.');
+
+    } catch (e) {
+      print('❌ Error generando análisis con IA: $e');
+      return language == 'es'
+          ? 'Error al generar el análisis con IA. Verifica tu conexión y la configuración de la API key.'
+          : 'Error generating AI analysis. Check your connection and API key configuration.';
+    }
+  }
 }
