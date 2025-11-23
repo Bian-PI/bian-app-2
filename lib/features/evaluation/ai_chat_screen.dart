@@ -398,20 +398,31 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [BianTheme.primaryRed, BianTheme.primaryRed.withOpacity(0.8)],
-                    ),
+                    gradient: (_isLoading || !_canSendMessage())
+                        ? LinearGradient(
+                            colors: [Colors.grey.shade400, Colors.grey.shade500],
+                          )
+                        : LinearGradient(
+                            colors: [BianTheme.primaryRed, BianTheme.primaryRed.withOpacity(0.8)],
+                          ),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: BianTheme.primaryRed.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    boxShadow: (_isLoading || !_canSendMessage())
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: BianTheme.primaryRed.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.send_rounded, color: Colors.white),
+                    icon: Icon(
+                      Icons.send_rounded,
+                      color: (_isLoading || !_canSendMessage())
+                          ? Colors.white.withOpacity(0.6)
+                          : Colors.white,
+                    ),
                     onPressed: (_isLoading || !_canSendMessage()) ? null : _sendMessage,
                   ),
                 ),

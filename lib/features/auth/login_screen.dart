@@ -805,58 +805,39 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildPendingReportsBanner(AppLocalizations loc) {
     return InkWell(
       onTap: _isLoading ? null : _handleOfflineModeClick,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: BianTheme.warningYellow.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(12),
+          color: BianTheme.successGreen.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: BianTheme.warningYellow.withOpacity(0.4),
-            width: 1.5,
+            color: BianTheme.successGreen.withOpacity(0.2),
+            width: 1,
           ),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: BianTheme.warningYellow,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.cloud_sync,
-                color: Colors.white,
-                size: 18,
+            Icon(
+              Icons.cloud_upload,
+              color: BianTheme.successGreen,
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$_pendingReportsCount pendiente${_pendingReportsCount == 1 ? "" : "s"}',
+              style: TextStyle(
+                color: BianTheme.darkGray,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$_pendingReportsCount pendiente${_pendingReportsCount == 1 ? "" : "s"}',
-                    style: TextStyle(
-                      color: BianTheme.darkGray,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Sincronizar reportes',
-                    style: TextStyle(
-                      color: BianTheme.mediumGray,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(width: 4),
             Icon(
               Icons.chevron_right,
-              color: BianTheme.warningYellow,
-              size: 20,
+              color: BianTheme.successGreen,
+              size: 16,
             ),
           ],
         ),

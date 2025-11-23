@@ -277,107 +277,20 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       return;
     }
 
-    // Mostrar diálogo de confirmación simple
-    final result = await showDialog<bool>(
+    await showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: BianTheme.successGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.sync, color: BianTheme.successGreen, size: 28),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Sincronizar Reportes',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BianTheme.infoBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BianTheme.infoBlue.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.cloud_upload, color: BianTheme.infoBlue, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '$_pendingSyncCount reporte(s) pendiente(s)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: BianTheme.infoBlue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              '¿Deseas sincronizar los reportes con el servidor?',
-              style: TextStyle(fontSize: 14, color: BianTheme.darkGray),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BianTheme.successGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BianTheme.successGreen.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: BianTheme.successGreen, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Los reportes se enviarán con la información del evaluador capturada',
-                      style: TextStyle(fontSize: 12, color: BianTheme.darkGray),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(loc.translate('cancel')),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            icon: Icon(Icons.cloud_upload),
-            label: Text('Sincronizar'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: BianTheme.successGreen,
-            ),
-          ),
-        ],
+      builder: (dialogContext) => _SyncReportsDialog(
+        pendingReports: await LocalReportsStorage.getPendingSyncReports(),
+        onSyncAll: () async {
+          Navigator.pop(dialogContext);
+          await _performSync();
+        },
+        onSyncSingle: (report) async {
+          Navigator.pop(dialogContext);
+          await _performSingleSync(report);
+        },
       ),
     );
-
-    if (result == true) {
-      await _performSync();
-    }
   }
 
   Future<void> _performSync() async {
@@ -707,27 +620,42 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         body: Column(
           children: [
             // Banner informativo
-            Container(
-              color: BianTheme.infoBlue.withOpacity(0.1),
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.save, color: BianTheme.infoBlue),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Los reportes se guardan localmente y puedes sincronizarlos cuando tengas conexión',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: BianTheme.darkGray,
-                        fontWeight: FontWeight.w500,
+            if (_pendingSyncCount > 0)
+              InkWell(
+                onTap: _isSyncing ? null : _showSyncDialog,
+                child: Container(
+                  color: BianTheme.successGreen.withOpacity(0.12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '$_pendingSyncCount reporte(s) listo(s) para sincronizar',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: BianTheme.darkGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (!_isSyncing)
+                        Icon(Icons.chevron_right, color: BianTheme.successGreen, size: 20),
+                      if (_isSyncing)
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(BianTheme.successGreen),
+                          ),
+                        ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            
+
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _loadLocalReports,
@@ -751,100 +679,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                         species: Species.pigs(),
                         onTap: () => _navigateToEvaluation(Species.pigs()),
                       ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Botón de sincronización destacado
-                      if (_pendingSyncCount > 0)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                BianTheme.successGreen,
-                                BianTheme.successGreen.withOpacity(0.8),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: BianTheme.successGreen.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.cloud_upload,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '$_pendingSyncCount reporte(s) pendiente(s)',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Sincroniza cuando tengas conexión',
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: _isSyncing ? null : _showSyncDialog,
-                                  icon: _isSyncing 
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              BianTheme.successGreen,
-                                            ),
-                                          ),
-                                        )
-                                      : Icon(Icons.sync),
-                                  label: Text(_isSyncing ? 'Sincronizando...' : 'Sincronizar Ahora'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: BianTheme.successGreen,
-                                    padding: EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      
+
                       const SizedBox(height: 32),
                       
                       Row(
@@ -1110,6 +945,212 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performSingleSync(Evaluation report) async {
+    setState(() => _isSyncing = true);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  BianTheme.successGreen,
+                  BianTheme.successGreen.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: BianTheme.successGreen.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.cloud_upload,
+                    size: 48,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Sincronizando...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final apiService = ApiService();
+      final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+      final results = _recalculateResults(report, species);
+      final translatedRecommendations = _translateRecommendations(
+        results['recommendations'] ?? [],
+        report.language,
+      );
+      final structuredJson = await report.generateStructuredJSON(
+        species,
+        results,
+        translatedRecommendations,
+        isOfflineMode: true,
+      );
+
+      final response = await apiService.submitEvaluation(structuredJson);
+
+      if (response['success'] == true) {
+        await LocalReportsStorage.markAsSynced(report.id);
+        if (!mounted) return;
+        Navigator.pop(context);
+        CustomSnackbar.showSuccess(context, 'Reporte sincronizado correctamente');
+      } else {
+        throw Exception(response['message'] ?? 'Error desconocido');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      CustomSnackbar.showError(context, 'Error: ${e.toString()}');
+    } finally {
+      setState(() => _isSyncing = false);
+      await _loadLocalReports();
+    }
+  }
+}
+
+class _SyncReportsDialog extends StatelessWidget {
+  final List<Evaluation> pendingReports;
+  final VoidCallback onSyncAll;
+  final Function(Evaluation) onSyncSingle;
+
+  const _SyncReportsDialog({
+    required this.pendingReports,
+    required this.onSyncAll,
+    required this.onSyncSingle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: BianTheme.successGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sincronizar Reportes',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${pendingReports.length} reporte(s) pendiente(s)',
+                          style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: pendingReports.length,
+                itemBuilder: (context, index) {
+                  final report = pendingReports[index];
+                  return ListTile(
+                    leading: Icon(Icons.description, color: BianTheme.infoBlue),
+                    title: Text(
+                      report.farmName,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      '${report.speciesId} - ${report.farmLocation}',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(Icons.upload, color: BianTheme.successGreen),
+                      onPressed: () => onSyncSingle(report),
+                      tooltip: 'Sincronizar',
+                    ),
+                  );
+                },
+              ),
+            ),
+            Divider(height: 1),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancelar'),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: onSyncAll,
+                      icon: Icon(Icons.cloud_done),
+                      label: Text('Sincronizar Todos'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BianTheme.successGreen,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

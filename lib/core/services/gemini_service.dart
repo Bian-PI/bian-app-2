@@ -2,9 +2,10 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  // API KEY GRATUITA - Tier gratuito de Google Gemini
-  // NOTA: En producción, esta key debería estar en variables de entorno
-  static const String _apiKey = 'AIzaSyBJKxKxKxKxKxKxKxKxKxKxKxKxKxK'; // ⚠️ PLACEHOLDER - Reemplazar con key real
+  static const String _apiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: 'YOUR_GEMINI_API_KEY_HERE',
+  );
 
   late final GenerativeModel _model;
   bool _isInitialized = false;
