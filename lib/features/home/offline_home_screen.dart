@@ -71,9 +71,10 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       report.language,
     );
     final structuredJson = await report.generateStructuredJSON(
-      species, 
-      results, 
+      species,
+      results,
       translatedRecommendations,
+      isOfflineMode: true,
     );
 
     Navigator.push(
@@ -496,6 +497,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
             species,
             results,
             translatedRecommendations,
+            isOfflineMode: true,
           );
 
           // Agregar documento del usuario
