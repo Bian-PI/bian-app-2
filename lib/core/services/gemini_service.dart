@@ -170,6 +170,33 @@ Be specific, professional, and constructive. Use clear, accessible language for 
     return translations[categoryId] ?? categoryId;
   }
 
+  /// Construye un resumen de respuestas críticas del formulario
+  String _buildCriticalResponsesSummary(
+    Map<String, dynamic> formResponses,
+    List<String> criticalPoints,
+    bool isSpanish,
+  ) {
+    if (criticalPoints.isEmpty || formResponses.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    buffer.writeln(isSpanish
+        ? '\nRESPUESTAS DEL FORMULARIO (Puntos Críticos):'
+        : '\nFORM RESPONSES (Critical Points):');
+
+    // Obtener hasta 5 respuestas críticas para no saturar el contexto
+    final limitedCriticalPoints = criticalPoints.take(5).toList();
+
+    for (final point in limitedCriticalPoints) {
+      final value = formResponses[point];
+      if (value != null) {
+        final fieldName = point.split('_').skip(1).join(' ').replaceAll('_', ' ');
+        buffer.writeln('• $fieldName: $value');
+      }
+    }
+
+    return buffer.toString();
+  }
+
   /// Genera recomendaciones rápidas (para casos con conectividad limitada)
   Future<String> generateQuickRecommendations({
     required String speciesType,
@@ -215,6 +242,9 @@ Be concise and specific. Maximum 2 lines per recommendation.
     required List<String> criticalPoints,
     required List<String> strongPoints,
     required String language,
+    required Map<String, dynamic> formResponses,
+    required String farmName,
+    required String farmLocation,
   }) async {
     if (!_isInitialized) {
       throw Exception('Gemini AI no está disponible');
@@ -226,37 +256,62 @@ Be concise and specific. Maximum 2 lines per recommendation.
           ? (isSpanish ? 'aves de postura' : 'laying hens')
           : (isSpanish ? 'cerdos' : 'pigs');
 
+      // Construir resumen de respuestas críticas del formulario
+      final criticalResponsesText = _buildCriticalResponsesSummary(
+        formResponses,
+        criticalPoints,
+        isSpanish,
+      );
+
       final systemPrompt = isSpanish
           ? '''Eres un experto veterinario especializado en bienestar animal de $speciesName.
 
-CONTEXTO DEL REPORTE:
-- Puntuación: ${overallScore.toStringAsFixed(1)}%
-- Categorías: ${categoryScores.entries.map((e) => '${_translateCategory(e.key, true)}: ${e.value.toStringAsFixed(0)}%').join(', ')}
-- Puntos críticos: ${criticalPoints.length}
-- Fortalezas: ${strongPoints.length}
+CONTEXTO COMPLETO DEL REPORTE - ICA (Índice de Calidad Animal):
+📍 Granja: $farmName (ubicación: $farmLocation)
+📊 ICA General: ${overallScore.toStringAsFixed(1)}% (este es el Índice de Calidad Animal basado en la evaluación completa)
 
-IMPORTANTE - REGLAS ESTRICTAS:
+PUNTUACIONES POR CATEGORÍA:
+${categoryScores.entries.map((e) => '• ${_translateCategory(e.key, true)}: ${e.value.toStringAsFixed(0)}%').join('\n')}
+
+DATOS DE LA EVALUACIÓN:
+• Puntos críticos identificados: ${criticalPoints.length}
+• Fortalezas identificadas: ${strongPoints.length}
+$criticalResponsesText
+
+⚠️ IMPORTANTE - El análisis se basa completamente en el ICA (Índice de Calidad Animal) obtenido de la evaluación de campo. Todas las recomendaciones deben estar alineadas con mejorar este índice.
+
+REGLAS ESTRICTAS DE RESPUESTA:
 1. Responde BREVE y DIRECTO (máximo 100 palabras)
 2. Responde SOLO lo que preguntan
 3. Usa BULLET POINTS cuando sea posible
 4. Sé ESPECÍFICO y PRÁCTICO
 5. Usa markdown simple (**, -, ###)
+6. Contextualiza tus respuestas con el ICA y los datos del formulario
 
 Pregunta del usuario: $userQuestion'''
           : '''You are an expert veterinarian specialized in $speciesName welfare.
 
-REPORT CONTEXT:
-- Score: ${overallScore.toStringAsFixed(1)}%
-- Categories: ${categoryScores.entries.map((e) => '${_translateCategory(e.key, false)}: ${e.value.toStringAsFixed(0)}%').join(', ')}
-- Critical points: ${criticalPoints.length}
-- Strengths: ${strongPoints.length}
+FULL REPORT CONTEXT - AQI (Animal Quality Index):
+📍 Farm: $farmName (location: $farmLocation)
+📊 Overall AQI: ${overallScore.toStringAsFixed(1)}% (this is the Animal Quality Index based on the complete evaluation)
 
-IMPORTANT - STRICT RULES:
+CATEGORY SCORES:
+${categoryScores.entries.map((e) => '• ${_translateCategory(e.key, false)}: ${e.value.toStringAsFixed(0)}%').join('\n')}
+
+EVALUATION DATA:
+• Critical points identified: ${criticalPoints.length}
+• Strengths identified: ${strongPoints.length}
+$criticalResponsesText
+
+⚠️ IMPORTANT - The analysis is completely based on the AQI (Animal Quality Index) obtained from the field evaluation. All recommendations should be aligned with improving this index.
+
+STRICT RESPONSE RULES:
 1. Answer BRIEF and DIRECT (max 100 words)
 2. Answer ONLY what is asked
 3. Use BULLET POINTS when possible
 4. Be SPECIFIC and PRACTICAL
 5. Use simple markdown (**, -, ###)
+6. Contextualize your answers with the AQI and form data
 
 User question: $userQuestion''';
 

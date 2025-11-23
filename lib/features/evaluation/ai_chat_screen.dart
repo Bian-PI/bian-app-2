@@ -1,4 +1,5 @@
 // lib/features/evaluation/ai_chat_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -14,6 +15,9 @@ class AIChatScreen extends StatefulWidget {
   final List criticalPoints;
   final List strongPoints;
   final String language;
+  final Map<String, dynamic> formResponses;
+  final String farmName;
+  final String farmLocation;
 
   const AIChatScreen({
     super.key,
@@ -23,6 +27,9 @@ class AIChatScreen extends StatefulWidget {
     required this.criticalPoints,
     required this.strongPoints,
     required this.language,
+    required this.formResponses,
+    required this.farmName,
+    required this.farmLocation,
   });
 
   @override
@@ -50,6 +57,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   bool _isLoading = false;
   int _questionCount = 0;
   DateTime? _lastResetTime;
+  Timer? _rateLimitTimer;
   static const int _maxQuestionsPerPeriod = 2;
   static const Duration _rateLimitPeriod = Duration(minutes: 5);
 
@@ -58,13 +66,26 @@ class _AIChatScreenState extends State<AIChatScreen> {
     super.initState();
     _lastResetTime = DateTime.now();
     _sendWelcomeMessage();
+    _startRateLimitTimer();
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _rateLimitTimer?.cancel();
     super.dispose();
+  }
+
+  void _startRateLimitTimer() {
+    // Timer que actualiza cada segundo para mostrar el tiempo restante dinámicamente
+    _rateLimitTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (mounted && _questionCount >= _maxQuestionsPerPeriod) {
+        setState(() {
+          _checkAndResetRateLimit();
+        });
+      }
+    });
   }
 
   void _sendWelcomeMessage() {
@@ -169,6 +190,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
         criticalPoints: widget.criticalPoints.map((e) => e.toString()).toList(),
         strongPoints: widget.strongPoints.map((e) => e.toString()).toList(),
         language: widget.language,
+        formResponses: widget.formResponses,
+        farmName: widget.farmName,
+        farmLocation: widget.farmLocation,
       );
 
       if (mounted) {
@@ -245,45 +269,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
       body: Column(
         children: [
-          // Banner de límite
-          if (remainingQuestions <= 1)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: remainingQuestions == 0
-                  ? BianTheme.errorRed.withOpacity(0.1)
-                  : BianTheme.warningYellow.withOpacity(0.1),
-              child: Row(
-                children: [
-                  Icon(
-                    remainingQuestions == 0 ? Icons.block : Icons.info_outline,
-                    size: 16,
-                    color: remainingQuestions == 0
-                        ? BianTheme.errorRed
-                        : BianTheme.warningYellow,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      remainingQuestions == 0
-                          ? (widget.language == 'es'
-                              ? '${_getRemainingTimeText()} para más preguntas'
-                              : '${_getRemainingTimeText()} for more questions')
-                          : (widget.language == 'es'
-                              ? '$remainingQuestions pregunta restante'
-                              : '$remainingQuestions question remaining'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: remainingQuestions == 0
-                            ? BianTheme.errorRed
-                            : BianTheme.warningYellow,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // Mensajes
           Expanded(
             child: ListView.builder(
@@ -315,6 +300,56 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     style: TextStyle(
                       color: BianTheme.mediumGray,
                       fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Banner de límite (abajo, discreto)
+          if (remainingQuestions <= 1)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: remainingQuestions == 0
+                    ? BianTheme.errorRed.withOpacity(0.08)
+                    : BianTheme.warningYellow.withOpacity(0.08),
+                border: Border(
+                  top: BorderSide(
+                    color: remainingQuestions == 0
+                        ? BianTheme.errorRed.withOpacity(0.2)
+                        : BianTheme.warningYellow.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    remainingQuestions == 0 ? Icons.schedule : Icons.info_outline,
+                    size: 14,
+                    color: remainingQuestions == 0
+                        ? BianTheme.errorRed
+                        : BianTheme.warningYellow,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      remainingQuestions == 0
+                          ? (widget.language == 'es'
+                              ? 'Espera ${_getRemainingTimeText()} para más preguntas'
+                              : 'Wait ${_getRemainingTimeText()} for more questions')
+                          : (widget.language == 'es'
+                              ? '$remainingQuestions pregunta restante'
+                              : '$remainingQuestions question remaining'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: remainingQuestions == 0
+                            ? BianTheme.errorRed
+                            : BianTheme.darkGray,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],

@@ -1806,6 +1806,9 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   criticalPoints: criticalPoints,
                   strongPoints: strongPoints,
                   language: evaluation.language,
+                  formResponses: evaluation.responses,
+                  farmName: evaluation.farmName,
+                  farmLocation: evaluation.farmLocation,
                 ),
               ),
             );
