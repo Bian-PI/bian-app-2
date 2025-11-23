@@ -11,6 +11,7 @@ import '../../core/localization/app_localizations.dart';
 import 'results_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/storage/local_reports_storage.dart';
+import '../../core/utils/location_service.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -41,11 +42,12 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   final _farmLocationController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
   final _evaluatorDocumentController = TextEditingController();
-  
+
   final Map<String, TextEditingController> _textControllers = {};
-  
+
   bool _showInfoDialog = true;
   bool _hasUnsavedChanges = false;
+  bool _isGettingLocation = false;
 
   @override
   void initState() {
@@ -227,99 +229,156 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
   }
 
+  Future<void> _getCurrentLocation() async {
+    final loc = AppLocalizations.of(context);
+
+    setState(() => _isGettingLocation = true);
+
+    final location = await LocationService.getCurrentLocation();
+
+    setState(() => _isGettingLocation = false);
+
+    if (location != null) {
+      setState(() {
+        _farmLocationController.text = location;
+      });
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loc.translate('location_permission_denied')),
+            backgroundColor: BianTheme.errorRed,
+            action: SnackBarAction(
+              label: loc.translate('enable_gps'),
+              textColor: Colors.white,
+              onPressed: () => LocationService.openLocationSettings(),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   void _showFarmInfoDialog() {
     final loc = AppLocalizations.of(context);
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(loc.translate('farm_information')),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _evaluatorDocumentController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: '${loc.translate('document')} *',
-                  hintText: '1234567890',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _farmNameController,
-                decoration: InputDecoration(
-                  labelText: '${loc.translate('farm_name')} *',
-                  hintText: loc.translate('farm_name_example'),
-                  prefixIcon: Icon(Icons.business),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _farmLocationController,
-                decoration: InputDecoration(
-                  labelText: '${loc.translate('location')} *',
-                  hintText: loc.translate('location_example'),
-                  prefixIcon: Icon(Icons.location_on),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _evaluatorNameController,
-                decoration: InputDecoration(
-                  labelText: '${loc.translate('evaluator_name')} *',
-                  hintText: loc.translate('evaluator_name_hint'),
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text(loc.translate('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_evaluatorDocumentController.text.isEmpty ||
-                  _farmNameController.text.isEmpty ||
-                  _farmLocationController.text.isEmpty ||
-                  _evaluatorNameController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(loc.translate('complete_all_fields')),
-                    backgroundColor: BianTheme.errorRed,
+          title: Text(loc.translate('farm_information')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _evaluatorDocumentController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: '${loc.translate('document')} *',
+                    hintText: '1234567890',
+                    prefixIcon: Icon(Icons.badge_outlined),
                   ),
-                );
-                return;
-              }
-
-              setState(() {
-                _evaluation = _evaluation.copyWith(
-                  farmName: _farmNameController.text,
-                  farmLocation: _farmLocationController.text,
-                  evaluatorName: _evaluatorNameController.text,
-                  evaluatorDocument: _evaluatorDocumentController.text,
-                  language: widget.currentLanguage,
-                );
-                _hasUnsavedChanges = true;
-              });
-
-              Navigator.pop(context);
-            },
-            child: Text(loc.translate('continue')),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _farmNameController,
+                  decoration: InputDecoration(
+                    labelText: '${loc.translate('farm_name')} *',
+                    hintText: loc.translate('farm_name_example'),
+                    prefixIcon: Icon(Icons.business),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _farmLocationController,
+                  decoration: InputDecoration(
+                    labelText: '${loc.translate('location')} *',
+                    hintText: loc.translate('location_example'),
+                    prefixIcon: Icon(Icons.location_on),
+                    suffixIcon: _isGettingLocation
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  BianTheme.primaryRed,
+                                ),
+                              ),
+                            ),
+                          )
+                        : IconButton(
+                            icon: Icon(Icons.my_location),
+                            onPressed: () async {
+                              setDialogState(() => _isGettingLocation = true);
+                              setState(() => _isGettingLocation = true);
+                              await _getCurrentLocation();
+                              setDialogState(() => _isGettingLocation = false);
+                              setState(() => _isGettingLocation = false);
+                            },
+                            tooltip: loc.translate('get_current_location'),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _evaluatorNameController,
+                  decoration: InputDecoration(
+                    labelText: '${loc.translate('evaluator_name')} *',
+                    hintText: loc.translate('evaluator_name_hint'),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: Text(loc.translate('cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_evaluatorDocumentController.text.isEmpty ||
+                    _farmNameController.text.isEmpty ||
+                    _farmLocationController.text.isEmpty ||
+                    _evaluatorNameController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(loc.translate('complete_all_fields')),
+                      backgroundColor: BianTheme.errorRed,
+                    ),
+                  );
+                  return;
+                }
+
+                setState(() {
+                  _evaluation = _evaluation.copyWith(
+                    farmName: _farmNameController.text,
+                    farmLocation: _farmLocationController.text,
+                    evaluatorName: _evaluatorNameController.text,
+                    evaluatorDocument: _evaluatorDocumentController.text,
+                    language: widget.currentLanguage,
+                  );
+                  _hasUnsavedChanges = true;
+                });
+
+                Navigator.pop(context);
+              },
+              child: Text(loc.translate('continue')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -779,7 +838,7 @@ Widget build(BuildContext context) {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '¿Salir?',
+                    loc.translate('exit_question'),
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -790,7 +849,7 @@ Widget build(BuildContext context) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Si sales ahora, perderás todo el progreso de esta evaluación.',
+                  loc.translate('lose_progress_warning'),
                   style: TextStyle(fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -810,7 +869,7 @@ Widget build(BuildContext context) {
                       Expanded(
                         child: Text(
                           widget.isOfflineMode
-                              ? 'En modo offline no se pueden guardar borradores'
+                              ? loc.translate('cannot_save_drafts_offline')
                               : 'Puedes guardar un borrador para continuar después',
                           style: TextStyle(fontSize: 12, color: BianTheme.darkGray),
                         ),
@@ -830,7 +889,7 @@ Widget build(BuildContext context) {
                 style: TextButton.styleFrom(
                   foregroundColor: BianTheme.errorRed,
                 ),
-                child: Text('Salir y perder progreso'),
+                child: Text(loc.translate('exit_and_lose_progress')),
               ),
               if (!widget.isOfflineMode)
                 ElevatedButton.icon(

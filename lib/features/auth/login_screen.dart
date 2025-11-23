@@ -441,7 +441,7 @@ Future<void> _checkInitialConnection() async {
                                   OutlinedButton.icon(
                                     onPressed: _isLoading ? null : _handleOfflineModeClick,
                                     icon: Icon(Icons.offline_bolt),
-                                    label: Text('Continuar sin conexión'),
+                                    label: Text(loc.translate('continue_offline')),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: currentConnection ? BianTheme.infoBlue : BianTheme.warningYellow,
                                       side: BorderSide(
@@ -461,7 +461,7 @@ Future<void> _checkInitialConnection() async {
                                           Icon(Icons.wifi_off, size: 16, color: BianTheme.warningYellow),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Sin conexión a internet',
+                                            loc.translate('no_internet_connection'),
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: BianTheme.warningYellow,

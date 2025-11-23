@@ -92,6 +92,20 @@ class AppLocalizations {
       'delete_local_report_confirm':
           '¿Seguro que deseas eliminar este reporte local?',
 
+      // Textos adicionales de UX
+      'continue_offline': 'Continuar sin conexión',
+      'no_internet_connection': 'Sin conexión a internet',
+      'exit_question': '¿Salir?',
+      'lose_progress_warning': 'Si sales ahora, perderás todo el progreso de esta evaluación.',
+      'cannot_save_drafts_offline': 'En modo offline no se pueden guardar borradores',
+      'exit_and_lose_progress': 'Salir y perder progreso',
+      'get_current_location': 'Obtener ubicación actual',
+      'getting_location': 'Obteniendo ubicación...',
+      'location_permission_denied': 'Permiso de ubicación denegado',
+      'location_error': 'Error al obtener ubicación',
+      'enable_gps': 'Habilitar GPS',
+      'manual_location': 'Ingresar manualmente',
+
       'field_required': 'Este campo es requerido',
       'invalid_email': 'Correo electrónico inválido',
       'invalid_password':
@@ -409,6 +423,20 @@ class AppLocalizations {
       'delete_local_report': 'Delete report',
       'delete_local_report_confirm':
           'Are you sure you want to delete this local report?',
+
+      // Additional UX texts
+      'continue_offline': 'Continue offline',
+      'no_internet_connection': 'No internet connection',
+      'exit_question': 'Exit?',
+      'lose_progress_warning': 'If you leave now, you will lose all progress on this evaluation.',
+      'cannot_save_drafts_offline': 'Cannot save drafts in offline mode',
+      'exit_and_lose_progress': 'Exit and lose progress',
+      'get_current_location': 'Get current location',
+      'getting_location': 'Getting location...',
+      'location_permission_denied': 'Location permission denied',
+      'location_error': 'Error getting location',
+      'enable_gps': 'Enable GPS',
+      'manual_location': 'Enter manually',
 
       'field_required': 'This field is required',
       'invalid_email': 'Invalid email',
