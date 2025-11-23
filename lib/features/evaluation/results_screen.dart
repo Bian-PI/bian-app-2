@@ -98,9 +98,10 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
         // Si no se pudo abrir, mostrar mensaje
         if (!context.mounted) return;
 
-        CustomSnackbar.showWarning(
+        CustomSnackbar.show(
           context,
           'No se pudo abrir automáticamente. Busca el archivo en Descargas.',
+          isWarning: true,
           duration: Duration(seconds: 4),
           actionLabel: 'Compartir',
           onActionPressed: () async {
