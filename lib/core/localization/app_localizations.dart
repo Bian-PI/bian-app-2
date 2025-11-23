@@ -370,6 +370,29 @@ class AppLocalizations {
       'download_pdf_title': 'Descargar PDF',
       'download_on_device': 'Guardar en el dispositivo',
       'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
+
+      // Biometría y privacidad
+      'biometric_consent_title': 'Autenticación Biométrica',
+      'biometric_consent_message':
+          'Para habilitar el inicio de sesión con huella dactilar o Face ID, necesitamos tu consentimiento para almacenar tus credenciales de forma segura en tu dispositivo.',
+      'important_information': 'Información Importante',
+      'biometric_local_only':
+          'Tus credenciales se almacenan solo en tu dispositivo',
+      'biometric_device_only':
+          'La huella o Face ID solo se usa en este dispositivo',
+      'biometric_disable_anytime':
+          'Puedes desactivar esta función en cualquier momento',
+      'biometric_no_external_sharing':
+          'Nunca compartimos tus datos biométricos con terceros',
+      'decline': 'Rechazar',
+      'accept_and_continue': 'Aceptar y Continuar',
+      'remember_account': 'Recordar cuenta',
+      'use_biometric': 'Usar huella/Face ID',
+      'biometric_login': 'Iniciar con biometría',
+      'authenticate_with': 'Autenticarse con {0}',
+      'session_expired': 'Sesión expirada',
+      'session_expired_message':
+          'Tu sesión expiró por inactividad. Por favor, inicia sesión nuevamente.',
     },
     'en': {
       'app_name': 'BIAN - Animal Welfare',
@@ -718,6 +741,29 @@ class AppLocalizations {
       'download_pdf_title': 'Download PDF',
       'download_on_device': 'Save on device',
       'share_via_apps': 'WhatsApp, Gmail, Drive, etc.',
+
+      // Biometrics and privacy
+      'biometric_consent_title': 'Biometric Authentication',
+      'biometric_consent_message':
+          'To enable login with fingerprint or Face ID, we need your consent to securely store your credentials on your device.',
+      'important_information': 'Important Information',
+      'biometric_local_only':
+          'Your credentials are stored only on your device',
+      'biometric_device_only':
+          'Fingerprint or Face ID is only used on this device',
+      'biometric_disable_anytime':
+          'You can disable this feature at any time',
+      'biometric_no_external_sharing':
+          'We never share your biometric data with third parties',
+      'decline': 'Decline',
+      'accept_and_continue': 'Accept and Continue',
+      'remember_account': 'Remember account',
+      'use_biometric': 'Use fingerprint/Face ID',
+      'biometric_login': 'Login with biometrics',
+      'authenticate_with': 'Authenticate with {0}',
+      'session_expired': 'Session expired',
+      'session_expired_message':
+          'Your session expired due to inactivity. Please log in again.',
     },
   };
 
