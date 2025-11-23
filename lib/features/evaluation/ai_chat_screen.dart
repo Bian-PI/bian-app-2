@@ -236,14 +236,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(6),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 AppLocalizations(Locale(widget.language)).translate('ai_consultation'),
@@ -271,14 +271,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
           if (_isLoading)
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  CircularProgressIndicator(
+                  const CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(BianTheme.primaryRed),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Text(
                     AppLocalizations(Locale(widget.language)).translate('thinking_status'),
                     style: TextStyle(
@@ -292,7 +292,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
           if (remainingQuestions <= 1)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: remainingQuestions == 0
                     ? BianTheme.errorRed.withOpacity(0.08)
@@ -316,7 +316,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                         ? BianTheme.errorRed
                         : BianTheme.warningYellow,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       remainingQuestions == 0
@@ -336,14 +336,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
 
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
-                  offset: Offset(0, -2),
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
@@ -363,7 +363,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                       ),
                       filled: true,
                       fillColor: BianTheme.lightGray.withOpacity(0.3),
-                      contentPadding: EdgeInsets.symmetric(
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
                       ),
@@ -371,7 +371,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
                     gradient: (_isLoading || !_canSendMessage())
@@ -388,7 +388,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                             BoxShadow(
                               color: BianTheme.primaryRed.withOpacity(0.3),
                               blurRadius: 8,
-                              offset: Offset(0, 2),
+                              offset: const Offset(0, 2),
                             ),
                           ],
                   ),
@@ -425,7 +425,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   Widget _buildUserMessage(ChatMessage message) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [BianTheme.primaryRed, BianTheme.primaryRed.withOpacity(0.8)],
@@ -440,7 +440,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           BoxShadow(
             color: BianTheme.primaryRed.withOpacity(0.2),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -456,7 +456,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   Widget _buildAIMessage(ChatMessage message) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: BianTheme.lightGray.withOpacity(0.3),
         borderRadius: BorderRadius.only(

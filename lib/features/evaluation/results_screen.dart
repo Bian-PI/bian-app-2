@@ -520,7 +520,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BianTheme.errorRed.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1740,7 +1740,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
   ) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1759,7 +1759,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
           BoxShadow(
             color: BianTheme.primaryRed.withOpacity(0.08),
             blurRadius: 20,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1817,7 +1817,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                     BoxShadow(
                       color: BianTheme.primaryRed.withOpacity(0.3),
                       blurRadius: 12,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),

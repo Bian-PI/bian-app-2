@@ -289,6 +289,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   Future<void> _performSync() async {
+    final loc = AppLocalizations.of(context);
     setState(() => _isSyncing = true);
 
     showDialog(
@@ -314,7 +315,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 BoxShadow(
                   color: BianTheme.successGreen.withOpacity(0.4),
                   blurRadius: 20,
-                  offset: Offset(0, 10),
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -933,6 +934,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   Future<void> _performSingleSync(Evaluation report) async {
+    final loc = AppLocalizations.of(context);
     setState(() => _isSyncing = true);
 
     showDialog(
@@ -958,7 +960,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 BoxShadow(
                   color: BianTheme.successGreen.withOpacity(0.4),
                   blurRadius: 20,
-                  offset: Offset(0, 10),
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
