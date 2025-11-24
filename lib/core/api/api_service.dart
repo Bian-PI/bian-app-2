@@ -462,7 +462,7 @@ class ApiService {
   Future<Map<String, dynamic>> getUserByDocument(String document) async {
     try {
       final response = await get('/users/document/$document', requiresAuth: false);
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
@@ -475,6 +475,170 @@ class ApiService {
         return {'success': false, 'message': 'server_error'};
       }
     } catch (e) {
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  // ========== MÉTODOS PARA BACKEND JAVA (EVALUACIONES) ==========
+
+  /// Crea un nuevo reporte de evaluación en el backend Java
+  ///
+  /// [evaluationData] debe contener toda la información del reporte:
+  /// - connection_status: String
+  /// - user_id: String
+  /// - evaluation_date: String (formato: YYYY-MM-DD)
+  /// - language: String (ej: "es", "en")
+  /// - species: String
+  /// - farm_name: String
+  /// - farm_location: String
+  /// - evaluator_name: String
+  /// - status: String
+  /// - overall_score: String
+  /// - compliance_level: String
+  /// - categories: Map<String, dynamic>
+  /// - critical_points: List<Map<String, String>>
+  /// - strong_points: List<Map<String, String>>
+  /// - recommendations: List<String>
+  Future<Map<String, dynamic>> createEvaluationReport(Map<String, dynamic> evaluationData) async {
+    try {
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.createEvaluation}');
+
+      print('📤 Creando reporte de evaluación en: $url');
+      print('📦 Data: $evaluationData');
+
+      final response = await http.post(
+        url,
+        headers: ApiConfig.headers,
+        body: jsonEncode(evaluationData),
+      ).timeout(ApiConfig.receiveTimeout);
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Registro creado correctamente.',
+        };
+      } else if (response.statusCode == 400) {
+        return {
+          'success': false,
+          'message': 'validation_error',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'server_error',
+        };
+      }
+    } catch (e) {
+      print('❌ Error creando reporte: $e');
+      if (e.toString().contains('TimeoutException')) {
+        return {'success': false, 'message': 'timeout_error'};
+      }
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// Obtiene un reporte específico por su ID de evaluación
+  ///
+  /// [evaluationId]: ID único del reporte de evaluación
+  Future<Map<String, dynamic>> getEvaluationById(String evaluationId) async {
+    try {
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getEvaluationById(evaluationId)}');
+
+      print('📥 Obteniendo reporte: $url');
+
+      final response = await http.get(
+        url,
+        headers: ApiConfig.headers,
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'evaluation': data,
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'evaluation_not_found'};
+      } else {
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      print('❌ Error obteniendo reporte: $e');
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// Obtiene todos los reportes de un usuario específico
+  ///
+  /// [userId]: ID del usuario
+  Future<Map<String, dynamic>> getAllUserEvaluationReports(String userId) async {
+    try {
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllUserEvaluations(userId)}');
+
+      print('📥 Obteniendo todos los reportes del usuario $userId: $url');
+
+      final response = await http.get(
+        url,
+        headers: ApiConfig.headers,
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List;
+        return {
+          'success': true,
+          'evaluations': data,
+          'total': data.length,
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'message': 'user_not_found',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'server_error',
+        };
+      }
+    } catch (e) {
+      print('❌ Error obteniendo reportes del usuario: $e');
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// Obtiene reportes para usuarios administradores
+  ///
+  /// [adminId]: ID del usuario administrador
+  Future<Map<String, dynamic>> getAdminEvaluationReports(int adminId) async {
+    try {
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
+
+      print('📥 Obteniendo reportes para admin $adminId: $url');
+
+      final response = await http.get(
+        url,
+        headers: ApiConfig.headers,
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List;
+        return {
+          'success': true,
+          'evaluations': data,
+          'total': data.length,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'server_error',
+        };
+      }
+    } catch (e) {
+      print('❌ Error obteniendo reportes admin: $e');
       return {'success': false, 'message': 'connection_error'};
     }
   }
