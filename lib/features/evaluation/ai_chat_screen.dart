@@ -75,13 +75,28 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final savedCount = prefs.getInt('ai_chat_question_count') ?? 0;
     final savedTimeMs = prefs.getInt('ai_chat_last_reset_time');
 
+    final now = DateTime.now();
+    DateTime lastReset;
+
+    if (savedTimeMs != null) {
+      lastReset = DateTime.fromMillisecondsSinceEpoch(savedTimeMs);
+    } else {
+      lastReset = now;
+    }
+
+    // Verificar si el tiempo ya se agotó al cargar el estado
+    int currentCount = savedCount;
+    if (now.difference(lastReset) >= _rateLimitPeriod) {
+      currentCount = 0;
+      lastReset = now;
+      await prefs.setInt('ai_chat_question_count', 0);
+      await prefs.setInt('ai_chat_last_reset_time', now.millisecondsSinceEpoch);
+      print('✅ Rate limit reseteado al cargar chat (tiempo agotado)');
+    }
+
     setState(() {
-      _questionCount = savedCount;
-      if (savedTimeMs != null) {
-        _lastResetTime = DateTime.fromMillisecondsSinceEpoch(savedTimeMs);
-      } else {
-        _lastResetTime = DateTime.now();
-      }
+      _questionCount = currentCount;
+      _lastResetTime = lastReset;
     });
   }
 
@@ -103,10 +118,17 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   void _startRateLimitTimer() {
     _rateLimitTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (mounted && _questionCount >= _maxQuestionsPerPeriod) {
-        setState(() {
-          _checkAndResetRateLimit();
-        });
+      if (mounted) {
+        final now = DateTime.now();
+        if (_lastResetTime != null &&
+            now.difference(_lastResetTime!) >= _rateLimitPeriod &&
+            _questionCount >= _maxQuestionsPerPeriod) {
+          setState(() {
+            _questionCount = 0;
+            _lastResetTime = now;
+          });
+          _saveRateLimitState();
+        }
       }
     });
   }
@@ -124,31 +146,29 @@ class _AIChatScreenState extends State<AIChatScreen> {
     });
   }
 
-  Future<void> _checkAndResetRateLimit() async {
+  void _checkAndResetRateLimitSync() {
     final now = DateTime.now();
     if (_lastResetTime != null &&
         now.difference(_lastResetTime!) >= _rateLimitPeriod) {
-      setState(() {
-        _questionCount = 0;
-        _lastResetTime = now;
-      });
-      await _saveRateLimitState();
+      _questionCount = 0;
+      _lastResetTime = now;
+      _saveRateLimitState();
     }
   }
 
   bool _canSendMessage() {
-    _checkAndResetRateLimit();
+    _checkAndResetRateLimitSync();
     return _questionCount < _maxQuestionsPerPeriod;
   }
 
   String _getRemainingTimeText() {
-    if (_lastResetTime == null) return '';
+    if (_lastResetTime == null) return '0m 0s';
 
     final now = DateTime.now();
     final timeSinceReset = now.difference(_lastResetTime!);
     final timeRemaining = _rateLimitPeriod - timeSinceReset;
 
-    if (timeRemaining.isNegative) return '';
+    if (timeRemaining.isNegative) return '0m 0s';
 
     final minutes = timeRemaining.inMinutes;
     final seconds = timeRemaining.inSeconds % 60;
