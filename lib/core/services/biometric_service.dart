@@ -60,7 +60,7 @@ class BiometricService {
         options: const AuthenticationOptions(
           useErrorDialogs: true,
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false,  // Permite fallback a PIN/Patrón si biometría falla
         ),
       );
 

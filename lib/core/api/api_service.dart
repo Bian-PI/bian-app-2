@@ -251,19 +251,40 @@ class ApiService {
   Future<Map<String, dynamic>> resendVerificationEmail(int userId, String email) async {
     try {
       final url = Uri.parse('${ApiConfig.mailServiceUrl}/api/email/send/$userId?email=$email');
-      
-      print('📤 Reenviando email de verificación a: $url');
-      
-      final response = await http.post(url).timeout(ApiConfig.receiveTimeout);
-      
+
+      print('📤 Reenviando email de verificación...');
+      print('📍 URL: $url');
+      print('📍 Mail Service URL: ${ApiConfig.mailServiceUrl}');
+      print('📍 User ID: $userId');
+      print('📍 Email: $email');
+
+      final response = await http.post(
+        url,
+        headers: ApiConfig.headers,
+      ).timeout(
+        ApiConfig.receiveTimeout,
+        onTimeout: () {
+          print('⏱️ Timeout al enviar email de verificación');
+          throw Exception('Timeout');
+        },
+      );
+
       print('📥 Response status: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
+      print('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return {
           'success': true,
           'message': 'verification_sent',
         };
+      } else if (response.statusCode == 404) {
+        print('❌ Usuario no encontrado en servicio de correos');
+        return {
+          'success': false,
+          'message': 'user_not_found',
+        };
       } else {
+        print('❌ Error del servidor de correos: ${response.statusCode}');
         return {
           'success': false,
           'message': 'server_error',
@@ -271,6 +292,13 @@ class ApiService {
       }
     } catch (e) {
       print('❌ Error reenviando email: $e');
+      print('❌ Tipo de error: ${e.runtimeType}');
+      if (e.toString().contains('TimeoutException') || e.toString().contains('Timeout')) {
+        return {'success': false, 'message': 'timeout_error'};
+      }
+      if (e.toString().contains('SocketException')) {
+        return {'success': false, 'message': 'connection_error'};
+      }
       return {'success': false, 'message': 'connection_error'};
     }
   }

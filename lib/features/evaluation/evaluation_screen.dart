@@ -307,9 +307,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     final loc = AppLocalizations.of(context);
 
     // Pre-rellenar datos del usuario logueado si existen
+    final bool hasUserDocument = _currentUser != null &&
+                                   _currentUser!.document != null &&
+                                   _currentUser!.document!.isNotEmpty;
+
     if (_currentUser != null) {
       _evaluatorNameController.text = _currentUser!.name;
-      if (_currentUser!.document != null && _currentUser!.document!.isNotEmpty) {
+      if (hasUserDocument) {
         _evaluatorDocumentController.text = _currentUser!.document!;
       }
       print('✅ Datos del usuario autocompletados en formulario');
@@ -328,16 +332,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: _evaluatorDocumentController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: '${loc.translate('document')} *',
-                    hintText: '1234567890',
-                    prefixIcon: Icon(Icons.badge_outlined),
+                // Solo mostrar campo de documento si el usuario NO lo tiene
+                if (!hasUserDocument)
+                  TextField(
+                    controller: _evaluatorDocumentController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: '${loc.translate('document')} *',
+                      hintText: '1234567890',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                if (!hasUserDocument) const SizedBox(height: 16),
+
                 TextField(
                   controller: _farmNameController,
                   decoration: InputDecoration(
@@ -402,9 +409,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Validar que todos los campos estén llenos
-                if (_evaluatorDocumentController.text.trim().isEmpty ||
-                    _farmNameController.text.trim().isEmpty ||
+                // Determinar si el usuario tiene documento guardado
+                final bool hasUserDocument = _currentUser != null &&
+                                               _currentUser!.document != null &&
+                                               _currentUser!.document!.isNotEmpty;
+
+                // Validar campos obligatorios básicos
+                if (_farmNameController.text.trim().isEmpty ||
                     _farmLocationController.text.trim().isEmpty ||
                     _evaluatorNameController.text.trim().isEmpty) {
                   CustomSnackbar.showError(
@@ -414,8 +425,17 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
-                // Validar documento (debe tener al menos 6 dígitos)
-                if (_evaluatorDocumentController.text.trim().length < 6) {
+                // Validar documento solo si NO tiene documento de usuario Y el campo está visible
+                if (!hasUserDocument && _evaluatorDocumentController.text.trim().isEmpty) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('complete_all_fields'),
+                  );
+                  return;
+                }
+
+                // Validar longitud de documento solo si se ingresó uno nuevo
+                if (!hasUserDocument && _evaluatorDocumentController.text.trim().length < 6) {
                   CustomSnackbar.showError(
                     context,
                     loc.translate('invalid_document'),
@@ -451,12 +471,17 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
+                // Usar documento del usuario si está disponible, sino el ingresado
+                final documentToUse = hasUserDocument
+                    ? _currentUser!.document!
+                    : _evaluatorDocumentController.text.trim();
+
                 setState(() {
                   _evaluation = _evaluation.copyWith(
                     farmName: _farmNameController.text.trim(),
                     farmLocation: _farmLocationController.text.trim(),
                     evaluatorName: _evaluatorNameController.text.trim(),
-                    evaluatorDocument: _evaluatorDocumentController.text.trim(),
+                    evaluatorDocument: documentToUse,
                     language: widget.currentLanguage,
                   );
                   _hasUnsavedChanges = true;
