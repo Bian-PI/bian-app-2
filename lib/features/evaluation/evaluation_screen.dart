@@ -12,6 +12,8 @@ import 'package:uuid/uuid.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/utils/location_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
+import '../../core/storage/secure_storage.dart';
+import '../../core/models/user_model.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -34,10 +36,11 @@ class EvaluationScreen extends StatefulWidget {
 class _EvaluationScreenState extends State<EvaluationScreen> {
   final _uuid = const Uuid();
   final _scrollController = ScrollController();
-  
+  final _storage = SecureStorage();
+
   int _currentCategoryIndex = 0;
   late Evaluation _evaluation;
-  
+
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
@@ -48,17 +51,29 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   bool _showInfoDialog = true;
   bool _hasUnsavedChanges = false;
   bool _isGettingLocation = false;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _initializeEvaluation();
-    
+    _loadCurrentUser();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.draftToEdit == null && _showInfoDialog) {
         _showWelcomeDialog();
       }
     });
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final user = await _storage.getUser();
+    if (mounted && user != null) {
+      setState(() {
+        _currentUser = user;
+      });
+      print('✅ Usuario logueado cargado: ${user.name}, documento: ${user.document}');
+    }
   }
 
   @override
@@ -290,6 +305,15 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   void _showFarmInfoDialog() {
     final loc = AppLocalizations.of(context);
+
+    // Pre-rellenar datos del usuario logueado si existen
+    if (_currentUser != null) {
+      _evaluatorNameController.text = _currentUser!.name;
+      if (_currentUser!.document != null && _currentUser!.document!.isNotEmpty) {
+        _evaluatorDocumentController.text = _currentUser!.document!;
+      }
+      print('✅ Datos del usuario autocompletados en formulario');
+    }
 
     showDialog(
       context: context,

@@ -222,6 +222,9 @@ class AppLocalizations {
       'first_enter_farm_data':
           'Primero ingresa los datos de la granja, luego completa cada categoría.',
       'complete_all_fields': 'Por favor completa todos los campos',
+      'invalid_document': 'El documento debe tener al menos 6 caracteres',
+      'min_length': 'Debe tener al menos {0} caracteres',
+      'name_format': 'Ingresa el nombre completo (nombre y apellido)',
       'previous': 'Anterior',
       'next': 'Siguiente',
       'finish': 'Finalizar',
@@ -639,6 +642,9 @@ class AppLocalizations {
       'first_enter_farm_data':
           'First enter the farm data, then complete each category.',
       'complete_all_fields': 'Please complete all fields',
+      'invalid_document': 'Document must have at least 6 characters',
+      'min_length': 'Must be at least {0} characters',
+      'name_format': 'Enter full name (first and last name)',
       'previous': 'Previous',
       'next': 'Next',
       'finish': 'Finish',

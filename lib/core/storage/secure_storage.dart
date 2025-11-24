@@ -78,7 +78,27 @@ class SecureStorage {
   }
 
   Future<void> clearAll() async {
+    // Guardar credenciales antes de limpiar si está activado recordar cuenta
+    final rememberAccount = await getRememberAccount();
+    final savedEmail = await getSavedEmail();
+    final savedPassword = await getSavedPassword();
+    final biometricEnabled = await getBiometricEnabled();
+
+    // Limpiar todo
     await _storage.deleteAll();
+
+    // Restaurar credenciales guardadas si estaba activado
+    if (rememberAccount && savedEmail != null) {
+      await saveRememberAccount(true);
+      await saveSavedEmail(savedEmail);
+      if (savedPassword != null) {
+        await saveSavedPassword(savedPassword);
+      }
+      if (biometricEnabled) {
+        await saveBiometricEnabled(true);
+      }
+      print('✅ Credenciales preservadas después de logout');
+    }
   }
 
   

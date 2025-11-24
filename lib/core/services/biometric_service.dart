@@ -39,6 +39,8 @@ class BiometricService {
     bool useErrorDialogs = true,
   }) async {
     try {
+      print('🔐 Iniciando autenticación biométrica...');
+
       final isSupported = await isDeviceSupported();
       if (!isSupported) {
         print('⚠️ Dispositivo no soporta biometría');
@@ -51,16 +53,33 @@ class BiometricService {
         return false;
       }
 
-      return await _localAuth.authenticate(
+      print('✓ Dispositivo soporta biometría y tiene configurada');
+
+      final result = await _localAuth.authenticate(
         localizedReason: reason,
-        options: AuthenticationOptions(
-          useErrorDialogs: useErrorDialogs,
+        options: const AuthenticationOptions(
+          useErrorDialogs: true,
           stickyAuth: true,
-          biometricOnly: false,
+          biometricOnly: true,
         ),
       );
+
+      print(result ? '✅ Autenticación exitosa' : '❌ Autenticación fallida');
+      return result;
     } on PlatformException catch (e) {
-      print('❌ Error en autenticación biométrica: $e');
+      print('❌ Error en autenticación biométrica: ${e.code} - ${e.message}');
+      if (e.code == 'NotAvailable') {
+        print('⚠️ Biometría no disponible en este dispositivo');
+      } else if (e.code == 'NotEnrolled') {
+        print('⚠️ No hay biometría registrada en el dispositivo');
+      } else if (e.code == 'LockedOut') {
+        print('⚠️ Biometría bloqueada temporalmente');
+      } else if (e.code == 'PermanentlyLockedOut') {
+        print('⚠️ Biometría bloqueada permanentemente');
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error inesperado en autenticación biométrica: $e');
       return false;
     }
   }
