@@ -157,19 +157,6 @@ class OfflineModeScreen extends StatelessWidget {
                     minimumSize: const Size(double.infinity, 56),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back),
-                  label: Text(loc.translate('cancel')),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: BianTheme.mediumGray,
-                    side: BorderSide(color: BianTheme.mediumGray),
-                    minimumSize: const Size(double.infinity, 56),
-                  ),
-                ),
               ],
             ),
           ),

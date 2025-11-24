@@ -378,10 +378,11 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (_evaluatorDocumentController.text.isEmpty ||
-                    _farmNameController.text.isEmpty ||
-                    _farmLocationController.text.isEmpty ||
-                    _evaluatorNameController.text.isEmpty) {
+                // Validar que todos los campos estén llenos
+                if (_evaluatorDocumentController.text.trim().isEmpty ||
+                    _farmNameController.text.trim().isEmpty ||
+                    _farmLocationController.text.trim().isEmpty ||
+                    _evaluatorNameController.text.trim().isEmpty) {
                   CustomSnackbar.showError(
                     context,
                     loc.translate('complete_all_fields'),
@@ -389,12 +390,49 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
+                // Validar documento (debe tener al menos 6 dígitos)
+                if (_evaluatorDocumentController.text.trim().length < 6) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('invalid_document'),
+                  );
+                  return;
+                }
+
+                // Validar nombre de granja (mínimo 3 caracteres)
+                if (_farmNameController.text.trim().length < 3) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('min_length', ['3']),
+                  );
+                  return;
+                }
+
+                // Validar ubicación (mínimo 3 caracteres)
+                if (_farmLocationController.text.trim().length < 3) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('min_length', ['3']),
+                  );
+                  return;
+                }
+
+                // Validar nombre evaluador (debe tener al menos 2 palabras)
+                final evaluatorName = _evaluatorNameController.text.trim();
+                if (evaluatorName.split(' ').where((word) => word.isNotEmpty).length < 2) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('name_format'),
+                  );
+                  return;
+                }
+
                 setState(() {
                   _evaluation = _evaluation.copyWith(
-                    farmName: _farmNameController.text,
-                    farmLocation: _farmLocationController.text,
-                    evaluatorName: _evaluatorNameController.text,
-                    evaluatorDocument: _evaluatorDocumentController.text,
+                    farmName: _farmNameController.text.trim(),
+                    farmLocation: _farmLocationController.text.trim(),
+                    evaluatorName: _evaluatorNameController.text.trim(),
+                    evaluatorDocument: _evaluatorDocumentController.text.trim(),
                     language: widget.currentLanguage,
                   );
                   _hasUnsavedChanges = true;

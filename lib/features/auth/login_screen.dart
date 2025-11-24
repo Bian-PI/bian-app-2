@@ -71,7 +71,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _checkInitialConnection() async {
     print('🔍 LoginScreen: Verificando conexión inicial...');
-    await Future.delayed(Duration(milliseconds: 500));
 
     final connectivityService =
         Provider.of<ConnectivityService>(context, listen: false);

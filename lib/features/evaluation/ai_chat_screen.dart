@@ -255,12 +255,59 @@ class _AIChatScreenState extends State<AIChatScreen> {
     });
   }
 
+  Future<bool> _onWillPop() async {
+    if (_messages.length <= 1) {
+      return true;
+    }
+
+    final loc = AppLocalizations(Locale(widget.language));
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: BianTheme.warningYellow, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                loc.translate('exit_question'),
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          loc.translate('lose_progress_warning'),
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(loc.translate('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BianTheme.errorRed,
+            ),
+            child: Text(loc.translate('exit')),
+          ),
+        ],
+      ),
+    );
+
+    return shouldPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final remainingQuestions = _maxQuestionsPerPeriod - _questionCount;
 
-    return Scaffold(
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
         title: Row(
           children: [
             Container(
@@ -435,6 +482,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
