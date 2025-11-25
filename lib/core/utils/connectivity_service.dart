@@ -15,11 +15,32 @@ class ConnectivityService {
 
   Future<void> initialize() async {
     print('🔧 Inicializando ConnectivityService...');
-    
+
+    // Primero emitir un estado optimista basado solo en tipo de red
+    final initialResults = await _connectivity.checkConnectivity();
+    final hasNetworkType = _hasAnyNetworkType(initialResults);
+
+    // Emitir estado optimista inmediatamente
+    _lastKnownState = hasNetworkType;
+    connectionStatusController.add(hasNetworkType);
+    print('🟢 Estado inicial optimista: $hasNetworkType (basado en tipo de red)');
+
+    // Luego validar la conexión real en background
+    if (hasNetworkType) {
+      _validateRealConnection(initialResults).then((hasInternet) {
+        if (_lastKnownState != hasInternet) {
+          print('🔄 Validación real cambió estado de $_lastKnownState a $hasInternet');
+          _lastKnownState = hasInternet;
+          connectionStatusController.add(hasInternet);
+        }
+      });
+    }
+
+    // Escuchar cambios futuros
     _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) async {
       print('📡 Cambio detectado en conectividad: $results');
       final hasConnection = await _validateRealConnection(results);
-      
+
       if (_lastKnownState != hasConnection) {
         print('🔄 Estado cambió de $_lastKnownState a $hasConnection - EMITIENDO');
         _lastKnownState = hasConnection;
@@ -28,11 +49,16 @@ class ConnectivityService {
         print('⏸️ Estado igual ($_lastKnownState) - NO emitir');
       }
     });
+  }
 
-    final hasConnection = await checkConnection();
-    _lastKnownState = hasConnection;
-    connectionStatusController.add(hasConnection);
-    print('🟢 Estado inicial: $hasConnection');
+  bool _hasAnyNetworkType(List<ConnectivityResult> results) {
+    if (results.isEmpty || results.first == ConnectivityResult.none) {
+      return false;
+    }
+    return results.any((result) =>
+        result == ConnectivityResult.mobile ||
+        result == ConnectivityResult.wifi ||
+        result == ConnectivityResult.ethernet);
   }
 
   Future<bool> checkConnection() async {

@@ -90,6 +90,16 @@ class AppLocalizations {
       'delete_local_report_confirm':
           '¿Seguro que deseas eliminar este reporte local?',
 
+      // Sincronización
+      'sync_to_server': 'Sincronizar con Servidor',
+      'syncing_to_server': 'Sincronizando con servidor...',
+      'evaluation_synced_successfully': 'Evaluación sincronizada exitosamente',
+      'sync_error': 'Error al sincronizar',
+      'sync_requires_login': 'Inicia sesión para sincronizar con el servidor',
+      'offline_mode_active': 'Modo offline activo',
+      'pending_sync_reports': 'Reportes pendientes de sincronización',
+      'pending_sync_message': 'Abre cada reporte y presiona "Sincronizar con Servidor"',
+
       'continue_offline': 'Continuar sin conexión',
       'no_internet_connection': 'Sin conexión a internet',
       'exit_question': '¿Salir?',
@@ -222,9 +232,9 @@ class AppLocalizations {
       'first_enter_farm_data':
           'Primero ingresa los datos de la granja, luego completa cada categoría.',
       'complete_all_fields': 'Por favor completa todos los campos',
-      'invalid_document': 'El documento debe tener al menos 6 caracteres',
-      'min_length': 'Debe tener al menos {0} caracteres',
-      'name_format': 'Ingresa el nombre completo (nombre y apellido)',
+      'invalid_document2': 'El documento debe tener al menos 6 caracteres',
+      'min_length2': 'Debe tener al menos {0} caracteres',
+      'name_format2': 'Ingresa el nombre completo (nombre y apellido)',
       'previous': 'Anterior',
       'next': 'Siguiente',
       'finish': 'Finalizar',
@@ -512,6 +522,16 @@ class AppLocalizations {
       'delete_local_report_confirm':
           'Are you sure you want to delete this local report?',
 
+      // Synchronization
+      'sync_to_server': 'Sync to Server',
+      'syncing_to_server': 'Syncing to server...',
+      'evaluation_synced_successfully': 'Evaluation synced successfully',
+      'sync_error': 'Sync error',
+      'sync_requires_login': 'Log in to sync with server',
+      'offline_mode_active': 'Offline mode active',
+      'pending_sync_reports': 'Pending sync reports',
+      'pending_sync_message': 'Open each report and press "Sync to Server"',
+
       'continue_offline': 'Continue offline',
       'no_internet_connection': 'No internet connection',
       'exit_question': 'Exit?',
@@ -642,9 +662,9 @@ class AppLocalizations {
       'first_enter_farm_data':
           'First enter the farm data, then complete each category.',
       'complete_all_fields': 'Please complete all fields',
-      'invalid_document': 'Document must have at least 6 characters',
-      'min_length': 'Must be at least {0} characters',
-      'name_format': 'Enter full name (first and last name)',
+      'invalid_document2': 'Document must have at least 6 characters',
+      'min_length2': 'Must be at least {0} characters',
+      'name_format2': 'Enter full name (first and last name)',
       'previous': 'Previous',
       'next': 'Next',
       'finish': 'Finish',

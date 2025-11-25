@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/storage/drafts_storage.dart';
 import '../../core/storage/reports_storage.dart';
+import '../../core/storage/local_reports_storage.dart';
 import '../../core/api/api_service.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Evaluation> _drafts = [];
   List<Evaluation> _reports = [];
   int _farmsCount = 0;
+  int _pendingSyncCount = 0; // Contador de reportes pendientes de sincronización
 
   int _reportLimit = 20;
   int _reportOffset = 0;
@@ -67,6 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
     bool hasMore = false;
     int total = 0;
 
+    // 1. Cargar reportes LOCALES pendientes de sincronización (PRIORIDAD)
+    final localReports = await LocalReportsStorage.getAllLocalReports();
+    final pendingSyncCount = await LocalReportsStorage.getPendingSyncCount();
+    print('📦 Reportes locales (pendientes): ${localReports.length}');
+    print('🔄 Reportes marcados para sincronizar: $pendingSyncCount');
+
+    // 2. Intentar cargar del servidor
     try {
       final result = await _apiService.getUserEvaluations(
         limit: _reportLimit,
@@ -75,18 +84,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (result['success'] == true) {
         final evaluationsData = result['evaluations'] as List;
-        reports = evaluationsData
+        final serverReports = evaluationsData
             .map((e) => Evaluation.fromJson(e))
             .toList();
         total = result['total'] ?? 0;
         hasMore = result['hasMore'] ?? false;
-        print('✅ Reportes cargados: ${reports.length} de $total');
+
+        // Combinar: locales primero, luego del servidor
+        reports = [...localReports, ...serverReports];
+        print('✅ Reportes del servidor: ${serverReports.length} de $total');
+        print('📊 Total reportes (locales + servidor): ${reports.length}');
       } else {
         print('⚠️ No se pudieron cargar reportes del servidor');
+        // Solo locales + cache local
+        final cachedReports = await ReportsStorage.getAllReports();
+        reports = [...localReports, ...cachedReports];
+        print('📦 Usando cache: ${cachedReports.length} reportes');
       }
     } catch (e) {
-      print('❌ Error cargando reportes: $e');
-      reports = await ReportsStorage.getAllReports();
+      print('❌ Error cargando reportes del servidor: $e');
+      // Fallback: locales + cache
+      final cachedReports = await ReportsStorage.getAllReports();
+      reports = [...localReports, ...cachedReports];
+      print('📦 Fallback a cache local: ${cachedReports.length} reportes');
     }
 
     setState(() {
@@ -95,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _drafts = drafts;
       _reports = reports;
       _farmsCount = farms.length;
+      _pendingSyncCount = pendingSyncCount;
       _reportTotal = total;
       _hasMoreReports = hasMore;
       _reportOffset = reports.length;
@@ -514,7 +535,62 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            
+
+            // Banner de reportes pendientes de sincronización
+            if (_pendingSyncCount > 0)
+              Container(
+                color: BianTheme.primaryRed.withOpacity(0.1),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: BianTheme.primaryRed,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$_pendingSyncCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            loc.translate('pending_sync_reports'),
+                            style: const TextStyle(
+                              color: BianTheme.primaryRed,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            loc.translate('pending_sync_message'),
+                            style: TextStyle(
+                              color: BianTheme.primaryRed.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.cloud_upload_outlined,
+                      color: BianTheme.primaryRed,
+                      size: 28,
+                    ),
+                  ],
+                ),
+              ),
+
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _loadAllData,

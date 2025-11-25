@@ -14,6 +14,8 @@ import '../../core/utils/location_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/models/user_model.dart';
+import '../../core/api/api_service.dart';
+import 'package:intl/intl.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -269,8 +271,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         final permissionStatus = await LocationService.checkAndRequestPermission();
 
         String message;
-        String? actionLabel;
-        VoidCallback? onAction;
+        String actionLabel;
+        VoidCallback onAction;
 
         switch (permissionStatus) {
           case LocationPermissionStatus.serviceDisabled:
@@ -284,7 +286,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             onAction = () => LocationService.openAppSettings();
             break;
           case LocationPermissionStatus.denied:
-          default:
+          case LocationPermissionStatus.granted:
+          // Si fue denegado o cualquier otro error
             message = loc.translate('location_permission_denied');
             actionLabel = loc.translate('open_settings');
             onAction = () => LocationService.openAppSettings();
@@ -803,16 +806,42 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         categoryScores: Map<String, double>.from(results['category_scores']),
         updatedAt: DateTime.now(),
       );
-      
+
+      // Eliminar borrador
+      await DraftsStorage.deleteDraft(_evaluation.id);
+
       if (widget.isOfflineMode) {
-        await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        // Modo offline: guardar como pendiente de sincronización
+        print('🔍 DEBUG: Guardando evaluación en modo offline...');
+        print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
+        print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
+
+        final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
+
+        // Verificar que se guardó correctamente
+        final allReports = await LocalReportsStorage.getAllLocalReports();
+        print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
+        final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
+        print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
       } else {
-        await ReportsStorage.saveReport(completedEvaluation);
-        await DraftsStorage.deleteDraft(_evaluation.id);
+        // Modo online: intentar sincronizar INMEDIATAMENTE
+        print('🌐 Modo online: Sincronizando evaluación al servidor...');
+        final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
+
+        if (syncSuccess) {
+          print('✅ Evaluación sincronizada exitosamente con el servidor');
+          // Guardar también localmente para acceso offline
+          await ReportsStorage.saveReport(completedEvaluation);
+        } else {
+          print('⚠️ Error al sincronizar, guardando como pendiente');
+          // Si falla, guardar como pendiente para reintento posterior
+          await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        }
       }
-      
+
       setState(() => _hasUnsavedChanges = false);
-      
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -827,6 +856,126 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         );
       }
     }
+  }
+
+  /// Sincroniza la evaluación con el backend Java automáticamente
+  Future<bool> _syncEvaluationToServer(
+    Evaluation evaluation,
+    Map<String, dynamic> structuredJson,
+  ) async {
+    try {
+      final user = await _storage.getUser();
+      if (user == null) {
+        print('❌ No hay usuario para sincronizar');
+        return false;
+      }
+
+      // Asegurar que se pase un int no nulo al backend; usar 0 como fallback si user.id es null
+      final userId = user.id ?? 0;
+      if (userId == 0) {
+        print('⚠️ Usuario cargado pero sin ID, usando 0 como fallback.');
+      }
+
+      // Preparar datos en formato del backend
+      final evaluationData = await _prepareEvaluationData(evaluation, structuredJson, userId);
+
+      print('📤 Enviando evaluación al backend Java...');
+      final apiService = ApiService();
+      final result = await apiService.createEvaluationReport(evaluationData);
+
+      if (result['success'] == true) {
+        print('✅ Sincronización exitosa con backend Java');
+        return true;
+      } else {
+        print('❌ Error del servidor: ${result['message']}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Excepción sincronizando: $e');
+      return false;
+    }
+  }
+
+  /// Prepara los datos para el backend Java
+  Future<Map<String, dynamic>> _prepareEvaluationData(
+    Evaluation evaluation,
+    Map<String, dynamic> structuredJson,
+    int userId,
+  ) async {
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final evaluationDateStr = dateFormatter.format(evaluation.evaluationDate);
+
+    final overallScore = evaluation.overallScore ?? 0.0;
+    final categoryScores = evaluation.categoryScores ?? {};
+    final results = structuredJson['results'] as Map<String, dynamic>;
+
+    // Preparar categories (TODO como strings para backend Java)
+    final categories = <String, dynamic>{};
+    for (var category in widget.species.categories) {
+      final score = categoryScores[category.id] ?? 0.0;
+      categories[category.id] = {
+        'score': score.toString(), // String
+        'fields': evaluation.responses.entries
+            .where((e) => e.key.startsWith('${category.id}_'))
+            .map((e) {
+              // Convertir booleanos y números a strings
+              String valueStr;
+              final value = e.value;
+              if (value is bool) {
+                valueStr = value.toString(); // "true" o "false"
+              } else if (value is num) {
+                valueStr = value.toString(); // "1.0", "2", etc.
+              } else {
+                valueStr = value.toString();
+              }
+
+              return {
+                'field_id': e.key.toString(), // String
+                'value': valueStr, // String
+              };
+            })
+            .toList(),
+      };
+    }
+
+    // Preparar critical_points
+    final criticalPoints = (results['critical_points'] as List)
+        .map((point) => {
+              'category': point.toString().split('_')[0],
+              'field': point.toString(),
+            })
+        .toList();
+
+    // Preparar strong_points
+    final strongPoints = (results['strong_points'] as List)
+        .map((point) => {
+              'description': point.toString(),
+            })
+        .toList();
+
+    // Recommendations
+    final recommendations = (structuredJson['recommendations'] as List)
+        .map((rec) => rec.toString())
+        .toList();
+
+    return {
+      'connection_status': 'online',
+      'user_id': userId.toString(),
+      'evaluation_date': evaluationDateStr,
+      'language': evaluation.language,
+      'species': widget.species.id,
+      'farm_name': evaluation.farmName,
+      'farm_location': evaluation.farmLocation,
+      'evaluator_name': evaluation.evaluatorName,
+      'evaluator_document': evaluation.evaluatorDocument,
+      'status': 'completed',
+      'overall_score': overallScore.toString(),
+      'compliance_level': results['compliance_level'] as String,
+      'categories': categories,
+      'critical_points': criticalPoints,
+      'strong_points': strongPoints,
+      'recommendations': recommendations,
+    };
   }
 
   void printJson(dynamic data, {String indent = ''}) {

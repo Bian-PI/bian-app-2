@@ -61,10 +61,19 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _animController.forward();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkInitialConnection();
-      _loadSavedCredentials();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Cargar lo crítico primero
+      await Future.wait([
+        _checkInitialConnection(),
+        _loadSavedCredentials(),
+      ]);
+
+      // Luego cargar lo secundario solo si es necesario
+      if (_rememberAccount) {
         _checkBiometricAvailability();
+      }
+
+      // Cargar reportes pendientes de forma lazy (no bloquea la UI)
       _loadPendingReportsCount();
     });
   }
@@ -154,6 +163,12 @@ class _LoginScreenState extends State<LoginScreen>
         if (result['user'] != null) {
           final user = User.fromJson(result['user']);
           await _storage.saveUser(user);
+
+          // Migrar reportes offline al usuario que acaba de logearse
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id?? 0);
+          if (migratedCount > 0) {
+            print('✅ Login: Migrados $migratedCount reportes offline al usuario ${user.email}');
+          }
         }
 
         if (_rememberAccount) {
@@ -250,6 +265,12 @@ class _LoginScreenState extends State<LoginScreen>
         if (result['user'] != null) {
           final user = User.fromJson(result['user']);
           await _storage.saveUser(user);
+
+          // Migrar reportes offline al usuario que acaba de logearse
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id?? 0);
+          if (migratedCount > 0) {
+            print('✅ Login biométrico: Migrados $migratedCount reportes offline al usuario ${user.email}');
+          }
         }
 
         Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);

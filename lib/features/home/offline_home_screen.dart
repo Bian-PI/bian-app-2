@@ -36,9 +36,15 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   Future<void> _loadLocalReports() async {
+    print('🔍 DEBUG OfflineHomeScreen: _loadLocalReports() LLAMADO');
     setState(() => _isLoading = true);
     final reports = await LocalReportsStorage.getAllLocalReports();
     final pendingCount = await LocalReportsStorage.getPendingSyncCount();
+    print('🔍 DEBUG OfflineHomeScreen: Reportes cargados: ${reports.length}');
+    print('🔍 DEBUG OfflineHomeScreen: Pendientes de sync: $pendingCount');
+    if (reports.isNotEmpty) {
+      print('🔍 DEBUG OfflineHomeScreen: Primer reporte: ${reports.first.farmName} - ${reports.first.id}');
+    }
     setState(() {
       _localReports = reports;
       _pendingSyncCount = pendingCount;
@@ -47,6 +53,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   void _navigateToEvaluation(Species species) async {
+    print('🔍 DEBUG OfflineHomeScreen: Navegando a EvaluationScreen en modo offline');
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
 
     await Navigator.push(
@@ -60,6 +67,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       ),
     );
 
+    print('🔍 DEBUG OfflineHomeScreen: RETORNÓ de EvaluationScreen, llamando _loadLocalReports()');
     _loadLocalReports();
   }
 

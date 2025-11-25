@@ -1,13 +1,28 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/evaluation_model.dart';
+import 'secure_storage.dart';
 
 class DraftsStorage {
-  static const String _keyDrafts = 'evaluation_drafts';
+  static const String _keyDraftsPrefix = 'evaluation_drafts_user_';
   static const int maxDrafts = 2;
+  static final _storage = SecureStorage();
+
+  /// Genera la clave única para los borradores del usuario actual
+  static Future<String?> _getUserDraftsKey() async {
+    final user = await _storage.getUser();
+    if (user == null) {
+      print('⚠️ No hay usuario logueado, no se puede guardar borrador');
+      return null;
+    }
+    return '$_keyDraftsPrefix${user.id}';
+  }
 
   static Future<bool> saveDraft(Evaluation evaluation) async {
     try {
+      final key = await _getUserDraftsKey();
+      if (key == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
       final existingDrafts = await getAllDrafts();
 
@@ -25,9 +40,9 @@ class DraftsStorage {
 
       final draftsJson = existingDrafts.map((d) => d.toJson()).toList();
       final encoded = jsonEncode(draftsJson);
-      await prefs.setString(_keyDrafts, encoded);
+      await prefs.setString(key, encoded);
 
-      print('✅ Borrador guardado: ${evaluation.id}');
+      print('✅ Borrador guardado para usuario: ${evaluation.id}');
       return true;
     } catch (e) {
       print('❌ Error guardando borrador: $e');
@@ -37,8 +52,11 @@ class DraftsStorage {
 
   static Future<List<Evaluation>> getAllDrafts() async {
     try {
+      final key = await _getUserDraftsKey();
+      if (key == null) return [];
+
       final prefs = await SharedPreferences.getInstance();
-      final draftsString = prefs.getString(_keyDrafts);
+      final draftsString = prefs.getString(key);
 
       if (draftsString == null || draftsString.isEmpty) {
         return [];
@@ -73,6 +91,9 @@ class DraftsStorage {
 
   static Future<bool> deleteDraft(String id) async {
     try {
+      final key = await _getUserDraftsKey();
+      if (key == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
       final drafts = await getAllDrafts();
 
@@ -80,7 +101,7 @@ class DraftsStorage {
 
       final draftsJson = drafts.map((d) => d.toJson()).toList();
       final encoded = jsonEncode(draftsJson);
-      await prefs.setString(_keyDrafts, encoded);
+      await prefs.setString(key, encoded);
 
       print('✅ Borrador eliminado: $id');
       return true;
@@ -92,9 +113,12 @@ class DraftsStorage {
 
   static Future<bool> deleteAllDrafts() async {
     try {
+      final key = await _getUserDraftsKey();
+      if (key == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_keyDrafts);
-      print('✅ Todos los borradores eliminados');
+      await prefs.remove(key);
+      print('✅ Todos los borradores del usuario eliminados');
       return true;
     } catch (e) {
       print('❌ Error eliminando borradores: $e');
