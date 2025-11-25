@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/storage/drafts_storage.dart';
 import '../../core/storage/reports_storage.dart';
+import '../../core/storage/local_reports_storage.dart';
 import '../../core/api/api_service.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
@@ -67,6 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
     bool hasMore = false;
     int total = 0;
 
+    // 1. Cargar reportes LOCALES pendientes de sincronización (PRIORIDAD)
+    final localReports = await LocalReportsStorage.getAllLocalReports();
+    print('📦 Reportes locales (pendientes): ${localReports.length}');
+
+    // 2. Intentar cargar del servidor
     try {
       final result = await _apiService.getUserEvaluations(
         limit: _reportLimit,
@@ -75,18 +81,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (result['success'] == true) {
         final evaluationsData = result['evaluations'] as List;
-        reports = evaluationsData
+        final serverReports = evaluationsData
             .map((e) => Evaluation.fromJson(e))
             .toList();
         total = result['total'] ?? 0;
         hasMore = result['hasMore'] ?? false;
-        print('✅ Reportes cargados: ${reports.length} de $total');
+
+        // Combinar: locales primero, luego del servidor
+        reports = [...localReports, ...serverReports];
+        print('✅ Reportes del servidor: ${serverReports.length} de $total');
+        print('📊 Total reportes (locales + servidor): ${reports.length}');
       } else {
         print('⚠️ No se pudieron cargar reportes del servidor');
+        // Solo locales + cache local
+        final cachedReports = await ReportsStorage.getAllReports();
+        reports = [...localReports, ...cachedReports];
+        print('📦 Usando cache: ${cachedReports.length} reportes');
       }
     } catch (e) {
-      print('❌ Error cargando reportes: $e');
-      reports = await ReportsStorage.getAllReports();
+      print('❌ Error cargando reportes del servidor: $e');
+      // Fallback: locales + cache
+      final cachedReports = await ReportsStorage.getAllReports();
+      reports = [...localReports, ...cachedReports];
+      print('📦 Fallback a cache local: ${cachedReports.length} reportes');
     }
 
     setState(() {

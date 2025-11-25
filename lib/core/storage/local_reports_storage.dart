@@ -13,8 +13,9 @@ class LocalReportsStorage {
   static Future<String?> _getUserLocalReportsKey() async {
     final user = await _storage.getUser();
     if (user == null) {
-      print('⚠️ No hay usuario logueado');
-      return null;
+      print('⚠️ No hay usuario logueado, usando clave para modo offline');
+      // En modo offline sin usuario, usar una clave especial
+      return '${_keyLocalReportsPrefix}offline_mode';
     }
     return '$_keyLocalReportsPrefix${user.id}';
   }
@@ -22,7 +23,10 @@ class LocalReportsStorage {
   /// Genera la clave única para los reportes pendientes del usuario actual
   static Future<String?> _getUserPendingSyncKey() async {
     final user = await _storage.getUser();
-    if (user == null) return null;
+    if (user == null) {
+      // En modo offline sin usuario, usar una clave especial
+      return '${_keyPendingSyncPrefix}offline_mode';
+    }
     return '$_keyPendingSyncPrefix${user.id}';
   }
 

@@ -811,8 +811,18 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
       if (widget.isOfflineMode) {
         // Modo offline: guardar como pendiente de sincronización
-        await LocalReportsStorage.saveLocalReport(completedEvaluation);
-        print('📴 Modo offline: Evaluación guardada como pendiente');
+        print('🔍 DEBUG: Guardando evaluación en modo offline...');
+        print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
+        print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
+
+        final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
+
+        // Verificar que se guardó correctamente
+        final allReports = await LocalReportsStorage.getAllLocalReports();
+        print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
+        final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
+        print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
       } else {
         // Modo online: intentar sincronizar INMEDIATAMENTE
         print('🌐 Modo online: Sincronizando evaluación al servidor...');
