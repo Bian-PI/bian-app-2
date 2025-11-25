@@ -97,6 +97,8 @@ class AppLocalizations {
       'sync_error': 'Error al sincronizar',
       'sync_requires_login': 'Inicia sesión para sincronizar con el servidor',
       'offline_mode_active': 'Modo offline activo',
+      'pending_sync_reports': 'Reportes pendientes de sincronización',
+      'pending_sync_message': 'Abre cada reporte y presiona "Sincronizar con Servidor"',
 
       'continue_offline': 'Continuar sin conexión',
       'no_internet_connection': 'Sin conexión a internet',
@@ -527,6 +529,8 @@ class AppLocalizations {
       'sync_error': 'Sync error',
       'sync_requires_login': 'Log in to sync with server',
       'offline_mode_active': 'Offline mode active',
+      'pending_sync_reports': 'Pending sync reports',
+      'pending_sync_message': 'Open each report and press "Sync to Server"',
 
       'continue_offline': 'Continue offline',
       'no_internet_connection': 'No internet connection',

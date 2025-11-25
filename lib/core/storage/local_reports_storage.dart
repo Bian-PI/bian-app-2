@@ -227,4 +227,72 @@ class LocalReportsStorage {
     final pendingIds = await getPendingSyncIds();
     return pendingIds.length;
   }
+
+  /// Migra reportes offline al usuario que acaba de iniciar sesión
+  /// Esto vincula evaluaciones creadas sin login a la cuenta del usuario
+  static Future<int> migrateOfflineReportsToUser(int userId) async {
+    try {
+      print('🔄 Iniciando migración de reportes offline al usuario $userId...');
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // 1. Obtener reportes offline (sin usuario)
+      final offlineKey = '${_keyLocalReportsPrefix}offline_mode';
+      final offlineReportsJson = prefs.getStringList(offlineKey) ?? [];
+
+      if (offlineReportsJson.isEmpty) {
+        print('ℹ️ No hay reportes offline para migrar');
+        return 0;
+      }
+
+      print('📦 Encontrados ${offlineReportsJson.length} reportes offline');
+
+      // 2. Parsear y actualizar userId en cada reporte
+      final offlineReports = offlineReportsJson
+          .map((json) => Evaluation.fromJson(jsonDecode(json)))
+          .toList();
+
+      final updatedReports = offlineReports.map((report) {
+        // Actualizar el userId en el reporte
+        // Nota: Evaluation no tiene userId directo, pero lo usaremos al sincronizar
+        return report; // El userId se agrega al sincronizar
+      }).toList();
+
+      // 3. Guardar en la clave del usuario
+      final userKey = '$_keyLocalReportsPrefix$userId';
+      final userReportsJson = prefs.getStringList(userKey) ?? [];
+
+      // Combinar reportes existentes del usuario con los offline migrados
+      final allReportsJson = [
+        ...userReportsJson,
+        ...offlineReportsJson, // Mantener el JSON original
+      ];
+
+      await prefs.setStringList(userKey, allReportsJson);
+
+      // 4. Marcar todos como pendientes de sincronización
+      final userPendingKey = '$_keyPendingSyncPrefix$userId';
+      final pendingIds = prefs.getStringList(userPendingKey) ?? [];
+
+      for (var report in updatedReports) {
+        if (!pendingIds.contains(report.id)) {
+          pendingIds.add(report.id);
+        }
+      }
+
+      await prefs.setStringList(userPendingKey, pendingIds);
+
+      // 5. Limpiar reportes offline
+      await prefs.remove(offlineKey);
+      await prefs.remove('${_keyPendingSyncPrefix}offline_mode');
+
+      print('✅ Migrados ${offlineReportsJson.length} reportes offline al usuario $userId');
+      print('📌 Todos marcados como pendientes de sincronización');
+
+      return offlineReportsJson.length;
+    } catch (e) {
+      print('❌ Error migrando reportes offline: $e');
+      return 0;
+    }
+  }
 }

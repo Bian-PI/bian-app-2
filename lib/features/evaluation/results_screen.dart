@@ -46,7 +46,7 @@ class ResultsScreen extends StatelessWidget {
     final dateFormatter = DateFormat('yyyy-MM-dd');
     final evaluationDateStr = dateFormatter.format(evaluation.evaluationDate);
 
-    // Preparar categories en el formato esperado
+    // Preparar categories en el formato esperado (TODO como strings)
     final categories = <String, dynamic>{};
     final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final categoryScores = results['category_scores'] as Map<String, double>;
@@ -54,13 +54,26 @@ class ResultsScreen extends StatelessWidget {
     for (var category in species.categories) {
       final score = categoryScores[category.id] ?? 0.0;
       categories[category.id] = {
-        'score': score.toString(),
+        'score': score.toString(), // String
         'fields': evaluation.responses.entries
             .where((e) => e.key.startsWith('${category.id}_'))
-            .map((e) => {
-                  'field_id': e.key,
-                  'value': e.value.toString(),
-                })
+            .map((e) {
+              // Convertir booleanos y números a strings
+              String valueStr;
+              final value = e.value;
+              if (value is bool) {
+                valueStr = value.toString(); // "true" o "false"
+              } else if (value is num) {
+                valueStr = value.toString(); // "1.0", "2", etc.
+              } else {
+                valueStr = value.toString();
+              }
+
+              return {
+                'field_id': e.key.toString(), // String
+                'value': valueStr, // String
+              };
+            })
             .toList(),
       };
     }

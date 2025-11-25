@@ -904,18 +904,31 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     final categoryScores = evaluation.categoryScores ?? {};
     final results = structuredJson['results'] as Map<String, dynamic>;
 
-    // Preparar categories
+    // Preparar categories (TODO como strings para backend Java)
     final categories = <String, dynamic>{};
     for (var category in widget.species.categories) {
       final score = categoryScores[category.id] ?? 0.0;
       categories[category.id] = {
-        'score': score.toString(),
+        'score': score.toString(), // String
         'fields': evaluation.responses.entries
             .where((e) => e.key.startsWith('${category.id}_'))
-            .map((e) => {
-                  'field_id': e.key,
-                  'value': e.value.toString(),
-                })
+            .map((e) {
+              // Convertir booleanos y números a strings
+              String valueStr;
+              final value = e.value;
+              if (value is bool) {
+                valueStr = value.toString(); // "true" o "false"
+              } else if (value is num) {
+                valueStr = value.toString(); // "1.0", "2", etc.
+              } else {
+                valueStr = value.toString();
+              }
+
+              return {
+                'field_id': e.key.toString(), // String
+                'value': valueStr, // String
+              };
+            })
             .toList(),
       };
     }

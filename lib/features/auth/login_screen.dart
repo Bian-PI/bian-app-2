@@ -163,6 +163,12 @@ class _LoginScreenState extends State<LoginScreen>
         if (result['user'] != null) {
           final user = User.fromJson(result['user']);
           await _storage.saveUser(user);
+
+          // Migrar reportes offline al usuario que acaba de logearse
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id);
+          if (migratedCount > 0) {
+            print('✅ Login: Migrados $migratedCount reportes offline al usuario ${user.email}');
+          }
         }
 
         if (_rememberAccount) {
@@ -259,6 +265,12 @@ class _LoginScreenState extends State<LoginScreen>
         if (result['user'] != null) {
           final user = User.fromJson(result['user']);
           await _storage.saveUser(user);
+
+          // Migrar reportes offline al usuario que acaba de logearse
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id);
+          if (migratedCount > 0) {
+            print('✅ Login biométrico: Migrados $migratedCount reportes offline al usuario ${user.email}');
+          }
         }
 
         Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
