@@ -287,8 +287,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             break;
           case LocationPermissionStatus.denied:
           case LocationPermissionStatus.granted:
-          default:
-            // Si fue denegado o cualquier otro error
+          // Si fue denegado o cualquier otro error
             message = loc.translate('location_permission_denied');
             actionLabel = loc.translate('open_settings');
             onAction = () => LocationService.openAppSettings();
@@ -871,8 +870,14 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         return false;
       }
 
+      // Asegurar que se pase un int no nulo al backend; usar 0 como fallback si user.id es null
+      final userId = user.id ?? 0;
+      if (userId == 0) {
+        print('⚠️ Usuario cargado pero sin ID, usando 0 como fallback.');
+      }
+
       // Preparar datos en formato del backend
-      final evaluationData = await _prepareEvaluationData(evaluation, structuredJson, user.id);
+      final evaluationData = await _prepareEvaluationData(evaluation, structuredJson, userId);
 
       print('📤 Enviando evaluación al backend Java...');
       final apiService = ApiService();

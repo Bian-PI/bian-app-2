@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen>
           await _storage.saveUser(user);
 
           // Migrar reportes offline al usuario que acaba de logearse
-          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id);
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id?? 0);
           if (migratedCount > 0) {
             print('✅ Login: Migrados $migratedCount reportes offline al usuario ${user.email}');
           }
@@ -267,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen>
           await _storage.saveUser(user);
 
           // Migrar reportes offline al usuario que acaba de logearse
-          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id);
+          final migratedCount = await LocalReportsStorage.migrateOfflineReportsToUser(user.id?? 0);
           if (migratedCount > 0) {
             print('✅ Login biométrico: Migrados $migratedCount reportes offline al usuario ${user.email}');
           }
