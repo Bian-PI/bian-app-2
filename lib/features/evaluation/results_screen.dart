@@ -15,6 +15,9 @@ import '../../core/widgets/custom_snackbar.dart';
 import '../../core/utils/connectivity_service.dart';
 import 'package:open_filex/open_filex.dart';
 import 'ai_chat_screen.dart';
+import '../../core/api/api_service.dart';
+import '../../core/storage/secure_storage.dart';
+import 'package:intl/intl.dart';
 
 class ResultsScreen extends StatelessWidget {
   final Evaluation evaluation;
@@ -29,6 +32,157 @@ class ResultsScreen extends StatelessWidget {
     required this.results,
     required this.structuredJson,
   });
+
+  /// Prepara los datos de la evaluación para enviar al backend Java
+  Future<Map<String, dynamic>> _prepareEvaluationData() async {
+    final storage = SecureStorage();
+    final user = await storage.getUser();
+
+    if (user == null) {
+      throw Exception('No hay usuario logueado');
+    }
+
+    // Formato de fecha: YYYY-MM-DD
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final evaluationDateStr = dateFormatter.format(evaluation.evaluationDate);
+
+    // Preparar categories en el formato esperado
+    final categories = <String, dynamic>{};
+    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
+    final categoryScores = results['category_scores'] as Map<String, double>;
+
+    for (var category in species.categories) {
+      final score = categoryScores[category.id] ?? 0.0;
+      categories[category.id] = {
+        'score': score.toString(),
+        'fields': evaluation.responses.entries
+            .where((e) => e.key.startsWith('${category.id}_'))
+            .map((e) => {
+                  'field_id': e.key,
+                  'value': e.value.toString(),
+                })
+            .toList(),
+      };
+    }
+
+    // Preparar critical_points
+    final criticalPoints = (results['critical_points'] as List)
+        .map((point) => {
+              'category': point.toString().split('_')[0],
+              'field': point.toString(),
+            })
+        .toList();
+
+    // Preparar strong_points
+    final strongPoints = (results['strong_points'] as List)
+        .map((point) => {
+              'description': point.toString(),
+            })
+        .toList();
+
+    // Recommendations
+    final recommendations = (structuredJson['recommendations'] as List)
+        .map((rec) => rec.toString())
+        .toList();
+
+    return {
+      'connection_status': 'online',
+      'user_id': user.id.toString(),
+      'evaluation_date': evaluationDateStr,
+      'language': evaluation.language,
+      'species': species.id,
+      'farm_name': evaluation.farmName,
+      'farm_location': evaluation.farmLocation,
+      'evaluator_name': evaluation.evaluatorName,
+      'evaluator_document': evaluation.evaluatorDocument,
+      'status': 'completed',
+      'overall_score': overallScore.toString(),
+      'compliance_level': results['compliance_level'] as String,
+      'categories': categories,
+      'critical_points': criticalPoints,
+      'strong_points': strongPoints,
+      'recommendations': recommendations,
+    };
+  }
+
+  /// Sincroniza la evaluación con el backend Java
+  Future<void> _syncToServer(BuildContext context) async {
+    final loc = AppLocalizations.of(context);
+
+    // Mostrar diálogo de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(BianTheme.primaryRed),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    loc.translate('syncing_to_server'),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      print('📤 Preparando datos para sincronización...');
+      final evaluationData = await _prepareEvaluationData();
+
+      print('📤 Enviando evaluación al backend Java...');
+      final apiService = ApiService();
+      final result = await apiService.createEvaluationReport(evaluationData);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Cerrar diálogo de carga
+
+      if (result['success'] == true) {
+        print('✅ Evaluación sincronizada exitosamente');
+        CustomSnackbar.showSuccess(
+          context,
+          loc.translate('evaluation_synced_successfully'),
+        );
+      } else {
+        print('❌ Error al sincronizar: ${result['message']}');
+        CustomSnackbar.showError(
+          context,
+          loc.translate(result['message'] ?? 'sync_error'),
+        );
+      }
+    } catch (e) {
+      print('❌ Excepción al sincronizar: $e');
+      if (!context.mounted) return;
+      Navigator.pop(context); // Cerrar diálogo de carga
+
+      CustomSnackbar.showError(
+        context,
+        '${loc.translate('sync_error')}: $e',
+      );
+    }
+  }
 
   Future<bool> _requestPermissions() async {
     if (Platform.isAndroid) {
@@ -1298,7 +1452,63 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             _buildAIAnalysisButton(context, loc, overallScore, categoryScores, criticalPoints, strongPoints),
 
             const SizedBox(height: 16),
-            ElevatedButton(
+
+            // Botón de sincronización con servidor
+            Consumer<ConnectivityService>(
+              builder: (context, connectivityService, _) {
+                return StreamBuilder<bool>(
+                  stream: connectivityService.connectionStatus,
+                  initialData: false,
+                  builder: (context, snapshot) {
+                    final hasConnection = snapshot.data ?? false;
+
+                    if (!hasConnection) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: BianTheme.warningYellow.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: BianTheme.warningYellow),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.cloud_off,
+                              color: BianTheme.warningYellow,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                loc.translate('offline_mode_active'),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ElevatedButton.icon(
+                      onPressed: () => _syncToServer(context),
+                      icon: const Icon(Icons.cloud_upload),
+                      label: Text(loc.translate('sync_to_server')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BianTheme.successGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        minimumSize: const Size(double.infinity, 52),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+            OutlinedButton(
               onPressed: () => Navigator.pop(context),
               child: Text(loc.translate('close')),
             ),

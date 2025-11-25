@@ -90,6 +90,13 @@ class AppLocalizations {
       'delete_local_report_confirm':
           '¿Seguro que deseas eliminar este reporte local?',
 
+      // Sincronización
+      'sync_to_server': 'Sincronizar con Servidor',
+      'syncing_to_server': 'Sincronizando con servidor...',
+      'evaluation_synced_successfully': 'Evaluación sincronizada exitosamente',
+      'sync_error': 'Error al sincronizar',
+      'offline_mode_active': 'Modo offline activo',
+
       'continue_offline': 'Continuar sin conexión',
       'no_internet_connection': 'Sin conexión a internet',
       'exit_question': '¿Salir?',
@@ -511,6 +518,13 @@ class AppLocalizations {
       'delete_local_report': 'Delete report',
       'delete_local_report_confirm':
           'Are you sure you want to delete this local report?',
+
+      // Synchronization
+      'sync_to_server': 'Sync to Server',
+      'syncing_to_server': 'Syncing to server...',
+      'evaluation_synced_successfully': 'Evaluation synced successfully',
+      'sync_error': 'Sync error',
+      'offline_mode_active': 'Offline mode active',
 
       'continue_offline': 'Continue offline',
       'no_internet_connection': 'No internet connection',
