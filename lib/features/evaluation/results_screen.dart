@@ -1458,9 +1458,18 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               builder: (context, connectivityService, _) {
                 return StreamBuilder<bool>(
                   stream: connectivityService.connectionStatus,
-                  initialData: false,
                   builder: (context, snapshot) {
-                    final hasConnection = snapshot.data ?? false;
+                    // Esperar a que el stream emita el primer valor real
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final hasConnection = snapshot.data!;
 
                     if (!hasConnection) {
                       return Container(

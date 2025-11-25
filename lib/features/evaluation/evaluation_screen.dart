@@ -14,6 +14,8 @@ import '../../core/utils/location_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/models/user_model.dart';
+import '../../core/api/api_service.dart';
+import 'package:intl/intl.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -803,16 +805,32 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         categoryScores: Map<String, double>.from(results['category_scores']),
         updatedAt: DateTime.now(),
       );
-      
+
+      // Eliminar borrador
+      await DraftsStorage.deleteDraft(_evaluation.id);
+
       if (widget.isOfflineMode) {
+        // Modo offline: guardar como pendiente de sincronización
         await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        print('📴 Modo offline: Evaluación guardada como pendiente');
       } else {
-        await ReportsStorage.saveReport(completedEvaluation);
-        await DraftsStorage.deleteDraft(_evaluation.id);
+        // Modo online: intentar sincronizar INMEDIATAMENTE
+        print('🌐 Modo online: Sincronizando evaluación al servidor...');
+        final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
+
+        if (syncSuccess) {
+          print('✅ Evaluación sincronizada exitosamente con el servidor');
+          // Guardar también localmente para acceso offline
+          await ReportsStorage.saveReport(completedEvaluation);
+        } else {
+          print('⚠️ Error al sincronizar, guardando como pendiente');
+          // Si falla, guardar como pendiente para reintento posterior
+          await LocalReportsStorage.saveLocalReport(completedEvaluation);
+        }
       }
-      
+
       setState(() => _hasUnsavedChanges = false);
-      
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -827,6 +845,107 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         );
       }
     }
+  }
+
+  /// Sincroniza la evaluación con el backend Java automáticamente
+  Future<bool> _syncEvaluationToServer(
+    Evaluation evaluation,
+    Map<String, dynamic> structuredJson,
+  ) async {
+    try {
+      final user = await _storage.getUser();
+      if (user == null) {
+        print('❌ No hay usuario para sincronizar');
+        return false;
+      }
+
+      // Preparar datos en formato del backend
+      final evaluationData = await _prepareEvaluationData(evaluation, structuredJson, user.id);
+
+      print('📤 Enviando evaluación al backend Java...');
+      final apiService = ApiService();
+      final result = await apiService.createEvaluationReport(evaluationData);
+
+      if (result['success'] == true) {
+        print('✅ Sincronización exitosa con backend Java');
+        return true;
+      } else {
+        print('❌ Error del servidor: ${result['message']}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Excepción sincronizando: $e');
+      return false;
+    }
+  }
+
+  /// Prepara los datos para el backend Java
+  Future<Map<String, dynamic>> _prepareEvaluationData(
+    Evaluation evaluation,
+    Map<String, dynamic> structuredJson,
+    int userId,
+  ) async {
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final evaluationDateStr = dateFormatter.format(evaluation.evaluationDate);
+
+    final overallScore = evaluation.overallScore ?? 0.0;
+    final categoryScores = evaluation.categoryScores ?? {};
+    final results = structuredJson['results'] as Map<String, dynamic>;
+
+    // Preparar categories
+    final categories = <String, dynamic>{};
+    for (var category in widget.species.categories) {
+      final score = categoryScores[category.id] ?? 0.0;
+      categories[category.id] = {
+        'score': score.toString(),
+        'fields': evaluation.responses.entries
+            .where((e) => e.key.startsWith('${category.id}_'))
+            .map((e) => {
+                  'field_id': e.key,
+                  'value': e.value.toString(),
+                })
+            .toList(),
+      };
+    }
+
+    // Preparar critical_points
+    final criticalPoints = (results['critical_points'] as List)
+        .map((point) => {
+              'category': point.toString().split('_')[0],
+              'field': point.toString(),
+            })
+        .toList();
+
+    // Preparar strong_points
+    final strongPoints = (results['strong_points'] as List)
+        .map((point) => {
+              'description': point.toString(),
+            })
+        .toList();
+
+    // Recommendations
+    final recommendations = (structuredJson['recommendations'] as List)
+        .map((rec) => rec.toString())
+        .toList();
+
+    return {
+      'connection_status': 'online',
+      'user_id': userId.toString(),
+      'evaluation_date': evaluationDateStr,
+      'language': evaluation.language,
+      'species': widget.species.id,
+      'farm_name': evaluation.farmName,
+      'farm_location': evaluation.farmLocation,
+      'evaluator_name': evaluation.evaluatorName,
+      'evaluator_document': evaluation.evaluatorDocument,
+      'status': 'completed',
+      'overall_score': overallScore.toString(),
+      'compliance_level': results['compliance_level'] as String,
+      'categories': categories,
+      'critical_points': criticalPoints,
+      'strong_points': strongPoints,
+      'recommendations': recommendations,
+    };
   }
 
   void printJson(dynamic data, {String indent = ''}) {
