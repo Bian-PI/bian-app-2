@@ -109,6 +109,22 @@ class ResultsScreen extends StatelessWidget {
   Future<void> _syncToServer(BuildContext context) async {
     final loc = AppLocalizations.of(context);
 
+    // Verificar que hay usuario logueado ANTES de intentar sincronizar
+    final storage = SecureStorage();
+    final user = await storage.getUser();
+
+    if (user == null) {
+      print('⚠️ No se puede sincronizar: No hay usuario logueado');
+      if (!context.mounted) return;
+      CustomSnackbar.showError(
+        context,
+        loc.translate('sync_requires_login'),
+      );
+      return;
+    }
+
+    print('✅ Usuario encontrado para sincronización: ${user.email}');
+
     // Mostrar diálogo de carga
     showDialog(
       context: context,
@@ -1453,63 +1469,103 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
 
             const SizedBox(height: 16),
 
-            // Botón de sincronización con servidor
-            Consumer<ConnectivityService>(
-              builder: (context, connectivityService, _) {
-                return StreamBuilder<bool>(
-                  stream: connectivityService.connectionStatus,
-                  builder: (context, snapshot) {
-                    // Esperar a que el stream emita el primer valor real
-                    if (!snapshot.hasData) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
+            // Botón de sincronización con servidor (solo si hay usuario y conexión)
+            FutureBuilder<bool>(
+              future: SecureStorage().getUser().then((user) => user != null),
+              builder: (context, userSnapshot) {
+                final hasUser = userSnapshot.data ?? false;
 
-                    final hasConnection = snapshot.data!;
-
-                    if (!hasConnection) {
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: BianTheme.warningYellow.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: BianTheme.warningYellow),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.cloud_off,
-                              color: BianTheme.warningYellow,
+                return Consumer<ConnectivityService>(
+                  builder: (context, connectivityService, _) {
+                    return StreamBuilder<bool>(
+                      stream: connectivityService.connectionStatus,
+                      builder: (context, snapshot) {
+                        // Esperar a que el stream emita el primer valor real
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                loc.translate('offline_mode_active'),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                          );
+                        }
+
+                        final hasConnection = snapshot.data!;
+
+                        // Si no hay usuario, mostrar mensaje de que necesita login
+                        if (!hasUser) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: BianTheme.lightGray.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: BianTheme.mediumGray),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_off,
+                                  color: BianTheme.darkGray,
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    loc.translate('sync_requires_login'),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: BianTheme.darkGray,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    }
+                          );
+                        }
 
-                    return ElevatedButton.icon(
-                      onPressed: () => _syncToServer(context),
-                      icon: const Icon(Icons.cloud_upload),
-                      label: Text(loc.translate('sync_to_server')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: BianTheme.successGreen,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        minimumSize: const Size(double.infinity, 52),
-                      ),
+                        // Si no hay conexión, mostrar modo offline
+                        if (!hasConnection) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: BianTheme.warningYellow.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: BianTheme.warningYellow),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.cloud_off,
+                                  color: BianTheme.warningYellow,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    loc.translate('offline_mode_active'),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        // Si hay usuario Y conexión, mostrar botón de sync
+                        return ElevatedButton.icon(
+                          onPressed: () => _syncToServer(context),
+                          icon: const Icon(Icons.cloud_upload),
+                          label: Text(loc.translate('sync_to_server')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: BianTheme.successGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size(double.infinity, 52),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

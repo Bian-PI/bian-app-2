@@ -271,8 +271,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         final permissionStatus = await LocationService.checkAndRequestPermission();
 
         String message;
-        String? actionLabel;
-        VoidCallback? onAction;
+        String actionLabel;
+        VoidCallback onAction;
 
         switch (permissionStatus) {
           case LocationPermissionStatus.serviceDisabled:
@@ -286,7 +286,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             onAction = () => LocationService.openAppSettings();
             break;
           case LocationPermissionStatus.denied:
+          case LocationPermissionStatus.granted:
           default:
+            // Si fue denegado o cualquier otro error
             message = loc.translate('location_permission_denied');
             actionLabel = loc.translate('open_settings');
             onAction = () => LocationService.openAppSettings();

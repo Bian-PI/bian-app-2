@@ -95,6 +95,7 @@ class AppLocalizations {
       'syncing_to_server': 'Sincronizando con servidor...',
       'evaluation_synced_successfully': 'Evaluación sincronizada exitosamente',
       'sync_error': 'Error al sincronizar',
+      'sync_requires_login': 'Inicia sesión para sincronizar con el servidor',
       'offline_mode_active': 'Modo offline activo',
 
       'continue_offline': 'Continuar sin conexión',
@@ -524,6 +525,7 @@ class AppLocalizations {
       'syncing_to_server': 'Syncing to server...',
       'evaluation_synced_successfully': 'Evaluation synced successfully',
       'sync_error': 'Sync error',
+      'sync_requires_login': 'Log in to sync with server',
       'offline_mode_active': 'Offline mode active',
 
       'continue_offline': 'Continue offline',
