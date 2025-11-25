@@ -572,7 +572,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.cloud_upload),
+                    icon: Icon(Icons.cloud_upload, size: 28),
                     onPressed: _isSyncing ? null : _showSyncDialog,
                     tooltip: loc.translate('sync_action'),
                   ),
@@ -614,7 +614,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 20),
+                      Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 24),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -936,7 +936,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                                 ),
                                 child: Icon(
                                   Icons.cloud_upload,
-                                  size: 16,
+                                  size: 20,
                                   color: _isSyncing
                                       ? BianTheme.mediumGray
                                       : BianTheme.successGreen,
@@ -1212,7 +1212,7 @@ class _SyncReportsDialog extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
-                      '${report.speciesId} - ${report.farmLocation}',
+                      '${AppLocalizations.of(context).translate(report.speciesId)} - ${report.farmLocation}',
                       style: TextStyle(fontSize: 12),
                     ),
                     trailing: IconButton(

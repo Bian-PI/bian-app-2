@@ -46,9 +46,6 @@ class _SplashScreenState extends State<SplashScreen>
     print('🔍 Verificando conectividad desde Splash...');
     final connectivityService = ConnectivityService();
 
-    // Dar más tiempo para inicializar
-    await Future.delayed(Duration(milliseconds: 1500));
-
     final hasConnection = await connectivityService.checkConnection();
     print('📡 Resultado final de conexión: $hasConnection');
 

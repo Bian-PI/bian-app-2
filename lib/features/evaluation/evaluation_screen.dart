@@ -12,6 +12,8 @@ import 'package:uuid/uuid.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/utils/location_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
+import '../../core/storage/secure_storage.dart';
+import '../../core/models/user_model.dart';
 
 class EvaluationScreen extends StatefulWidget {
   final Species species;
@@ -34,10 +36,11 @@ class EvaluationScreen extends StatefulWidget {
 class _EvaluationScreenState extends State<EvaluationScreen> {
   final _uuid = const Uuid();
   final _scrollController = ScrollController();
-  
+  final _storage = SecureStorage();
+
   int _currentCategoryIndex = 0;
   late Evaluation _evaluation;
-  
+
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
@@ -48,17 +51,29 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   bool _showInfoDialog = true;
   bool _hasUnsavedChanges = false;
   bool _isGettingLocation = false;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _initializeEvaluation();
-    
+    _loadCurrentUser();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.draftToEdit == null && _showInfoDialog) {
         _showWelcomeDialog();
       }
     });
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final user = await _storage.getUser();
+    if (mounted && user != null) {
+      setState(() {
+        _currentUser = user;
+      });
+      print('✅ Usuario logueado cargado: ${user.name}, documento: ${user.document}');
+    }
   }
 
   @override
@@ -291,6 +306,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   void _showFarmInfoDialog() {
     final loc = AppLocalizations.of(context);
 
+    // Pre-rellenar datos del usuario logueado si existen
+    final bool hasUserDocument = _currentUser != null &&
+                                   _currentUser!.document != null &&
+                                   _currentUser!.document!.isNotEmpty;
+
+    if (_currentUser != null) {
+      _evaluatorNameController.text = _currentUser!.name;
+      if (hasUserDocument) {
+        _evaluatorDocumentController.text = _currentUser!.document!;
+      }
+      print('✅ Datos del usuario autocompletados en formulario');
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -304,16 +332,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: _evaluatorDocumentController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: '${loc.translate('document')} *',
-                    hintText: '1234567890',
-                    prefixIcon: Icon(Icons.badge_outlined),
+                // Solo mostrar campo de documento si el usuario NO lo tiene
+                if (!hasUserDocument)
+                  TextField(
+                    controller: _evaluatorDocumentController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: '${loc.translate('document')} *',
+                      hintText: '1234567890',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                if (!hasUserDocument) const SizedBox(height: 16),
+
                 TextField(
                   controller: _farmNameController,
                   decoration: InputDecoration(
@@ -378,10 +409,15 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (_evaluatorDocumentController.text.isEmpty ||
-                    _farmNameController.text.isEmpty ||
-                    _farmLocationController.text.isEmpty ||
-                    _evaluatorNameController.text.isEmpty) {
+                // Determinar si el usuario tiene documento guardado
+                final bool hasUserDocument = _currentUser != null &&
+                                               _currentUser!.document != null &&
+                                               _currentUser!.document!.isNotEmpty;
+
+                // Validar campos obligatorios básicos
+                if (_farmNameController.text.trim().isEmpty ||
+                    _farmLocationController.text.trim().isEmpty ||
+                    _evaluatorNameController.text.trim().isEmpty) {
                   CustomSnackbar.showError(
                     context,
                     loc.translate('complete_all_fields'),
@@ -389,12 +425,63 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
+                // Validar documento solo si NO tiene documento de usuario Y el campo está visible
+                if (!hasUserDocument && _evaluatorDocumentController.text.trim().isEmpty) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('complete_all_fields'),
+                  );
+                  return;
+                }
+
+                // Validar longitud de documento solo si se ingresó uno nuevo
+                if (!hasUserDocument && _evaluatorDocumentController.text.trim().length < 6) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('invalid_document'),
+                  );
+                  return;
+                }
+
+                // Validar nombre de granja (mínimo 3 caracteres)
+                if (_farmNameController.text.trim().length < 3) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('min_length', ['3']),
+                  );
+                  return;
+                }
+
+                // Validar ubicación (mínimo 3 caracteres)
+                if (_farmLocationController.text.trim().length < 3) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('min_length', ['3']),
+                  );
+                  return;
+                }
+
+                // Validar nombre evaluador (debe tener al menos 2 palabras)
+                final evaluatorName = _evaluatorNameController.text.trim();
+                if (evaluatorName.split(' ').where((word) => word.isNotEmpty).length < 2) {
+                  CustomSnackbar.showError(
+                    context,
+                    loc.translate('name_format'),
+                  );
+                  return;
+                }
+
+                // Usar documento del usuario si está disponible, sino el ingresado
+                final documentToUse = hasUserDocument
+                    ? _currentUser!.document!
+                    : _evaluatorDocumentController.text.trim();
+
                 setState(() {
                   _evaluation = _evaluation.copyWith(
-                    farmName: _farmNameController.text,
-                    farmLocation: _farmLocationController.text,
-                    evaluatorName: _evaluatorNameController.text,
-                    evaluatorDocument: _evaluatorDocumentController.text,
+                    farmName: _farmNameController.text.trim(),
+                    farmLocation: _farmLocationController.text.trim(),
+                    evaluatorName: _evaluatorNameController.text.trim(),
+                    evaluatorDocument: documentToUse,
                     language: widget.currentLanguage,
                   );
                   _hasUnsavedChanges = true;

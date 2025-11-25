@@ -104,6 +104,7 @@ class _BianAppState extends State<BianApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           theme: BianTheme.lightTheme,
+          themeMode: ThemeMode.light,
           home: const SplashScreen(),
         );
       },
