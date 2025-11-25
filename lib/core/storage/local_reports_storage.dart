@@ -1,19 +1,41 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/evaluation_model.dart';
+import 'secure_storage.dart';
 
 class LocalReportsStorage {
-  static const String _keyLocalReports = 'local_offline_reports';
-  static const String _keyPendingSync = 'pending_sync_reports';
+  static const String _keyLocalReportsPrefix = 'local_offline_reports_user_';
+  static const String _keyPendingSyncPrefix = 'pending_sync_reports_user_';
   static const int maxReports = 20;
+  static final _storage = SecureStorage();
+
+  /// Genera la clave única para los reportes locales del usuario actual
+  static Future<String?> _getUserLocalReportsKey() async {
+    final user = await _storage.getUser();
+    if (user == null) {
+      print('⚠️ No hay usuario logueado');
+      return null;
+    }
+    return '$_keyLocalReportsPrefix${user.id}';
+  }
+
+  /// Genera la clave única para los reportes pendientes del usuario actual
+  static Future<String?> _getUserPendingSyncKey() async {
+    final user = await _storage.getUser();
+    if (user == null) return null;
+    return '$_keyPendingSyncPrefix${user.id}';
+  }
 
   static Future<bool> saveLocalReport(Evaluation evaluation) async {
     try {
+      final key = await _getUserLocalReportsKey();
+      if (key == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
       final existingReports = await getAllLocalReports();
 
       final existingIndex = existingReports.indexWhere((r) => r.id == evaluation.id);
-      
+
       if (existingIndex != -1) {
         existingReports[existingIndex] = evaluation;
       } else {
@@ -26,11 +48,11 @@ class LocalReportsStorage {
 
       final reportsJson = existingReports.map((r) => r.toJson()).toList();
       final encoded = jsonEncode(reportsJson);
-      await prefs.setString(_keyLocalReports, encoded);
+      await prefs.setString(key, encoded);
 
       await _markAsPendingSync(evaluation.id);
 
-      print('✅ Reporte local guardado: ${evaluation.id}');
+      print('✅ Reporte local guardado para usuario: ${evaluation.id}');
       return true;
     } catch (e) {
       print('❌ Error guardando reporte local: $e');
@@ -40,8 +62,11 @@ class LocalReportsStorage {
 
   static Future<List<Evaluation>> getAllLocalReports() async {
     try {
+      final key = await _getUserLocalReportsKey();
+      if (key == null) return [];
+
       final prefs = await SharedPreferences.getInstance();
-      final reportsString = prefs.getString(_keyLocalReports);
+      final reportsString = prefs.getString(key);
 
       if (reportsString == null || reportsString.isEmpty) {
         return [];
@@ -76,6 +101,9 @@ class LocalReportsStorage {
 
   static Future<bool> deleteLocalReport(String id) async {
     try {
+      final key = await _getUserLocalReportsKey();
+      if (key == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
       final reports = await getAllLocalReports();
 
@@ -83,7 +111,7 @@ class LocalReportsStorage {
 
       final reportsJson = reports.map((r) => r.toJson()).toList();
       final encoded = jsonEncode(reportsJson);
-      await prefs.setString(_keyLocalReports, encoded);
+      await prefs.setString(key, encoded);
 
       await _removeFromPendingSync(id);
 
@@ -97,10 +125,14 @@ class LocalReportsStorage {
 
   static Future<bool> clearAllLocalReports() async {
     try {
+      final reportsKey = await _getUserLocalReportsKey();
+      final syncKey = await _getUserPendingSyncKey();
+      if (reportsKey == null || syncKey == null) return false;
+
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_keyLocalReports);
-      await prefs.remove(_keyPendingSync);
-      print('✅ Todos los reportes locales eliminados');
+      await prefs.remove(reportsKey);
+      await prefs.remove(syncKey);
+      print('✅ Todos los reportes locales del usuario eliminados');
       return true;
     } catch (e) {
       print('❌ Error eliminando reportes locales: $e');
@@ -116,12 +148,15 @@ class LocalReportsStorage {
 
   static Future<void> _markAsPendingSync(String reportId) async {
     try {
+      final key = await _getUserPendingSyncKey();
+      if (key == null) return;
+
       final prefs = await SharedPreferences.getInstance();
       final pendingIds = await getPendingSyncIds();
-      
+
       if (!pendingIds.contains(reportId)) {
         pendingIds.add(reportId);
-        await prefs.setStringList(_keyPendingSync, pendingIds);
+        await prefs.setStringList(key, pendingIds);
       }
     } catch (e) {
       print('❌ Error marcando como pendiente: $e');
@@ -130,11 +165,14 @@ class LocalReportsStorage {
 
   static Future<void> _removeFromPendingSync(String reportId) async {
     try {
+      final key = await _getUserPendingSyncKey();
+      if (key == null) return;
+
       final prefs = await SharedPreferences.getInstance();
       final pendingIds = await getPendingSyncIds();
-      
+
       pendingIds.remove(reportId);
-      await prefs.setStringList(_keyPendingSync, pendingIds);
+      await prefs.setStringList(key, pendingIds);
     } catch (e) {
       print('❌ Error quitando de pendientes: $e');
     }
@@ -142,8 +180,11 @@ class LocalReportsStorage {
 
   static Future<List<String>> getPendingSyncIds() async {
     try {
+      final key = await _getUserPendingSyncKey();
+      if (key == null) return [];
+
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getStringList(_keyPendingSync) ?? [];
+      return prefs.getStringList(key) ?? [];
     } catch (e) {
       print('❌ Error obteniendo pendientes: $e');
       return [];

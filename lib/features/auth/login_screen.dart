@@ -61,10 +61,19 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _animController.forward();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkInitialConnection();
-      _loadSavedCredentials();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Cargar lo crítico primero
+      await Future.wait([
+        _checkInitialConnection(),
+        _loadSavedCredentials(),
+      ]);
+
+      // Luego cargar lo secundario solo si es necesario
+      if (_rememberAccount) {
         _checkBiometricAvailability();
+      }
+
+      // Cargar reportes pendientes de forma lazy (no bloquea la UI)
       _loadPendingReportsCount();
     });
   }
