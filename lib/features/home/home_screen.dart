@@ -1131,17 +1131,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
             // Mis Evaluaciones
             Expanded(
-              child: _buildSimpleCard(
-                title: loc.translate('my_evaluations_action'),
-                count: _allServerReports.length,
-                icon: Icons.assessment_outlined,
-                color: BianTheme.successGreen,
+              child: InkWell(
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
                   );
                 },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: BianTheme.successGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: BianTheme.successGreen.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.assessment_outlined, color: BianTheme.successGreen, size: 32),
+                      const SizedBox(height: 12),
+                      Text(
+                        loc.translate('my_evaluations_action'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: BianTheme.successGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        loc.translate('view_full_history'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: BianTheme.successGreen.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
