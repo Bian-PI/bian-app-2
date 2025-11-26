@@ -1389,11 +1389,11 @@ class ResultsScreen extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
-    final complianceLevel = results['compliance_level'] as String;
-    final categoryScores = results['category_scores'] as Map<String, double>;
-    final criticalPoints = results['critical_points'] as List;
-    final strongPoints = results['strong_points'] as List;
-    final recommendations = structuredJson['recommendations'] as List;
+    final complianceLevel = (results['compliance_level'] as String?) ?? '';
+    final categoryScores = (results['category_scores'] as Map<String, double>?) ?? {};
+    final criticalPoints = (results['critical_points'] as List?) ?? [];
+    final strongPoints = (results['strong_points'] as List?) ?? [];
+    final recommendations = (structuredJson['recommendations'] as List?) ?? [];
 
     return Scaffold(
       appBar: AppBar(
