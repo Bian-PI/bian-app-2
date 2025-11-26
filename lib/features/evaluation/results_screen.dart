@@ -635,10 +635,15 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             ],
           ),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cerrar')),
-                OutlinedButton.icon(
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: BianTheme.mediumGray,
+                side: const BorderSide(color: BianTheme.mediumGray),
+              ),
+              child: const Text('Cerrar'),
+            ),
+            OutlinedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
                 _openPDF(context, filePath);
@@ -724,9 +729,14 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             ],
           ),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text('Cerrar')),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: BianTheme.mediumGray,
+                side: const BorderSide(color: BianTheme.mediumGray),
+              ),
+              child: const Text('Cerrar'),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);

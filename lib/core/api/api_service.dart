@@ -414,15 +414,20 @@ class ApiService {
       print('📤 Sincronizando reporte offline...');
       print('📦 Data: $reportData');
 
-      final response = await post(
-        '/animals/evaluation',
-        reportData,
-        requiresAuth: true,  // ✅ Enviar token de autenticación
-      );
+      // ✅ Usar el servidor correcto de evaluaciones (puerto 8089)
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.createEvaluation}');
+
+      print('📍 URL: $url');
+
+      final response = await http.post(
+        url,
+        headers: ApiConfig.headers,
+        body: jsonEncode(reportData),
+      ).timeout(ApiConfig.receiveTimeout);
 
       print('📥 Response status: ${response.statusCode}');
       print('📥 Response body: ${response.body}');
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return {

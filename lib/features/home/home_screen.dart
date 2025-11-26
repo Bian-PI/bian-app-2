@@ -29,11 +29,11 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _storage = SecureStorage();
   final _apiService = ApiService();
   final _sessionManager = SessionManager();
-  
+
   User? _currentUser;
   bool _isVerified = false;
   bool _isLoading = true;
@@ -53,7 +53,44 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _configureSessionManager();
     _loadAllData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Verificar si la sesión sigue activa cuando la app vuelve del segundo plano
+      _checkSessionOnResume();
+    }
+  }
+
+  void _configureSessionManager() {
+    _sessionManager.onSessionExpired = _handleSessionExpired;
+  }
+
+  void _handleSessionExpired() {
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _checkSessionOnResume() async {
+    final hasSession = await _sessionManager.hasActiveSession();
+    if (!hasSession && mounted) {
+      _handleSessionExpired();
+    }
   }
 
   Future<void> _loadAllData() async {
@@ -620,12 +657,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 24),
                       _buildSpeciesCards(context),
-                      
+
                       const SizedBox(height: 30),
-
-                      _buildQuickStats(context),
-
-                      const SizedBox(height: 24),
 
                       _buildQuickActions(context),
 
@@ -745,11 +778,11 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const CircleAvatar(
-                  radius: 28,
+                  radius: 24,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 36, color: BianTheme.primaryRed),
+                  child: Icon(Icons.person, size: 30, color: BianTheme.primaryRed),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   _currentUser?.name ?? 'Usuario',
                   style: const TextStyle(
@@ -893,56 +926,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildWelcomeCard(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: BianTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: BianTheme.elevatedShadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/images/logo2.png',
-                width: 50,
-                height: 50,
-                color: Colors.white,
-                fit: BoxFit.contain,
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  loc.translate('active'),
+          Image.asset(
+            'assets/images/logo2.png',
+            width: 40,
+            height: 40,
+            color: Colors.white,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${loc.translate('welcome')}, ${_currentUser?.name?.split(' ').first ?? 'Usuario'}!',
                   style: const TextStyle(
                     color: Colors.white,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            loc.translate('welcome_user', [_currentUser?.name ?? 'Usuario']),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+                const SizedBox(height: 4),
+                Text(
+                  loc.translate('manage_animal_welfare'),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            loc.translate('manage_animal_welfare'),
-            style: const TextStyle(color: Colors.white70),
           ),
         ],
       ),
@@ -1125,6 +1152,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final totalReports = _localReports.length + _reportTotal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1139,7 +1167,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildActionButton(
                 title: 'Reportes Locales',
-                icon: Icons.storage,
+                subtitle: '${_localReports.length} guardados',
+                icon: Icons.storage_rounded,
                 color: BianTheme.infoBlue,
                 badge: _pendingSyncCount > 0 ? '$_pendingSyncCount' : null,
                 onTap: () {
@@ -1153,33 +1182,15 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
-                title: loc.translate('profile'),
-                icon: Icons.person_outline,
-                color: BianTheme.primaryRed,
+                title: 'Evaluaciones',
+                subtitle: '$totalReports completadas',
+                icon: Icons.assignment_turned_in_rounded,
+                color: BianTheme.successGreen,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
+                  // Scroll a la sección de reportes
+                  // (podrías agregar un ScrollController para hacer scroll automático)
                 },
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                title: loc.translate('language'),
-                icon: Icons.language_rounded,
-                color: BianTheme.successGreen,
-                onTap: _showLanguageDialog,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(), // Espacio vacío para mantener simetría
             ),
           ],
         ),
@@ -1189,6 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActionButton({
     required String title,
+    String? subtitle,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
@@ -1205,43 +1217,57 @@ class _HomeScreenState extends State<HomeScreen> {
           border: Border.all(color: color.withOpacity(0.3)),
           boxShadow: BianTheme.cardShadow,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: BianTheme.darkGray,
-                ),
-              ),
-            ),
-            if (badge != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  badge,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const Spacer(),
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: BianTheme.darkGray,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: BianTheme.mediumGray,
                 ),
               ),
+            ],
           ],
         ),
       ),
