@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../core/storage/local_reports_storage.dart';
-import '../../core/storage/reports_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/species_model.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/providers/language_provider.dart';
 import '../../core/providers/app_mode_provider.dart';
-import '../../core/utils/connectivity_service.dart';
-import '../../core/api/api_service.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
@@ -26,8 +23,6 @@ class OfflineHomeScreen extends StatefulWidget {
 class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   List<Evaluation> _localReports = [];
   bool _isLoading = true;
-  bool _isSyncing = false;
-  int _pendingSyncCount = 0;
 
   @override
   void initState() {
@@ -47,7 +42,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     }
     setState(() {
       _localReports = reports;
-      _pendingSyncCount = pendingCount;
       _isLoading = false;
     });
   }
@@ -262,202 +256,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
 
-  Future<void> _showSyncDialog() async {
-    final loc = AppLocalizations.of(context);
-    final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
 
-    final hasConnection = await connectivityService.checkConnection();
-
-    if (!hasConnection) {
-      if (!mounted) return;
-      CustomSnackbar.showError(context, loc.translate('no_connection'));
-      return;
-    }
-
-    if (_pendingSyncCount == 0) {
-      if (!mounted) return;
-      CustomSnackbar.showInfo(context, loc.translate('no_pending_reports_sync'));
-      return;
-    }
-
-    final pendingReports = await LocalReportsStorage.getPendingSyncReports();
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => _SyncReportsDialog(
-        pendingReports: pendingReports,
-        onSyncAll: () async {
-          Navigator.pop(dialogContext);
-          await _performSync();
-        },
-        onSyncSingle: (report) async {
-          Navigator.pop(dialogContext);
-          await _performSingleSync(report);
-        },
-      ),
-    );
-  }
-
-  Future<void> _performSync() async {
-    final loc = AppLocalizations.of(context);
-    setState(() => _isSyncing = true);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  BianTheme.successGreen,
-                  BianTheme.successGreen.withOpacity(0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: BianTheme.successGreen.withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.cloud_upload,
-                    size: 48,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  loc.translate('syncing_reports'),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  loc.translate('uploading_to_cloud'),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    strokeWidth: 3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final pendingReports = await LocalReportsStorage.getPendingSyncReports();
-      final apiService = ApiService();
-
-      int syncedCount = 0;
-      int errorCount = 0;
-
-      for (var report in pendingReports) {
-        try {
-          final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
-          final results = _recalculateResults(report, species);
-          final translatedRecommendations = _translateRecommendations(
-            results['recommendations'] ?? [],
-            report.language,
-          );
-          final structuredJson = await report.generateStructuredJSON(
-            species,
-            results,
-            translatedRecommendations,
-            isOfflineMode: true,
-          );
-
-          structuredJson['user_document'] = report.evaluatorDocument;
-
-          final syncResult = await apiService.syncOfflineReport(structuredJson);
-
-          if (syncResult['success'] == true) {
-            await LocalReportsStorage.markAsSynced(report.id);
-
-            await ReportsStorage.saveReport(report.copyWith(status: 'synced'));
-
-            await LocalReportsStorage.deleteLocalReport(report.id);
-
-            syncedCount++;
-          } else {
-            errorCount++;
-            print('❌ Error sincronizando ${report.id}: ${syncResult['message']}');
-          }
-        } catch (e) {
-          errorCount++;
-          print('❌ Error sincronizando reporte: $e');
-        }
-      }
-
-      if (mounted) Navigator.pop(context);
-
-      await _loadLocalReports();
-
-      if (mounted) {
-        if (errorCount == 0 && syncedCount > 0) {
-          CustomSnackbar.showSuccess(
-            context,
-            loc.translate('reports_synced_successfully_count', ['$syncedCount']),
-            duration: Duration(seconds: 4),
-          );
-        } else if (errorCount > 0 && syncedCount > 0) {
-          CustomSnackbar.showWarning(
-            context,
-            loc.translate('reports_synced_with_errors_count', ['$syncedCount', '$errorCount']),
-            duration: Duration(seconds: 4),
-          );
-        } else if (errorCount > 0 && syncedCount == 0) {
-          CustomSnackbar.showError(
-            context,
-            loc.translate('sync_error_try_later'),
-            duration: Duration(seconds: 4),
-          );
-        }
-      }
-    } catch (e) {
-      print('💥 Error en sincronización: $e');
-      if (mounted) {
-        Navigator.pop(context);
-        CustomSnackbar.showError(context, loc.translate('connection_error_msg', [e.toString()]));
-      }
-    } finally {
-      setState(() => _isSyncing = false);
-    }
-  }
 
   Future<bool> _handleExitOfflineMode() async {
     final loc = AppLocalizations.of(context);
@@ -575,36 +374,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           ),
           backgroundColor: BianTheme.warningYellow,
           actions: [
-            if (_pendingSyncCount > 0)
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.cloud_upload, size: 28),
-                    onPressed: _isSyncing ? null : _showSyncDialog,
-                    tooltip: loc.translate('sync_action'),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: BianTheme.errorRed,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$_pendingSyncCount',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             IconButton(
               icon: Icon(Icons.login),
               onPressed: _handleExitOfflineMode,
@@ -614,39 +383,26 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         ),
         body: Column(
           children: [
-            if (_pendingSyncCount > 0)
-              InkWell(
-                onTap: _isSyncing ? null : _showSyncDialog,
-                child: Container(
-                  color: BianTheme.successGreen.withOpacity(0.12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          loc.translate('reports_ready_to_sync', ['$_pendingSyncCount']),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: BianTheme.darkGray,
-                            fontWeight: FontWeight.w600,
-                          ),
+            if (_localReports.isNotEmpty)
+              Container(
+                color: BianTheme.infoBlue.withOpacity(0.12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: BianTheme.infoBlue, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        loc.translate('login_to_sync_reports'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: BianTheme.darkGray,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (!_isSyncing)
-                        Icon(Icons.chevron_right, color: BianTheme.successGreen, size: 20),
-                      if (_isSyncing)
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(BianTheme.successGreen),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.arrow_forward, color: BianTheme.infoBlue, size: 20),
+                  ],
                 ),
               ),
 
@@ -897,61 +653,34 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                     ),
                     Column(
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: BianTheme.warningYellow.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: BianTheme.warningYellow.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.cloud_off,
-                                    size: 12,
-                                    color: BianTheme.warningYellow,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    loc.translate('local_badge'),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: BianTheme.warningYellow,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: BianTheme.warningYellow.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: BianTheme.warningYellow.withOpacity(0.3),
                             ),
-                            const SizedBox(width: 4),
-                            InkWell(
-                              onTap: _isSyncing ? null : () => _syncSingleReport(report),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: BianTheme.successGreen.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: BianTheme.successGreen.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.cloud_upload,
-                                  size: 20,
-                                  color: _isSyncing
-                                      ? BianTheme.mediumGray
-                                      : BianTheme.successGreen,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.cloud_off,
+                                size: 12,
+                                color: BianTheme.warningYellow,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                loc.translate('local_badge'),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: BianTheme.warningYellow,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         IconButton(
@@ -972,296 +701,4 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     );
   }
 
-  Future<void> _syncSingleReport(Evaluation report) async {
-    final loc = AppLocalizations.of(context);
-    final connectivityService = Provider.of<ConnectivityService>(context, listen: false);
-
-    // Verificar conexión
-    final hasConnection = await connectivityService.checkConnection();
-
-    if (!hasConnection) {
-      if (!mounted) return;
-      CustomSnackbar.showError(context, loc.translate('no_connection'));
-      return;
-    }
-
-    // Confirmar sincronización
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                loc.translate('sync_report'),
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(loc.translate('sync_report_confirm')),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BianTheme.lightGray.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    report.farmName,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    report.farmLocation,
-                    style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(loc.translate('cancel')),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            icon: Icon(Icons.cloud_upload),
-            label: Text(loc.translate('sync_now')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: BianTheme.successGreen,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await _performSingleSync(report);
-    }
-  }
-
-  Future<void> _performSingleSync(Evaluation report) async {
-    final loc = AppLocalizations.of(context);
-    setState(() => _isSyncing = true);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  BianTheme.successGreen,
-                  BianTheme.successGreen.withOpacity(0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: BianTheme.successGreen.withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.cloud_upload,
-                    size: 48,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  loc.translate('syncing_status'),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final apiService = ApiService();
-      final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
-      final results = _recalculateResults(report, species);
-      final translatedRecommendations = _translateRecommendations(
-        results['recommendations'] ?? [],
-        report.language,
-      );
-      final structuredJson = await report.generateStructuredJSON(
-        species,
-        results,
-        translatedRecommendations,
-        isOfflineMode: true,
-      );
-
-      structuredJson['user_document'] = report.evaluatorDocument;
-
-      final response = await apiService.syncOfflineReport(structuredJson);
-
-      if (response['success'] == true) {
-        await LocalReportsStorage.markAsSynced(report.id);
-        await ReportsStorage.saveReport(report.copyWith(status: 'synced'));
-        await LocalReportsStorage.deleteLocalReport(report.id);
-
-        if (!mounted) return;
-        Navigator.pop(context);
-        CustomSnackbar.showSuccess(context, loc.translate('report_synced_successfully'));
-      } else {
-        throw Exception(response['message'] ?? 'Error desconocido');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      CustomSnackbar.showError(context, loc.translate('error_prefix', [e.toString()]));
-    } finally {
-      setState(() => _isSyncing = false);
-      await _loadLocalReports();
-    }
-  }
-}
-
-class _SyncReportsDialog extends StatelessWidget {
-  final List<Evaluation> pendingReports;
-  final VoidCallback onSyncAll;
-  final Function(Evaluation) onSyncSingle;
-
-  const _SyncReportsDialog({
-    required this.pendingReports,
-    required this.onSyncAll,
-    required this.onSyncSingle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: BianTheme.successGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context).translate('sync_reports_title'),
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          AppLocalizations.of(context).translate('reports_pending_count', ['${pendingReports.length}']),
-                          style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: pendingReports.length,
-                itemBuilder: (context, index) {
-                  final report = pendingReports[index];
-                  return ListTile(
-                    leading: Icon(Icons.description, color: BianTheme.infoBlue),
-                    title: Text(
-                      report.farmName,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      '${AppLocalizations.of(context).translate(report.speciesId)} - ${report.farmLocation}',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.upload, color: BianTheme.successGreen),
-                      onPressed: () => onSyncSingle(report),
-                      tooltip: AppLocalizations.of(context).translate('sync_action'),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Divider(height: 1),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(AppLocalizations.of(context).translate('cancel')),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      onPressed: onSyncAll,
-                      icon: Icon(Icons.cloud_done),
-                      label: Text(AppLocalizations.of(context).translate('sync_all')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: BianTheme.successGreen,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

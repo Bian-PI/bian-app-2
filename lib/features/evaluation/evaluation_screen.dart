@@ -309,12 +309,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   void _showFarmInfoDialog() {
     final loc = AppLocalizations.of(context);
 
-    // Pre-rellenar datos del usuario logueado si existen
-    final bool hasUserDocument = _currentUser != null &&
+    // Pre-rellenar datos del usuario logueado si existen (solo en modo online)
+    final bool hasUserDocument = !widget.isOfflineMode &&
+                                   _currentUser != null &&
                                    _currentUser!.document != null &&
                                    _currentUser!.document!.isNotEmpty;
 
-    if (_currentUser != null) {
+    if (!widget.isOfflineMode && _currentUser != null) {
       _evaluatorNameController.text = _currentUser!.name;
       if (hasUserDocument) {
         _evaluatorDocumentController.text = _currentUser!.document!;
@@ -335,8 +336,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Solo mostrar campo de documento si el usuario NO lo tiene
-                if (!hasUserDocument)
+                // Solo mostrar campo de documento en modo ONLINE si el usuario NO lo tiene
+                if (!widget.isOfflineMode && !hasUserDocument)
                   TextField(
                     controller: _evaluatorDocumentController,
                     keyboardType: TextInputType.number,
@@ -346,7 +347,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                       prefixIcon: Icon(Icons.badge_outlined),
                     ),
                   ),
-                if (!hasUserDocument) const SizedBox(height: 16),
+                if (!widget.isOfflineMode && !hasUserDocument) const SizedBox(height: 16),
 
                 TextField(
                   controller: _farmNameController,
@@ -412,8 +413,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Determinar si el usuario tiene documento guardado
-                final bool hasUserDocument = _currentUser != null &&
+                // Determinar si el usuario tiene documento guardado (solo en modo online)
+                final bool hasUserDocument = !widget.isOfflineMode &&
+                                               _currentUser != null &&
                                                _currentUser!.document != null &&
                                                _currentUser!.document!.isNotEmpty;
 
@@ -428,8 +430,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
-                // Validar documento solo si NO tiene documento de usuario Y el campo está visible
-                if (!hasUserDocument && _evaluatorDocumentController.text.trim().isEmpty) {
+                // Validar documento solo en modo ONLINE si NO tiene documento de usuario
+                if (!widget.isOfflineMode && !hasUserDocument && _evaluatorDocumentController.text.trim().isEmpty) {
                   CustomSnackbar.showError(
                     context,
                     loc.translate('complete_all_fields'),
@@ -437,8 +439,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
-                // Validar longitud de documento solo si se ingresó uno nuevo
-                if (!hasUserDocument && _evaluatorDocumentController.text.trim().length < 6) {
+                // Validar longitud de documento solo en modo ONLINE si se ingresó uno nuevo
+                if (!widget.isOfflineMode && !hasUserDocument && _evaluatorDocumentController.text.trim().length < 6) {
                   CustomSnackbar.showError(
                     context,
                     loc.translate('invalid_document'),
@@ -474,10 +476,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   return;
                 }
 
-                // Usar documento del usuario si está disponible, sino el ingresado
-                final documentToUse = hasUserDocument
-                    ? _currentUser!.document!
-                    : _evaluatorDocumentController.text.trim();
+                // En modo offline, usar el nombre del evaluador como identificador temporal
+                // En modo online, usar documento del usuario si está disponible, sino el ingresado
+                final documentToUse = widget.isOfflineMode
+                    ? evaluatorName.hashCode.abs().toString() // ID temporal basado en el nombre
+                    : (hasUserDocument
+                        ? _currentUser!.document!
+                        : _evaluatorDocumentController.text.trim());
 
                 setState(() {
                   _evaluation = _evaluation.copyWith(
@@ -887,11 +892,12 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         print('✅ Sincronización exitosa con backend Java');
         return true;
       } else {
-        print('❌ Error del servidor: ${result['message']}');
+        print('❌ Error del servidor: ${result['message'] ?? 'Error desconocido'}');
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Excepción sincronizando: $e');
+      print('📚 StackTrace: $stackTrace');
       return false;
     }
   }

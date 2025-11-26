@@ -31,6 +31,7 @@ class AppLocalizations {
       'logout': 'Cerrar Sesión',
       'yes': 'Sí',
       'no': 'No',
+      'warning': 'Advertencia',
 
       'login': 'Iniciar Sesión',
       'register': 'Registrarse',
@@ -96,6 +97,7 @@ class AppLocalizations {
       'evaluation_synced_successfully': 'Evaluación sincronizada exitosamente',
       'sync_error': 'Error al sincronizar',
       'sync_requires_login': 'Inicia sesión para sincronizar con el servidor',
+      'login_to_sync_reports': 'Inicia sesión para sincronizar tus reportes con el servidor',
       'offline_mode_active': 'Modo offline activo',
       'pending_sync_reports': 'Reportes pendientes de sincronización',
       'pending_sync_message': 'Abre cada reporte y presiona "Sincronizar con Servidor"',
@@ -505,6 +507,7 @@ class AppLocalizations {
       'generate_pdfs': 'Generate PDFs',
       'offline_reports_warning':
           'Offline reports will NOT be synchronized and will be lost when closing the app',
+          'warning': 'Attention',
       'offline_reports_lost_on_close':
           'Offline reports will be lost when closing the app',
       'session_closed_for_security':
@@ -528,6 +531,7 @@ class AppLocalizations {
       'evaluation_synced_successfully': 'Evaluation synced successfully',
       'sync_error': 'Sync error',
       'sync_requires_login': 'Log in to sync with server',
+      'login_to_sync_reports': 'Log in to sync your reports with the server',
       'offline_mode_active': 'Offline mode active',
       'pending_sync_reports': 'Pending sync reports',
       'pending_sync_message': 'Open each report and press "Sync to Server"',

@@ -1405,6 +1405,11 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.translate('evaluation_results')),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+          tooltip: loc.translate('close'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),

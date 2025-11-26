@@ -42,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _rememberAccount = false;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
+  bool _hasSavedCredentials = false;
   String? _biometricType;
   int _pendingReportsCount = 0;
 
@@ -100,13 +101,23 @@ class _LoginScreenState extends State<LoginScreen>
     final savedEmail = await _biometricService.getSavedEmail();
     final biometricEnabled = await _biometricService.isBiometricEnabled();
 
-    if (mounted && savedEmail != null) {
+    if (mounted) {
       setState(() {
         _rememberAccount = rememberEnabled;
         _biometricEnabled = biometricEnabled;
-        _emailController.text = savedEmail;
+        _hasSavedCredentials = savedEmail != null;
+        if (savedEmail != null) {
+          _emailController.text = savedEmail;
+        }
       });
-      print('✅ Credenciales cargadas: $savedEmail');
+
+      if (savedEmail != null) {
+        print('✅ Credenciales cargadas: $savedEmail');
+        print('🔐 Biometría habilitada: $biometricEnabled');
+        print('💾 Recordar cuenta: $rememberEnabled');
+      } else {
+        print('ℹ️ No hay credenciales guardadas');
+      }
     }
   }
 
@@ -183,7 +194,12 @@ class _LoginScreenState extends State<LoginScreen>
 
         _sessionManager.startMonitoring();
 
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          if (_rememberAccount) {
+            _hasSavedCredentials = true;
+          }
+        });
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -225,7 +241,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _loginWithBiometric() async {
+    print('🔐 Iniciando login con biometría...');
+
     if (!_biometricEnabled) {
+      print('❌ Biometría no habilitada');
       CustomSnackbar.showWarning(
         context,
         'La autenticación biométrica no está habilitada',
@@ -234,24 +253,34 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     final loc = AppLocalizations.of(context);
+
+    // Primero verificar que hay credenciales guardadas
+    final credentials = await _biometricService.getSavedCredentials();
+    if (credentials == null) {
+      print('❌ No hay credenciales guardadas');
+      CustomSnackbar.showError(context, 'No hay credenciales guardadas para este dispositivo');
+      return;
+    }
+
+    print('✅ Credenciales encontradas para: ${credentials['email']}');
+
+    // Solicitar autenticación biométrica
+    print('👆 Solicitando autenticación biométrica...');
     final authenticated = await _biometricService.authenticate(
       reason: loc.translate('authenticate_with', [_biometricType ?? 'Biometría']),
     );
 
     if (!authenticated) {
+      print('❌ Autenticación biométrica fallida o cancelada');
       CustomSnackbar.showError(context, 'Autenticación biométrica fallida');
       return;
     }
 
-    final credentials = await _biometricService.getSavedCredentials();
-    if (credentials == null) {
-      CustomSnackbar.showError(context, 'No hay credenciales guardadas');
-      return;
-    }
-
+    print('✅ Autenticación biométrica exitosa');
     setState(() => _isLoading = true);
 
     try {
+      print('📡 Haciendo login con credenciales guardadas...');
       final result = await _apiService.login(
         credentials['email']!,
         credentials['password']!,
@@ -260,6 +289,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
+        print('✅ Login exitoso con biometría');
         await _storage.saveToken(result['token']);
 
         if (result['user'] != null) {
@@ -285,40 +315,86 @@ class _LoginScreenState extends State<LoginScreen>
           );
         }
       } else {
+        print('❌ Login fallido: ${result['message']}');
         setState(() => _isLoading = false);
         _showSnackBar(loc.translate('invalid_credentials'), isError: true);
       }
     } catch (e) {
+      print('❌ Error en login biométrico: $e');
       setState(() => _isLoading = false);
       _showSnackBar(loc.translate('connection_error'), isError: true);
     }
   }
 
   Future<void> _toggleRememberAccount(bool value) async {
-    if (value && _biometricAvailable) {
-      final accepted = await PrivacyConsentDialog.show(context);
-      if (!accepted) return;
+    if (value) {
+      // Verificar disponibilidad de biometría si aún no se ha verificado
+      if (!_biometricAvailable) {
+        await _checkBiometricAvailability();
+      }
 
-      setState(() {
-        _rememberAccount = true;
-        _biometricEnabled = true;
-      });
+      // Si la biometría está disponible, solicitar consentimiento
+      if (_biometricAvailable) {
+        final accepted = await PrivacyConsentDialog.show(context);
+        if (!accepted) return;
 
-      await _biometricService.enableBiometric();
-      CustomSnackbar.showSuccess(
-        context,
-        'Biometría activada. Inicia sesión para guardar tus credenciales.',
-      );
-    } else if (value) {
-      setState(() => _rememberAccount = true);
+        setState(() {
+          _rememberAccount = true;
+          _biometricEnabled = true;
+        });
+
+        await _biometricService.enableBiometric();
+        CustomSnackbar.showSuccess(
+          context,
+          'Biometría activada. Inicia sesión para guardar tus credenciales.',
+        );
+      } else {
+        // Si no hay biometría disponible, solo marcar remember account
+        setState(() => _rememberAccount = true);
+      }
     } else {
+      // Confirmar antes de desmarcar
+      final loc = AppLocalizations.of(context);
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(loc.translate('warning')),
+          content: Text(
+            'Al desmarcar esta opción, tus credenciales guardadas se eliminarán y deberás iniciar sesión manualmente la próxima vez.\n\n¿Deseas continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.translate('cancel')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BianTheme.errorRed,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar credenciales'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
       setState(() {
         _rememberAccount = false;
         _biometricEnabled = false;
+        _hasSavedCredentials = false;
       });
       await _biometricService.disableBiometric();
       await _biometricService.clearRememberedAccount();
       _passwordController.clear();
+
+      if (mounted) {
+        CustomSnackbar.showInfo(
+          context,
+          'Credenciales eliminadas correctamente',
+        );
+      }
     }
   }
 
@@ -662,6 +738,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
 
                                   if (_biometricEnabled &&
+                                      _hasSavedCredentials &&
                                       !_isLoading &&
                                       currentConnection)
                                     Padding(
