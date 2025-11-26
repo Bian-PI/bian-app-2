@@ -926,80 +926,11 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     Map<String, dynamic> structuredJson,
     int userId,
   ) async {
-    final dateFormatter = DateFormat('yyyy-MM-dd');
-    final evaluationDateStr = dateFormatter.format(evaluation.evaluationDate);
+    // El structuredJson ya contiene todo lo necesario, solo actualizamos user_id
+    structuredJson['user_id'] = userId.toString();
 
-    final overallScore = evaluation.overallScore ?? 0.0;
-    final categoryScores = evaluation.categoryScores ?? {};
-    final results = structuredJson['results'] as Map<String, dynamic>;
-
-    // Preparar categories (TODO como strings para backend Java)
-    final categories = <String, dynamic>{};
-    for (var category in widget.species.categories) {
-      final score = categoryScores[category.id] ?? 0.0;
-      categories[category.id] = {
-        'score': score.toString(), // String
-        'fields': evaluation.responses.entries
-            .where((e) => e.key.startsWith('${category.id}_'))
-            .map((e) {
-              // Convertir booleanos y números a strings
-              String valueStr;
-              final value = e.value;
-              if (value is bool) {
-                valueStr = value.toString(); // "true" o "false"
-              } else if (value is num) {
-                valueStr = value.toString(); // "1.0", "2", etc.
-              } else {
-                valueStr = value.toString();
-              }
-
-              return {
-                'field_id': e.key.toString(), // String
-                'value': valueStr, // String
-              };
-            })
-            .toList(),
-      };
-    }
-
-    // Preparar critical_points
-    final criticalPoints = (results['critical_points'] as List)
-        .map((point) => {
-              'category': point.toString().split('_')[0],
-              'field': point.toString(),
-            })
-        .toList();
-
-    // Preparar strong_points
-    final strongPoints = (results['strong_points'] as List)
-        .map((point) => {
-              'description': point.toString(),
-            })
-        .toList();
-
-    // Recommendations
-    final recommendations = (structuredJson['recommendations'] as List)
-        .map((rec) => rec.toString())
-        .toList();
-
-    return {
-      'connection_status': 'online',
-      'user_id': userId.toString(),
-      'evaluation_date': evaluationDateStr,
-      'language': evaluation.language,
-      'species': widget.species.id,
-      'farm_name': evaluation.farmName,
-      'farm_location': evaluation.farmLocation,
-      'evaluator_name': evaluation.evaluatorName,
-      'evaluator_document': evaluation.evaluatorDocument,
-      'status': 'completed',
-      'overall_score': overallScore.toString(),
-      'compliance_level': results['compliance_level'] as String,
-      'categories': categories,
-      'critical_points': criticalPoints,
-      'strong_points': strongPoints,
-      'recommendations': recommendations,
-    };
+    print('📤 Datos preparados para envío: $structuredJson');
+    return structuredJson;
   }
 
   void printJson(dynamic data, {String indent = ''}) {

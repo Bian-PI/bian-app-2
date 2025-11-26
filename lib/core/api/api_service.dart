@@ -466,24 +466,51 @@ class ApiService {
     int offset = 0,
   }) async {
     try {
-      print('📥 Obteniendo reportes (limit: $limit, offset: $offset)...');
+      // Obtener el ID del usuario actual
+      final user = await _storage.getUser();
+      if (user == null || user.id == null) {
+        print('❌ No hay usuario logueado');
+        return {'success': false, 'message': 'no_user'};
+      }
 
-      final response = await get(
-        '/evaluations/user?limit=$limit&offset=$offset',
-        requiresAuth: true,
+      final userId = user.id!;
+      print('📥 Obteniendo reportes para usuario $userId...');
+
+      // Usar el endpoint correcto del backend Java
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllUserEvaluations(userId.toString())}');
+
+      final token = await _storage.getToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(response.body);
+        print('✅ Reportes obtenidos: ${data.length}');
+
+        // Simular paginación en el cliente
+        final start = offset;
+        final end = (offset + limit).clamp(0, data.length);
+        final paginatedData = data.sublist(start, end);
+        final hasMore = end < data.length;
+
         return {
           'success': true,
-          'evaluations': data['evaluations'] ?? [],
-          'total': data['total'] ?? 0,
-          'hasMore': data['hasMore'] ?? false,
+          'evaluations': paginatedData,
+          'total': data.length,
+          'hasMore': hasMore,
         };
       } else if (response.statusCode == 401) {
+        print('❌ No autorizado');
         return {'success': false, 'message': 'unauthorized'};
       } else {
+        print('❌ Error del servidor: ${response.statusCode}');
         return {'success': false, 'message': 'server_error'};
       }
     } catch (e) {
