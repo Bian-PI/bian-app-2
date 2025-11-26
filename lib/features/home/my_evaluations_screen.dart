@@ -579,7 +579,27 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
         // Reconstruir el evaluation desde los datos completos del servidor
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
         final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
-        final results = _recalculateResults(fullEvaluation, species);
+
+        // Si la evaluación del servidor ya tiene scores calculados, usarlos directamente
+        Map<String, dynamic> results;
+        if (fullEvaluation.overallScore != null && fullEvaluation.categoryScores != null) {
+          // Usar los scores que vienen del servidor
+          results = {
+            'overall_score': fullEvaluation.overallScore!,
+            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
+            'category_scores': fullEvaluation.categoryScores!,
+            'recommendations': _generateRecommendationKeys(
+              fullEvaluation.overallScore!,
+              fullEvaluation.categoryScores!,
+            ),
+            'critical_points': [],
+            'strong_points': [],
+          };
+        } else {
+          // Si no tiene scores, recalcular desde responses
+          results = _recalculateResults(fullEvaluation, species);
+        }
+
         final translatedRecommendations = _translateRecommendations(
           results['recommendations'],
           fullEvaluation.language,
@@ -623,6 +643,39 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       }
       print('❌ Error al cargar evaluación: $e');
     }
+  }
+
+  String _getComplianceLevel(double overallScore) {
+    if (overallScore >= 90) {
+      return 'excellent';
+    } else if (overallScore >= 75) {
+      return 'good';
+    } else if (overallScore >= 60) {
+      return 'acceptable';
+    } else if (overallScore >= 40) {
+      return 'needs_improvement';
+    } else {
+      return 'critical';
+    }
+  }
+
+  List<String> _generateRecommendationKeys(double overallScore, Map<String, double> categoryScores) {
+    final recommendationKeys = <String>[];
+    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
+    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
+      recommendationKeys.add('improve_feeding_practices');
+    }
+    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
+      recommendationKeys.add('strengthen_health_program');
+    }
+    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+      recommendationKeys.add('improve_infrastructure');
+    }
+    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+      recommendationKeys.add('train_staff_welfare');
+    }
+    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+    return recommendationKeys;
   }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {

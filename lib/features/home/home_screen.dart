@@ -1053,7 +1053,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Botón principal: Nueva Evaluación
         _buildActionButton(
           title: 'Nueva Evaluación',
-          subtitle: 'Selecciona especie y comienza',
+          subtitle: 'Comienza una evaluación',
           icon: Icons.add_circle_outline,
           color: BianTheme.primaryRed,
           onTap: () => _showSpeciesSelectionDialog(context),
