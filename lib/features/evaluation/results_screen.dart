@@ -1498,27 +1498,19 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
             const SizedBox(height: 16),
 
             // Botón de sincronización con servidor (solo si hay usuario y conexión)
-            FutureBuilder<bool>(
-              future: SecureStorage().getUser().then((user) => user != null),
-              builder: (context, userSnapshot) {
-                final hasUser = userSnapshot.data ?? false;
+            Consumer<ConnectivityService>(
+              builder: (context, connectivityService, _) {
+                return StreamBuilder<bool>(
+                  stream: connectivityService.connectionStatus,
+                  initialData: false, // Valor por defecto mientras carga
+                  builder: (context, snapshot) {
+                    final hasConnection = snapshot.data ?? false;
 
-                return Consumer<ConnectivityService>(
-                  builder: (context, connectivityService, _) {
-                    return StreamBuilder<bool>(
-                      stream: connectivityService.connectionStatus,
-                      builder: (context, snapshot) {
-                        // Esperar a que el stream emita el primer valor real
-                        if (!snapshot.hasData) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-
-                        final hasConnection = snapshot.data!;
+                    return FutureBuilder<bool>(
+                      future: SecureStorage().getUser().then((user) => user != null),
+                      initialData: true, // Asumir que hay usuario por defecto
+                      builder: (context, userSnapshot) {
+                        final hasUser = userSnapshot.data ?? false;
 
                         // Si no hay usuario, mostrar mensaje de que necesita login
                         if (!hasUser) {

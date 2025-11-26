@@ -18,6 +18,7 @@ import '../profile/profile_screen.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import 'local_reports_screen.dart';
+import 'my_evaluations_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -39,16 +40,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
 
   List<Evaluation> _drafts = [];
-  List<Evaluation> _reports = [];
-  List<Evaluation> _localReports = []; // Reportes locales separados
   int _farmsCount = 0;
   int _pendingSyncCount = 0; // Contador de reportes pendientes de sincronización
-
-  int _reportLimit = 20;
-  int _reportOffset = 0;
-  int _reportTotal = 0;
-  bool _hasMoreReports = false;
-  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -94,112 +87,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadAllData() async {
-    setState(() {
-      _isLoading = true;
-      _reportOffset = 0;
-    });
+    setState(() => _isLoading = true);
 
     final user = await _storage.getUser();
     final verified = await _storage.isUserVerified();
     final drafts = await DraftsStorage.getAllDrafts();
     final farms = await ReportsStorage.getUniqueFarms();
 
-    List<Evaluation> reports = [];
-    bool hasMore = false;
-    int total = 0;
-
-    // 1. Cargar reportes LOCALES pendientes de sincronización (PRIORIDAD)
-    final localReports = await LocalReportsStorage.getAllLocalReports();
+    // Cargar solo reportes LOCALES pendientes de sincronización
     final pendingSyncCount = await LocalReportsStorage.getPendingSyncCount();
-    print('📦 Reportes locales (pendientes): ${localReports.length}');
-    print('🔄 Reportes marcados para sincronizar: $pendingSyncCount');
-
-    // 2. Intentar cargar del servidor
-    try {
-      final result = await _apiService.getUserEvaluations(
-        limit: _reportLimit,
-        offset: 0,
-      );
-
-      if (result['success'] == true) {
-        final evaluationsData = result['evaluations'] as List;
-        final serverReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
-        total = result['total'] ?? 0;
-        hasMore = result['hasMore'] ?? false;
-
-        // Separar locales de servidor para estadísticas correctas
-        reports = serverReports;
-        print('✅ Reportes del servidor: ${serverReports.length} de $total');
-        print('📊 Reportes locales: ${localReports.length}');
-      } else {
-        print('⚠️ No se pudieron cargar reportes del servidor');
-        // Solo cache local (sin incluir locales en stats)
-        final cachedReports = await ReportsStorage.getAllReports();
-        reports = cachedReports;
-        print('📦 Usando cache: ${cachedReports.length} reportes');
-      }
-    } catch (e) {
-      print('❌ Error cargando reportes del servidor: $e');
-      // Fallback: cache (sin locales en stats)
-      final cachedReports = await ReportsStorage.getAllReports();
-      reports = cachedReports;
-      print('📦 Fallback a cache local: ${cachedReports.length} reportes');
-    }
+    print('📦 Borradores: ${drafts.length}');
+    print('🔄 Reportes pendientes de sincronizar: $pendingSyncCount');
 
     setState(() {
       _currentUser = user;
       _isVerified = verified;
       _drafts = drafts;
-      _reports = reports;
-      _localReports = localReports;
       _farmsCount = farms.length;
       _pendingSyncCount = pendingSyncCount;
-      _reportTotal = total;
-      _hasMoreReports = hasMore;
-      _reportOffset = reports.length;
       _isLoading = false;
     });
-  }
-
-  Future<void> _loadMoreReports() async {
-    if (_isLoadingMore || !_hasMoreReports) return;
-
-    setState(() => _isLoadingMore = true);
-
-    try {
-      final result = await _apiService.getUserEvaluations(
-        limit: _reportLimit,
-        offset: _reportOffset,
-      );
-
-      if (result['success'] == true) {
-        final evaluationsData = result['evaluations'] as List;
-        final newReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
-
-        setState(() {
-          _reports.addAll(newReports);
-          _reportOffset += newReports.length;
-          _hasMoreReports = result['hasMore'] ?? false;
-          _isLoadingMore = false;
-        });
-
-        print('✅ Más reportes cargados: +${newReports.length} (total: ${_reports.length})');
-      }
-    } catch (e) {
-      print('❌ Error cargando más reportes: $e');
-      setState(() => _isLoadingMore = false);
-
-      if (mounted) {
-        CustomSnackbar.showError(
-          context,
-          'Error cargando más reportes',
-        );
-      }
-    }
   }
 
   Future<void> _resendVerificationEmail() async {
@@ -684,74 +591,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ..._drafts.map((draft) => _buildDraftCard(context, draft)),
                       ],
                       
-                      const SizedBox(height: 30),
-                      
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            loc.translate('completed_evaluations'),
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
-                          Text(
-                            '${_localReports.length + _reports.length}',
-                            style: TextStyle(
-                              color: BianTheme.primaryRed,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      if (_reports.isEmpty && _localReports.isEmpty)
-                        _buildEmptyReportsCard(context)
-                      else ...[
-                        // Mostrar locales primero
-                        ..._localReports.map((report) => _buildReportCard(context, report)),
-                        // Luego los del servidor
-                        ..._reports.map((report) => _buildReportCard(context, report)),
-
-                        if (_hasMoreReports) ...[
-                          const SizedBox(height: 20),
-                          Center(
-                            child: _isLoadingMore
-                                ? const CircularProgressIndicator()
-                                : OutlinedButton.icon(
-                                    onPressed: _loadMoreReports,
-                                    icon: const Icon(Icons.expand_more),
-                                    label: Text(
-                                      'Cargar más (${_reports.length} de $_reportTotal)',
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: BianTheme.primaryRed,
-                                      side: const BorderSide(
-                                        color: BianTheme.primaryRed,
-                                        width: 2,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 14,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
-
-                        if (!_hasMoreReports && _reportTotal > 0) ...[
-                          const SizedBox(height: 20),
-                          Center(
-                            child: Text(
-                              'Mostrando todos los reportes (${_localReports.length + _reportTotal})',
-                              style: TextStyle(
-                                color: BianTheme.mediumGray,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
                     ],
                   ),
                 ),
@@ -871,6 +710,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.assessment_outlined, color: BianTheme.primaryRed),
+            title: Text(loc.translate('my_evaluations')),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
               );
             },
           ),
@@ -1152,7 +1002,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildQuickActions(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final totalReports = _localReports.length + _reportTotal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1167,7 +1016,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
               child: _buildActionButton(
                 title: 'Reportes Locales',
-                subtitle: '${_localReports.length} guardados',
+                subtitle: 'Pendientes de sincronizar',
                 icon: Icons.storage_rounded,
                 color: BianTheme.infoBlue,
                 badge: _pendingSyncCount > 0 ? '$_pendingSyncCount' : null,
@@ -1182,13 +1031,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
-                title: 'Evaluaciones',
-                subtitle: '$totalReports completadas',
-                icon: Icons.assignment_turned_in_rounded,
+                title: 'Mis Evaluaciones',
+                subtitle: 'Ver historial completo',
+                icon: Icons.assessment_outlined,
                 color: BianTheme.successGreen,
                 onTap: () {
-                  // Scroll a la sección de reportes
-                  // (podrías agregar un ScrollController para hacer scroll automático)
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
+                  );
                 },
               ),
             ),

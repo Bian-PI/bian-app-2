@@ -838,10 +838,28 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           print('✅ Evaluación sincronizada exitosamente con el servidor');
           // Guardar también localmente para acceso offline
           await ReportsStorage.saveReport(completedEvaluation);
+
+          // Mostrar feedback de éxito
+          if (mounted) {
+            CustomSnackbar.showSuccess(
+              context,
+              AppLocalizations.of(context).translate('evaluation_synced_successfully'),
+            );
+          }
         } else {
           print('⚠️ Error al sincronizar, guardando como pendiente');
           // Si falla, guardar como pendiente para reintento posterior
           await LocalReportsStorage.saveLocalReport(completedEvaluation);
+
+          // Mostrar feedback de que se guardó localmente
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              AppLocalizations.of(context).translate('saved_locally_will_sync_later'),
+              isWarning: true,
+              duration: const Duration(seconds: 4),
+            );
+          }
         }
       }
 
