@@ -1013,22 +1013,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(
-              child: _buildActionButton(
-                title: 'Reportes Locales',
-                subtitle: 'Pendientes de sincronizar',
-                icon: Icons.storage_rounded,
-                color: BianTheme.infoBlue,
-                badge: _pendingSyncCount > 0 ? '$_pendingSyncCount' : null,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
-                  ).then((_) => _loadAllData());
-                },
+            // Solo mostrar Reportes Locales si hay pendientes
+            if (_pendingSyncCount > 0) ...[
+              Expanded(
+                child: _buildActionButton(
+                  title: 'Reportes Locales',
+                  subtitle: 'Pendientes de sincronizar',
+                  icon: Icons.cloud_upload,
+                  color: BianTheme.warningYellow,
+                  badge: '$_pendingSyncCount',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                    ).then((_) => _loadAllData());
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: _buildActionButton(
                 title: 'Mis Evaluaciones',

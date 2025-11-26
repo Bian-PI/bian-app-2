@@ -41,25 +41,79 @@ class Evaluation {
   });
 
   factory Evaluation.fromJson(Map<String, dynamic> json) {
-    return Evaluation(
-      id: json['id'],
-      speciesId: json['speciesId'],
-      farmName: json['farmName'],
-      farmLocation: json['farmLocation'],
-      evaluationDate: DateTime.parse(json['evaluationDate']),
-      evaluatorName: json['evaluatorName'],
-      evaluatorDocument: json['evaluatorDocument'] ?? '',
-      responses: Map<String, dynamic>.from(json['responses']),
-      overallScore: json['overallScore']?.toDouble(),
-      categoryScores: json['categoryScores'] != null
-          ? Map<String, double>.from(json['categoryScores'])
-          : null,
-      status: json['status'] ?? 'draft',
-      language: json['language'] ?? 'es',
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
-      user: null,
-    );
+    try {
+      return Evaluation(
+        id: json['id']?.toString() ?? '',
+        speciesId: json['speciesId']?.toString() ?? json['species']?.toString() ?? 'birds',
+        farmName: json['farmName']?.toString() ?? json['farm_name']?.toString() ?? '',
+        farmLocation: json['farmLocation']?.toString() ?? json['farm_location']?.toString() ?? '',
+        evaluationDate: json['evaluationDate'] != null
+            ? DateTime.parse(json['evaluationDate'])
+            : (json['evaluation_date'] != null
+                ? DateTime.parse(json['evaluation_date'])
+                : DateTime.now()),
+        evaluatorName: json['evaluatorName']?.toString() ?? json['evaluator_name']?.toString() ?? '',
+        evaluatorDocument: json['evaluatorDocument']?.toString() ?? json['evaluator_document']?.toString() ?? '',
+        responses: json['responses'] != null
+            ? Map<String, dynamic>.from(json['responses'])
+            : (json['categories'] != null ? _parseCategoriesToResponses(json['categories']) : {}),
+        overallScore: _parseScore(json['overallScore']) ?? _parseScore(json['overall_score']),
+        categoryScores: _parseCategoryScores(json['categoryScores'] ?? json['category_scores']),
+        status: json['status']?.toString() ?? 'completed',
+        language: json['language']?.toString() ?? 'es',
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'])
+            : (json['created_at'] != null
+                ? DateTime.parse(json['created_at'])
+                : DateTime.now()),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'])
+            : (json['updated_at'] != null
+                ? DateTime.parse(json['updated_at'])
+                : DateTime.now()),
+        user: null,
+      );
+    } catch (e) {
+      print('❌ Error parseando evaluación: $e');
+      print('📦 JSON recibido: $json');
+      rethrow;
+    }
+  }
+
+  static double? _parseScore(dynamic score) {
+    if (score == null) return null;
+    if (score is double) return score;
+    if (score is int) return score.toDouble();
+    if (score is String) return double.tryParse(score);
+    return null;
+  }
+
+  static Map<String, double>? _parseCategoryScores(dynamic scores) {
+    if (scores == null) return null;
+    if (scores is Map) {
+      return scores.map((key, value) => MapEntry(
+        key.toString(),
+        _parseScore(value) ?? 0.0,
+      ));
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> _parseCategoriesToResponses(dynamic categories) {
+    final responses = <String, dynamic>{};
+    if (categories is Map) {
+      categories.forEach((categoryKey, categoryData) {
+        if (categoryData is Map && categoryData['responses'] != null) {
+          final categoryResponses = categoryData['responses'];
+          if (categoryResponses is Map) {
+            categoryResponses.forEach((fieldKey, value) {
+              responses['${categoryKey}_$fieldKey'] = value;
+            });
+          }
+        }
+      });
+    }
+    return responses;
   }
 
   Map<String, dynamic> toJson() {
