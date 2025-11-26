@@ -31,6 +31,7 @@ class AppLocalizations {
       'logout': 'Cerrar Sesión',
       'yes': 'Sí',
       'no': 'No',
+      'warning': 'Advertencia',
 
       'login': 'Iniciar Sesión',
       'register': 'Registrarse',
@@ -506,6 +507,7 @@ class AppLocalizations {
       'generate_pdfs': 'Generate PDFs',
       'offline_reports_warning':
           'Offline reports will NOT be synchronized and will be lost when closing the app',
+          'warning': 'Attention',
       'offline_reports_lost_on_close':
           'Offline reports will be lost when closing the app',
       'session_closed_for_security':

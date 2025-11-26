@@ -888,12 +888,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       final apiService = ApiService();
       final result = await apiService.createEvaluationReport(evaluationData);
 
-      // Verificar que result no sea null
-      if (result == null) {
-        print('❌ El servidor no respondió correctamente (null response)');
-        return false;
-      }
-
       if (result['success'] == true) {
         print('✅ Sincronización exitosa con backend Java');
         return true;

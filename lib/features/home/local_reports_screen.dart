@@ -42,7 +42,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   }
 
   Future<void> _syncReport(Evaluation report) async {
-    final loc = AppLocalizations.of(context);
+    AppLocalizations.of(context);
 
     setState(() => _isSyncing = true);
 
@@ -63,9 +63,9 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       );
 
       // Enviar al servidor
-      final result = await _apiService.submitEvaluation(structuredJson);
+      final result = await _apiService.syncOfflineReport(structuredJson);
 
-      if (result != null && result['success'] == true) {
+      if (result['success'] == true) {
         // Marcar como sincronizado
         await LocalReportsStorage.markAsSynced(report.id);
 
@@ -142,9 +142,9 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
             translatedRecommendations,
           );
 
-          final result = await _apiService.submitEvaluation(structuredJson);
+          final result = await _apiService.syncOfflineReport(structuredJson);
 
-          if (result != null && result['success'] == true) {
+          if (result['success'] == true) {
             await LocalReportsStorage.markAsSynced(report.id);
             successCount++;
           } else {
