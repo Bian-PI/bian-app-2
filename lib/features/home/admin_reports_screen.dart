@@ -509,12 +509,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             icon: Icons.assessment,
             label: loc.translate('stats_reports'),
             value: '$totalReports',
-          ),
+          ),/*
           _buildStatItem(
             icon: Icons.people,
             label: loc.translate('stats_users'),
             value: '$uniqueUsers',
-          ),
+          ),*/
           _buildStatItem(
             icon: Icons.trending_up,
             label: loc.translate('stats_average'),
