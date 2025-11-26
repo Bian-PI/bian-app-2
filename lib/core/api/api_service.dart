@@ -415,7 +415,7 @@ class ApiService {
       print('📦 Data: $reportData');
 
       final response = await post(
-        '/evaluations/sync',
+        '/animals/evaluation',
         reportData,
         requiresAuth: true,  // ✅ Enviar token de autenticación
       );
