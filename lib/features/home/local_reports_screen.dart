@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
@@ -32,7 +33,8 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   Future<void> _loadLocalReports() async {
     setState(() => _isLoading = true);
 
-    final reports = await LocalReportsStorage.getAllLocalReports();
+    // SOLO cargar reportes pendientes de sincronización (no sincronizados)
+    final reports = await LocalReportsStorage.getPendingSyncReports();
     final pendingIds = await LocalReportsStorage.getPendingSyncIds();
 
     setState(() {
@@ -539,6 +541,18 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
                                     ],
                                   ),
                                 ),
+                              const SizedBox(width: 8),
+                              SvgPicture.asset(
+                                report.speciesId == 'birds'
+                                    ? 'assets/icons/ave.svg'
+                                    : 'assets/icons/cerdo.svg',
+                                width: 20,
+                                height: 20,
+                                colorFilter: ColorFilter.mode(
+                                  BianTheme.primaryRed,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),

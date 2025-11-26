@@ -18,6 +18,8 @@ import '../profile/profile_screen.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import 'local_reports_screen.dart';
+import 'my_evaluations_screen.dart';
+import 'admin_reports_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -39,16 +41,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
 
   List<Evaluation> _drafts = [];
-  List<Evaluation> _reports = [];
-  List<Evaluation> _localReports = []; // Reportes locales separados
   int _farmsCount = 0;
   int _pendingSyncCount = 0; // Contador de reportes pendientes de sincronización
-
-  int _reportLimit = 20;
-  int _reportOffset = 0;
-  int _reportTotal = 0;
-  bool _hasMoreReports = false;
-  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -94,112 +88,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadAllData() async {
-    setState(() {
-      _isLoading = true;
-      _reportOffset = 0;
-    });
+    setState(() => _isLoading = true);
 
     final user = await _storage.getUser();
     final verified = await _storage.isUserVerified();
     final drafts = await DraftsStorage.getAllDrafts();
     final farms = await ReportsStorage.getUniqueFarms();
 
-    List<Evaluation> reports = [];
-    bool hasMore = false;
-    int total = 0;
-
-    // 1. Cargar reportes LOCALES pendientes de sincronización (PRIORIDAD)
-    final localReports = await LocalReportsStorage.getAllLocalReports();
+    // Cargar solo reportes LOCALES pendientes de sincronización
     final pendingSyncCount = await LocalReportsStorage.getPendingSyncCount();
-    print('📦 Reportes locales (pendientes): ${localReports.length}');
-    print('🔄 Reportes marcados para sincronizar: $pendingSyncCount');
-
-    // 2. Intentar cargar del servidor
-    try {
-      final result = await _apiService.getUserEvaluations(
-        limit: _reportLimit,
-        offset: 0,
-      );
-
-      if (result['success'] == true) {
-        final evaluationsData = result['evaluations'] as List;
-        final serverReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
-        total = result['total'] ?? 0;
-        hasMore = result['hasMore'] ?? false;
-
-        // Separar locales de servidor para estadísticas correctas
-        reports = serverReports;
-        print('✅ Reportes del servidor: ${serverReports.length} de $total');
-        print('📊 Reportes locales: ${localReports.length}');
-      } else {
-        print('⚠️ No se pudieron cargar reportes del servidor');
-        // Solo cache local (sin incluir locales en stats)
-        final cachedReports = await ReportsStorage.getAllReports();
-        reports = cachedReports;
-        print('📦 Usando cache: ${cachedReports.length} reportes');
-      }
-    } catch (e) {
-      print('❌ Error cargando reportes del servidor: $e');
-      // Fallback: cache (sin locales en stats)
-      final cachedReports = await ReportsStorage.getAllReports();
-      reports = cachedReports;
-      print('📦 Fallback a cache local: ${cachedReports.length} reportes');
-    }
+    print('📦 Borradores: ${drafts.length}');
+    print('🔄 Reportes pendientes de sincronizar: $pendingSyncCount');
 
     setState(() {
       _currentUser = user;
       _isVerified = verified;
       _drafts = drafts;
-      _reports = reports;
-      _localReports = localReports;
       _farmsCount = farms.length;
       _pendingSyncCount = pendingSyncCount;
-      _reportTotal = total;
-      _hasMoreReports = hasMore;
-      _reportOffset = reports.length;
       _isLoading = false;
     });
-  }
-
-  Future<void> _loadMoreReports() async {
-    if (_isLoadingMore || !_hasMoreReports) return;
-
-    setState(() => _isLoadingMore = true);
-
-    try {
-      final result = await _apiService.getUserEvaluations(
-        limit: _reportLimit,
-        offset: _reportOffset,
-      );
-
-      if (result['success'] == true) {
-        final evaluationsData = result['evaluations'] as List;
-        final newReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
-
-        setState(() {
-          _reports.addAll(newReports);
-          _reportOffset += newReports.length;
-          _hasMoreReports = result['hasMore'] ?? false;
-          _isLoadingMore = false;
-        });
-
-        print('✅ Más reportes cargados: +${newReports.length} (total: ${_reports.length})');
-      }
-    } catch (e) {
-      print('❌ Error cargando más reportes: $e');
-      setState(() => _isLoadingMore = false);
-
-      if (mounted) {
-        CustomSnackbar.showError(
-          context,
-          'Error cargando más reportes',
-        );
-      }
-    }
   }
 
   Future<void> _resendVerificationEmail() async {
@@ -684,74 +592,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ..._drafts.map((draft) => _buildDraftCard(context, draft)),
                       ],
                       
-                      const SizedBox(height: 30),
-                      
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            loc.translate('completed_evaluations'),
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
-                          Text(
-                            '${_localReports.length + _reports.length}',
-                            style: TextStyle(
-                              color: BianTheme.primaryRed,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      if (_reports.isEmpty && _localReports.isEmpty)
-                        _buildEmptyReportsCard(context)
-                      else ...[
-                        // Mostrar locales primero
-                        ..._localReports.map((report) => _buildReportCard(context, report)),
-                        // Luego los del servidor
-                        ..._reports.map((report) => _buildReportCard(context, report)),
-
-                        if (_hasMoreReports) ...[
-                          const SizedBox(height: 20),
-                          Center(
-                            child: _isLoadingMore
-                                ? const CircularProgressIndicator()
-                                : OutlinedButton.icon(
-                                    onPressed: _loadMoreReports,
-                                    icon: const Icon(Icons.expand_more),
-                                    label: Text(
-                                      'Cargar más (${_reports.length} de $_reportTotal)',
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: BianTheme.primaryRed,
-                                      side: const BorderSide(
-                                        color: BianTheme.primaryRed,
-                                        width: 2,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 14,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
-
-                        if (!_hasMoreReports && _reportTotal > 0) ...[
-                          const SizedBox(height: 20),
-                          Center(
-                            child: Text(
-                              'Mostrando todos los reportes (${_localReports.length + _reportTotal})',
-                              style: TextStyle(
-                                color: BianTheme.mediumGray,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
                     ],
                   ),
                 ),
@@ -875,6 +715,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.assessment_outlined, color: BianTheme.primaryRed),
+            title: Text(loc.translate('my_evaluations')),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.storage, color: BianTheme.infoBlue),
             title: const Text('Reportes Locales'),
             trailing: _pendingSyncCount > 0
@@ -902,6 +753,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ).then((_) => _loadAllData()); // Recargar al volver
             },
           ),
+
+          // Opción solo para administradores
+          if (_currentUser?.role?.toLowerCase() == 'admin') ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings, color: Colors.deepPurple),
+              title: const Text(
+                'Todos los Reportes (Admin)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('Ver todos los reportes del sistema'),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'ADMIN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminReportsScreen()),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+
           ListTile(
             leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
             title: Text(loc.translate('language')),
@@ -1086,10 +974,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Expanded(
               child: _buildStatCard(
-                title: loc.translate('evaluations'),
-                value: '${_reports.length}',
-                icon: Icons.assignment_turned_in_rounded,
-                color: BianTheme.successGreen,
+                title: loc.translate('drafts'),
+                value: '${_drafts.length}',
+                icon: Icons.drafts,
+                color: BianTheme.warningYellow,
               ),
             ),
             const SizedBox(width: 16),
@@ -1152,7 +1040,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildQuickActions(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final totalReports = _localReports.length + _reportTotal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1162,39 +1049,172 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 16),
+
+        // Botón principal: Nueva Evaluación
+        _buildActionButton(
+          title: 'Nueva Evaluación',
+          subtitle: 'Comienza una evaluación',
+          icon: Icons.add_circle_outline,
+          color: BianTheme.primaryRed,
+          onTap: () => _showSpeciesSelectionDialog(context),
+        ),
+
+        const SizedBox(height: 12),
+
         Row(
           children: [
+            // Solo mostrar Reportes Locales si hay pendientes
+            if (_pendingSyncCount > 0) ...[
+              Expanded(
+                child: _buildActionButton(
+                  title: 'Reportes Locales',
+                  subtitle: 'Pendientes de sincronizar',
+                  icon: Icons.cloud_upload,
+                  color: BianTheme.warningYellow,
+                  badge: '$_pendingSyncCount',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                    ).then((_) => _loadAllData());
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: _buildActionButton(
-                title: 'Reportes Locales',
-                subtitle: '${_localReports.length} guardados',
-                icon: Icons.storage_rounded,
-                color: BianTheme.infoBlue,
-                badge: _pendingSyncCount > 0 ? '$_pendingSyncCount' : null,
+                title: 'Mis Evaluaciones',
+                subtitle: 'Ver historial completo',
+                icon: Icons.assessment_outlined,
+                color: BianTheme.successGreen,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
-                  ).then((_) => _loadAllData());
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                title: 'Evaluaciones',
-                subtitle: '$totalReports completadas',
-                icon: Icons.assignment_turned_in_rounded,
-                color: BianTheme.successGreen,
-                onTap: () {
-                  // Scroll a la sección de reportes
-                  // (podrías agregar un ScrollController para hacer scroll automático)
+                    MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
+                  );
                 },
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  void _showSpeciesSelectionDialog(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToEvaluation(Species.birds());
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/ave.svg',
+                              width: 48,
+                              height: 48,
+                              colorFilter: ColorFilter.mode(
+                                BianTheme.primaryRed,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Aves',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: BianTheme.primaryRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToEvaluation(Species.pigs());
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/cerdo.svg',
+                              width: 48,
+                              height: 48,
+                              colorFilter: ColorFilter.mode(
+                                BianTheme.primaryRed,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Cerdos',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: BianTheme.primaryRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  loc.translate('cancel'),
+                  style: TextStyle(color: BianTheme.mediumGray),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

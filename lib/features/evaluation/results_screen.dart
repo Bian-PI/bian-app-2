@@ -48,7 +48,8 @@ class ResultsScreen extends StatelessWidget {
 
     // Preparar categories en el formato esperado (TODO como strings)
     final categories = <String, dynamic>{};
-    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
+    final overallScore =
+        double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final categoryScores = results['category_scores'] as Map<String, double>;
 
     for (var category in species.categories) {
@@ -58,23 +59,22 @@ class ResultsScreen extends StatelessWidget {
         'fields': evaluation.responses.entries
             .where((e) => e.key.startsWith('${category.id}_'))
             .map((e) {
-              // Convertir booleanos y números a strings
-              String valueStr;
-              final value = e.value;
-              if (value is bool) {
-                valueStr = value.toString(); // "true" o "false"
-              } else if (value is num) {
-                valueStr = value.toString(); // "1.0", "2", etc.
-              } else {
-                valueStr = value.toString();
-              }
+          // Convertir booleanos y números a strings
+          String valueStr;
+          final value = e.value;
+          if (value is bool) {
+            valueStr = value.toString(); // "true" o "false"
+          } else if (value is num) {
+            valueStr = value.toString(); // "1.0", "2", etc.
+          } else {
+            valueStr = value.toString();
+          }
 
-              return {
-                'field_id': e.key.toString(), // String
-                'value': valueStr, // String
-              };
-            })
-            .toList(),
+          return {
+            'field_id': e.key.toString(), // String
+            'value': valueStr, // String
+          };
+        }).toList(),
       };
     }
 
@@ -158,7 +158,8 @@ class ResultsScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(BianTheme.primaryRed),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(BianTheme.primaryRed),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -270,13 +271,13 @@ class ResultsScreen extends StatelessWidget {
     return true;
   }
 
-Future<void> _openPDF(BuildContext context, String filePath) async {
+  Future<void> _openPDF(BuildContext context, String filePath) async {
     try {
       print('📂 Intentando abrir PDF: $filePath');
-      
+
       final result = await OpenFilex.open(filePath);
       print('📊 Resultado de apertura: ${result.type} - ${result.message}');
-      
+
       if (result.type != ResultType.done) {
         if (!context.mounted) return;
 
@@ -343,8 +344,10 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   color: BianTheme.primaryRed,
                 ),
               ),
-              title: Text(AppLocalizations.of(context).translate('download_pdf')),
-              subtitle: Text(AppLocalizations.of(context).translate('download_on_device')),
+              title:
+                  Text(AppLocalizations.of(context).translate('download_pdf')),
+              subtitle: Text(
+                  AppLocalizations.of(context).translate('download_on_device')),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
                 _downloadPDF(context);
@@ -364,7 +367,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 ),
               ),
               title: Text(AppLocalizations.of(context).translate('share_pdf')),
-              subtitle: Text(AppLocalizations.of(context).translate('share_via_apps')),
+              subtitle: Text(
+                  AppLocalizations.of(context).translate('share_via_apps')),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
                 _generateAndSharePDF(context);
@@ -454,7 +458,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       if (!hasPermission) {
         print('❌ Permisos denegados');
         if (!context.mounted) return;
-        CustomSnackbar.showError(context, loc.translate('storage_permissions_required'));
+        CustomSnackbar.showError(
+            context, loc.translate('storage_permissions_required'));
         return;
       }
 
@@ -696,8 +701,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
               Icon(Icons.error_outline, color: BianTheme.errorRed, size: 32),
               SizedBox(width: 12),
               Expanded(
-                  child: Text('Error al guardar',
-                      style: TextStyle(fontSize: 18))),
+                  child:
+                      Text('Error al guardar', style: TextStyle(fontSize: 18))),
             ],
           ),
           content: Column(
@@ -743,8 +748,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 _generateAndSharePDF(context);
               },
               child: Text('Intentar Compartir'),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: BianTheme.infoBlue),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: BianTheme.infoBlue),
             ),
           ],
         ),
@@ -805,12 +810,14 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
       );
     }
   }
+
   Future<pw.Document> _buildPDFNoContext(AppLocalizations loc) async {
     print('🔵 Iniciando generación de PDF...');
 
     final pdf = pw.Document();
 
-    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
+    final overallScore =
+        double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
     final criticalPoints = results['critical_points'] as List;
@@ -878,8 +885,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                     padding: const pw.EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     decoration: pw.BoxDecoration(
-                      color: PdfColor.fromInt(
-                          0xFFF5F5F5),
+                      color: PdfColor.fromInt(0xFFF5F5F5),
                       borderRadius: pw.BorderRadius.circular(8),
                     ),
                     child: pw.Column(
@@ -889,8 +895,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                           style: pw.TextStyle(
                             fontSize: 32,
                             fontWeight: pw.FontWeight.bold,
-                            color:  PdfColor.fromInt(
-                          0xFFDB7093),
+                            color: PdfColor.fromInt(0xFFDB7093),
                           ),
                         ),
                         pw.Text(
@@ -898,8 +903,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                           style: pw.TextStyle(
                             fontSize: 20,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColor.fromInt(
-                          0xFFDB7093),
+                            color: PdfColor.fromInt(0xFFDB7093),
                           ),
                         ),
                       ],
@@ -908,9 +912,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 ],
               ),
             ),
-
             pw.SizedBox(height: 24),
-
             pw.Text(
               loc.translate('evaluation_results'),
               style: pw.TextStyle(
@@ -919,9 +921,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
-
             pw.SizedBox(height: 20),
-
             pw.Container(
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
@@ -958,9 +958,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 ],
               ),
             ),
-
             pw.SizedBox(height: 24),
-
             pw.Container(
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
@@ -997,9 +995,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 ],
               ),
             ),
-
             pw.SizedBox(height: 24),
-
             pw.Text(
               loc.translate('category_scores'),
               style: pw.TextStyle(
@@ -1008,9 +1004,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
-
             pw.SizedBox(height: 16),
-
             ...species.categories.map((category) {
               final score = categoryScores[category.id] ?? 0.0;
               return pw.Container(
@@ -1018,9 +1012,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 child: _buildCategoryScore(loc.translate(category.id), score),
               );
             }),
-
             pw.SizedBox(height: 24),
-
             pw.Text(
               loc.translate('critical_points'),
               style: pw.TextStyle(
@@ -1029,9 +1021,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
-
             pw.SizedBox(height: 16),
-
             if (criticalPoints.isEmpty)
               pw.Container(
                 padding: const pw.EdgeInsets.all(16),
@@ -1138,9 +1128,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   ),
                 );
               }),
-
             pw.SizedBox(height: 24),
-
             pw.Text(
               loc.translate('strong_points'),
               style: pw.TextStyle(
@@ -1149,9 +1137,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
-
             pw.SizedBox(height: 16),
-
             if (strongPoints.isEmpty)
               pw.Container(
                 padding: const pw.EdgeInsets.all(16),
@@ -1216,9 +1202,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                   ),
                 );
               }),
-
             pw.SizedBox(height: 24),
-
             pw.Text(
               loc.translate('recommendations'),
               style: pw.TextStyle(
@@ -1227,9 +1211,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 color: PdfColor.fromInt(0xFF2D2D2D),
               ),
             ),
-
             pw.SizedBox(height: 16),
-
             ...List.generate(recommendations.length, (index) {
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 12),
@@ -1278,9 +1260,7 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 ),
               );
             }),
-
             pw.SizedBox(height: 32),
-
             pw.Divider(color: PdfColor.fromInt(0xFFE0E0E0)),
             pw.SizedBox(height: 12),
             pw.Row(
@@ -1405,7 +1385,8 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final overallScore = double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
+    final overallScore =
+        double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
     final criticalPoints = results['critical_points'] as List;
@@ -1493,34 +1474,34 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                 (rec) => _buildRecommendationCard(context, rec.toString())),
             const SizedBox(height: 32),
 
-            _buildAIAnalysisButton(context, loc, overallScore, categoryScores, criticalPoints, strongPoints),
+            _buildAIAnalysisButton(context, loc, overallScore, categoryScores,
+                criticalPoints, strongPoints),
 
             const SizedBox(height: 16),
 
             // Botón de sincronización con servidor (solo si hay usuario y conexión)
-            FutureBuilder<bool>(
-              future: SecureStorage().getUser().then((user) => user != null),
-              builder: (context, userSnapshot) {
-                final hasUser = userSnapshot.data ?? false;
+            Consumer<ConnectivityService>(
+              builder: (context, connectivityService, _) {
+                return StreamBuilder<bool>(
+                  stream: connectivityService.connectionStatus,
+                  initialData: true, // Optimista: asumir conexión inicialmente
 
-                return Consumer<ConnectivityService>(
-                  builder: (context, connectivityService, _) {
-                    return StreamBuilder<bool>(
-                      stream: connectivityService.connectionStatus,
-                      builder: (context, snapshot) {
-                        // Esperar a que el stream emita el primer valor real
-                        if (!snapshot.hasData) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
+                  builder: (context, snapshot) {
+                    final hasConnection =
+                        snapshot.data ?? true; // Por defecto optimista
 
-                        final hasConnection = snapshot.data!;
+                    return FutureBuilder<bool>(
+                      future: SecureStorage()
+                          .getUser()
+                          .then((user) => user != null),
+
+                      initialData: true, // Asumir que hay usuario por defecto
+
+                      builder: (context, userSnapshot) {
+                        final hasUser = userSnapshot.data ?? false;
 
                         // Si no hay usuario, mostrar mensaje de que necesita login
+
                         if (!hasUser) {
                           return Container(
                             padding: const EdgeInsets.all(16),
@@ -1551,14 +1532,16 @@ Future<void> _openPDF(BuildContext context, String filePath) async {
                           );
                         }
 
-                        // Si no hay conexión, mostrar modo offline
-                        if (!hasConnection) {
+                        // Si no hay conexión Y tenemos datos confirmados, mostrar modo offline
+
+                        if (!hasConnection && snapshot.hasData) {
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: BianTheme.warningYellow.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: BianTheme.warningYellow),
+                              border:
+                                  Border.all(color: BianTheme.warningYellow),
                             ),
                             child: Row(
                               children: [

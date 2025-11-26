@@ -466,28 +466,147 @@ class ApiService {
     int offset = 0,
   }) async {
     try {
-      print('📥 Obteniendo reportes (limit: $limit, offset: $offset)...');
+      // Obtener el ID del usuario actual
+      final user = await _storage.getUser();
+      if (user == null || user.id == null) {
+        print('❌ No hay usuario logueado');
+        return {'success': false, 'message': 'no_user'};
+      }
 
-      final response = await get(
-        '/evaluations/user?limit=$limit&offset=$offset',
-        requiresAuth: true,
+      final userId = user.id!;
+      print('📥 Obteniendo reportes para usuario $userId...');
+
+      // Usar el endpoint correcto del backend Java
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllUserEvaluations(userId.toString())}');
+
+      final token = await _storage.getToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(response.body);
+        print('✅ Reportes obtenidos: ${data.length}');
+
+        // Simular paginación en el cliente
+        final start = offset;
+        final end = (offset + limit).clamp(0, data.length);
+        final paginatedData = data.sublist(start, end);
+        final hasMore = end < data.length;
+
         return {
           'success': true,
-          'evaluations': data['evaluations'] ?? [],
-          'total': data['total'] ?? 0,
-          'hasMore': data['hasMore'] ?? false,
+          'evaluations': paginatedData,
+          'total': data.length,
+          'hasMore': hasMore,
         };
       } else if (response.statusCode == 401) {
+        print('❌ No autorizado');
         return {'success': false, 'message': 'unauthorized'};
       } else {
+        print('❌ Error del servidor: ${response.statusCode}');
         return {'success': false, 'message': 'server_error'};
       }
     } catch (e) {
       print('❌ Error obteniendo reportes: $e');
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// Obtiene TODAS las evaluaciones (solo para admins)
+  Future<Map<String, dynamic>> getAllEvaluationsAdmin({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      print('📥 [ADMIN] Obteniendo TODAS las evaluaciones...');
+
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllEvaluations}');
+
+      final token = await _storage.getToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('📥 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        print('✅ [ADMIN] Reportes obtenidos: ${data.length}');
+
+        // Simular paginación en el cliente
+        final start = offset;
+        final end = (offset + limit).clamp(0, data.length);
+        final paginatedData = data.sublist(start, end);
+        final hasMore = end < data.length;
+
+        return {
+          'success': true,
+          'evaluations': paginatedData,
+          'total': data.length,
+          'hasMore': hasMore,
+        };
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        print('❌ No autorizado - Requiere permisos de admin');
+        return {'success': false, 'message': 'unauthorized'};
+      } else {
+        print('❌ Error del servidor: ${response.statusCode}');
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      print('❌ Error obteniendo reportes (admin): $e');
+      return {'success': false, 'message': 'connection_error'};
+    }
+  }
+
+  /// Obtiene los detalles completos de una evaluación por ID
+  Future<Map<String, dynamic>> getEvaluationById(String evaluationId) async {
+    try {
+      print('📥 Obteniendo evaluación $evaluationId del servidor...');
+
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getEvaluationById(evaluationId)}');
+
+      final token = await _storage.getToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('📥 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ Evaluación obtenida: $evaluationId');
+
+        return {
+          'success': true,
+          'evaluation': data,
+        };
+      } else if (response.statusCode == 404) {
+        print('❌ Evaluación no encontrada');
+        return {'success': false, 'message': 'not_found'};
+      } else if (response.statusCode == 401) {
+        print('❌ No autorizado');
+        return {'success': false, 'message': 'unauthorized'};
+      } else {
+        print('❌ Error del servidor: ${response.statusCode}');
+        return {'success': false, 'message': 'server_error'};
+      }
+    } catch (e) {
+      print('❌ Error obteniendo evaluación: $e');
       return {'success': false, 'message': 'connection_error'};
     }
   }
@@ -570,37 +689,6 @@ class ApiService {
       if (e.toString().contains('TimeoutException')) {
         return {'success': false, 'message': 'timeout_error'};
       }
-      return {'success': false, 'message': 'connection_error'};
-    }
-  }
-
-  /// Obtiene un reporte específico por su ID de evaluación
-  ///
-  /// [evaluationId]: ID único del reporte de evaluación
-  Future<Map<String, dynamic>> getEvaluationById(String evaluationId) async {
-    try {
-      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getEvaluationById(evaluationId)}');
-
-      print('📥 Obteniendo reporte: $url');
-
-      final response = await http.get(
-        url,
-        headers: ApiConfig.headers,
-      ).timeout(ApiConfig.receiveTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'evaluation': data,
-        };
-      } else if (response.statusCode == 404) {
-        return {'success': false, 'message': 'evaluation_not_found'};
-      } else {
-        return {'success': false, 'message': 'server_error'};
-      }
-    } catch (e) {
-      print('❌ Error obteniendo reporte: $e');
       return {'success': false, 'message': 'connection_error'};
     }
   }

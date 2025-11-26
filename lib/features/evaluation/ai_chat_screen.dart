@@ -121,13 +121,26 @@ class _AIChatScreenState extends State<AIChatScreen> {
       if (mounted) {
         final now = DateTime.now();
         if (_lastResetTime != null &&
-            now.difference(_lastResetTime!) >= _rateLimitPeriod &&
-            _questionCount >= _maxQuestionsPerPeriod) {
+            now.difference(_lastResetTime!) >= _rateLimitPeriod) {
+          // Si el usuario había agotado sus intentos, notificar que ya puede consultar de nuevo
+          final wasLimitReached = _questionCount >= _maxQuestionsPerPeriod;
+
           setState(() {
             _questionCount = 0;
             _lastResetTime = now;
           });
           _saveRateLimitState();
+
+          // Mostrar notificación si había llegado al límite
+          if (wasLimitReached) {
+            final loc = AppLocalizations(Locale(widget.language));
+            CustomSnackbar.showSuccess(
+              context,
+              loc.translate('rate_limit_reset') ?? '✓ Ya puedes seguir consultando con la IA',
+              duration: Duration(seconds: 4),
+            );
+            print('✅ Límite de rate reseteado - Notificación enviada');
+          }
         }
       }
     });
