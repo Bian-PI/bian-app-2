@@ -938,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: _buildStatCard(
                 title: loc.translate('drafts'),
                 value: '${_drafts.length}',
-                icon: Icons.draft_outlined,
+                icon: Icons.drafts,
                 color: BianTheme.warningYellow,
               ),
             ),
