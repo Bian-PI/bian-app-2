@@ -197,8 +197,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         final structuredJson = await fullEvaluation.generateStructuredJSON(
           species,
           results,
-          [], // Recommendations no está en el modelo, enviar lista vacía
+          [], // Recommendations vacío
         );
+
+        print('✅ [ADMIN] Datos preparados para mostrar:');
+        print('  - overallScore: ${results['overallScore']}');
+        print('  - categoryScores: ${results['categoryScores']}');
 
         if (mounted) {
           Navigator.push(
@@ -333,7 +337,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Buscar por granja, ubicación, evaluador...',
+              hintText: loc.translate('search_placeholder'),
               hintStyle: TextStyle(fontSize: 14),
               prefixIcon: Icon(Icons.search, color: BianTheme.primaryRed),
               suffixIcon: _searchQuery.isNotEmpty
@@ -382,9 +386,9 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     ),
                   ),
                   items: [
-                    DropdownMenuItem(value: 'all', child: Text('Todas', style: TextStyle(fontSize: 14))),
-                    DropdownMenuItem(value: 'birds', child: Text('Aves', style: TextStyle(fontSize: 14))),
-                    DropdownMenuItem(value: 'pigs', child: Text('Cerdos', style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 'all', child: Text(loc.translate('filter_all_species'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 'birds', child: Text(loc.translate('filter_birds'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 'pigs', child: Text(loc.translate('filter_pigs'), style: TextStyle(fontSize: 14))),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -408,10 +412,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     ),
                   ),
                   items: [
-                    DropdownMenuItem(value: 0.0, child: Text('Score: Todos', style: TextStyle(fontSize: 14))),
-                    DropdownMenuItem(value: 50.0, child: Text('Score ≥ 50%', style: TextStyle(fontSize: 14))),
-                    DropdownMenuItem(value: 70.0, child: Text('Score ≥ 70%', style: TextStyle(fontSize: 14))),
-                    DropdownMenuItem(value: 85.0, child: Text('Score ≥ 85%', style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 0.0, child: Text(loc.translate('filter_score_all'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 50.0, child: Text(loc.translate('filter_score_50'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 70.0, child: Text(loc.translate('filter_score_70'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 85.0, child: Text(loc.translate('filter_score_85'), style: TextStyle(fontSize: 14))),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -458,17 +462,17 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         children: [
           _buildStatItem(
             icon: Icons.assessment,
-            label: 'Reportes',
+            label: loc.translate('stats_reports'),
             value: '$totalReports',
           ),
           _buildStatItem(
             icon: Icons.people,
-            label: 'Usuarios',
+            label: loc.translate('stats_users'),
             value: '$uniqueUsers',
           ),
           _buildStatItem(
             icon: Icons.trending_up,
-            label: 'Promedio',
+            label: loc.translate('stats_average'),
             value: '${avgScore.toStringAsFixed(0)}%',
           ),
         ],
@@ -506,6 +510,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   }
 
   Widget _buildReportCard(Evaluation report) {
+    final loc = AppLocalizations.of(context);
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     final speciesColor = Color(int.parse(species.gradientColors[0]));
     final score = report.overallScore ?? 0.0;
@@ -516,10 +521,6 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             : BianTheme.errorRed;
 
     final dateStr = DateFormat('dd MMM yyyy', 'es').format(report.evaluationDate);
-
-    // Contar reportes del usuario
-    final userId = report.user?.id?.toString() ?? report.evaluatorDocument ?? 'unknown';
-    final userReports = _userReportCount[userId] ?? 0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -557,7 +558,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          report.farmName.isEmpty ? 'Sin nombre' : report.farmName,
+                          report.farmName.isEmpty ? loc.translate('no_name') : report.farmName,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -567,7 +568,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          report.farmLocation.isEmpty ? 'Sin ubicación' : report.farmLocation,
+                          report.farmLocation.isEmpty ? loc.translate('no_location') : report.farmLocation,
                           style: TextStyle(
                             fontSize: 13,
                             color: BianTheme.mediumGray,
@@ -601,14 +602,14 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
               const SizedBox(height: 12),
 
-              // Info adicional
+              // Info adicional - SIN contador de reportes
               Row(
                 children: [
                   Icon(Icons.person, size: 14, color: BianTheme.mediumGray),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${report.evaluatorName.isEmpty ? 'Sin evaluador' : report.evaluatorName} ($userReports reportes)',
+                      report.evaluatorName.isEmpty ? loc.translate('no_evaluator') : report.evaluatorName,
                       style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -642,7 +643,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No se encontraron reportes',
+            loc.translate('no_reports_found'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -651,7 +652,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Intenta ajustar los filtros de búsqueda',
+            loc.translate('adjust_search_filters'),
             style: TextStyle(
               fontSize: 14,
               color: BianTheme.mediumGray,

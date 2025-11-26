@@ -810,7 +810,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: BianTheme.primaryGradient,
+        color: BianTheme.primaryRed, // Color sólido sin degradado
         borderRadius: BorderRadius.circular(16),
         boxShadow: BianTheme.elevatedShadow,
       ),
