@@ -67,7 +67,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         // Calcular estadísticas de usuarios
         _userReportCount = {};
         for (var report in newReports) {
-          final userId = report.userId ?? 'unknown';
+          final userId = report.user?.id?.toString() ?? report.evaluatorDocument ?? 'unknown';
           _userReportCount[userId] = (_userReportCount[userId] ?? 0) + 1;
         }
 
@@ -115,12 +115,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         // Filtro de búsqueda (documento, granja, ubicación, evaluador)
         if (_searchQuery.isNotEmpty) {
           final query = _searchQuery.toLowerCase();
-          final matchesFarm = (report.farmName ?? '').toLowerCase().contains(query);
-          final matchesLocation = (report.farmLocation ?? '').toLowerCase().contains(query);
-          final matchesEvaluator = (report.evaluatorName ?? '').toLowerCase().contains(query);
-          final matchesUser = (report.userId ?? '').toLowerCase().contains(query);
+          final matchesFarm = report.farmName.toLowerCase().contains(query);
+          final matchesLocation = report.farmLocation.toLowerCase().contains(query);
+          final matchesEvaluator = report.evaluatorName.toLowerCase().contains(query);
+          final matchesDocument = report.evaluatorDocument.toLowerCase().contains(query);
 
-          if (!matchesFarm && !matchesLocation && !matchesEvaluator && !matchesUser) {
+          if (!matchesFarm && !matchesLocation && !matchesEvaluator && !matchesDocument) {
             return false;
           }
         }
@@ -140,9 +140,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
       // Ordenar por fecha (más recientes primero)
       _filteredReports.sort((a, b) {
-        final dateA = DateTime.tryParse(a.evaluationDate ?? '') ?? DateTime(1970);
-        final dateB = DateTime.tryParse(b.evaluationDate ?? '') ?? DateTime(1970);
-        return dateB.compareTo(dateA);
+        return b.evaluationDate.compareTo(a.evaluationDate);
       });
     });
   }
@@ -199,7 +197,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         final structuredJson = await fullEvaluation.generateStructuredJSON(
           species,
           results,
-          fullEvaluation.recommendations ?? [],
+          [], // Recommendations no está en el modelo, enviar lista vacía
         );
 
         if (mounted) {
@@ -517,11 +515,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             ? BianTheme.warningYellow
             : BianTheme.errorRed;
 
-    final date = DateTime.tryParse(report.evaluationDate ?? '');
-    final dateStr = date != null ? DateFormat('dd MMM yyyy', 'es').format(date) : 'Sin fecha';
+    final dateStr = DateFormat('dd MMM yyyy', 'es').format(report.evaluationDate);
 
     // Contar reportes del usuario
-    final userReports = _userReportCount[report.userId ?? 'unknown'] ?? 0;
+    final userId = report.user?.id?.toString() ?? report.evaluatorDocument ?? 'unknown';
+    final userReports = _userReportCount[userId] ?? 0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -559,7 +557,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          report.farmName ?? 'Sin nombre',
+                          report.farmName.isEmpty ? 'Sin nombre' : report.farmName,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -569,7 +567,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          report.farmLocation ?? 'Sin ubicación',
+                          report.farmLocation.isEmpty ? 'Sin ubicación' : report.farmLocation,
                           style: TextStyle(
                             fontSize: 13,
                             color: BianTheme.mediumGray,
@@ -610,7 +608,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${report.evaluatorName ?? 'Sin evaluador'} ($userReports reportes)',
+                      '${report.evaluatorName.isEmpty ? 'Sin evaluador' : report.evaluatorName} ($userReports reportes)',
                       style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

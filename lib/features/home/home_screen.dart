@@ -1133,7 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
               child: _buildSimpleCard(
                 title: loc.translate('my_evaluations_action'),
-                count: _serverReportsCount,
+                count: _allServerReports.length,
                 icon: Icons.assessment_outlined,
                 color: BianTheme.successGreen,
                 onTap: () {
