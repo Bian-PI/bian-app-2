@@ -575,36 +575,6 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           ),
           backgroundColor: BianTheme.warningYellow,
           actions: [
-            if (_pendingSyncCount > 0)
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.cloud_upload, size: 28),
-                    onPressed: _isSyncing ? null : _showSyncDialog,
-                    tooltip: loc.translate('sync_action'),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: BianTheme.errorRed,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$_pendingSyncCount',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             IconButton(
               icon: Icon(Icons.login),
               onPressed: _handleExitOfflineMode,
@@ -614,39 +584,26 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
         ),
         body: Column(
           children: [
-            if (_pendingSyncCount > 0)
-              InkWell(
-                onTap: _isSyncing ? null : _showSyncDialog,
-                child: Container(
-                  color: BianTheme.successGreen.withOpacity(0.12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.cloud_upload, color: BianTheme.successGreen, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          loc.translate('reports_ready_to_sync', ['$_pendingSyncCount']),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: BianTheme.darkGray,
-                            fontWeight: FontWeight.w600,
-                          ),
+            if (_localReports.isNotEmpty)
+              Container(
+                color: BianTheme.infoBlue.withOpacity(0.12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: BianTheme.infoBlue, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        loc.translate('login_to_sync_reports'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: BianTheme.darkGray,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (!_isSyncing)
-                        Icon(Icons.chevron_right, color: BianTheme.successGreen, size: 20),
-                      if (_isSyncing)
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(BianTheme.successGreen),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.arrow_forward, color: BianTheme.infoBlue, size: 20),
+                  ],
                 ),
               ),
 
@@ -897,61 +854,34 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
                     ),
                     Column(
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: BianTheme.warningYellow.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: BianTheme.warningYellow.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.cloud_off,
-                                    size: 12,
-                                    color: BianTheme.warningYellow,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    loc.translate('local_badge'),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: BianTheme.warningYellow,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: BianTheme.warningYellow.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: BianTheme.warningYellow.withOpacity(0.3),
                             ),
-                            const SizedBox(width: 4),
-                            InkWell(
-                              onTap: _isSyncing ? null : () => _syncSingleReport(report),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: BianTheme.successGreen.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: BianTheme.successGreen.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.cloud_upload,
-                                  size: 20,
-                                  color: _isSyncing
-                                      ? BianTheme.mediumGray
-                                      : BianTheme.successGreen,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.cloud_off,
+                                size: 12,
+                                color: BianTheme.warningYellow,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                loc.translate('local_badge'),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: BianTheme.warningYellow,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         IconButton(
