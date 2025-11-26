@@ -42,23 +42,65 @@ class Evaluation {
 
   factory Evaluation.fromJson(Map<String, dynamic> json) {
     try {
+      print('📦 Evaluation.fromJson - Claves en JSON: ${json.keys.toList()}');
+
+      print(
+          '📊 overallScore presente: ${json.containsKey('overallScore')} / overall_score: ${json.containsKey('overall_score')}');
+
+      print(
+          '📊 categoryScores presente: ${json.containsKey('categoryScores')} / category_scores: ${json.containsKey('category_scores')}');
+
+      print('📊 categories presente: ${json.containsKey('categories')}');
+
+      // Debug de categories si existe
+
+      if (json['categories'] != null) {
+        print('📂 categories (raw): ${json['categories']}');
+
+        if (json['categories'] is Map) {
+          final cats = json['categories'] as Map;
+
+          cats.forEach((key, value) {
+            print('  📁 Categoría $key:');
+
+            if (value is Map && value.containsKey('score')) {
+              print('    Score: ${value['score']}');
+            }
+          });
+        }
+      }
+
       return Evaluation(
         id: json['id']?.toString() ?? '',
-        speciesId: json['speciesId']?.toString() ?? json['species']?.toString() ?? 'birds',
-        farmName: json['farmName']?.toString() ?? json['farm_name']?.toString() ?? '',
-        farmLocation: json['farmLocation']?.toString() ?? json['farm_location']?.toString() ?? '',
+        speciesId: json['speciesId']?.toString() ??
+            json['species']?.toString() ??
+            'birds',
+        farmName:
+            json['farmName']?.toString() ?? json['farm_name']?.toString() ?? '',
+        farmLocation: json['farmLocation']?.toString() ??
+            json['farm_location']?.toString() ??
+            '',
         evaluationDate: json['evaluationDate'] != null
             ? DateTime.parse(json['evaluationDate'])
             : (json['evaluation_date'] != null
                 ? DateTime.parse(json['evaluation_date'])
                 : DateTime.now()),
-        evaluatorName: json['evaluatorName']?.toString() ?? json['evaluator_name']?.toString() ?? '',
-        evaluatorDocument: json['evaluatorDocument']?.toString() ?? json['evaluator_document']?.toString() ?? '',
+        evaluatorName: json['evaluatorName']?.toString() ??
+            json['evaluator_name']?.toString() ??
+            '',
+        evaluatorDocument: json['evaluatorDocument']?.toString() ??
+            json['evaluator_document']?.toString() ??
+            '',
         responses: json['responses'] != null
             ? Map<String, dynamic>.from(json['responses'])
-            : (json['categories'] != null ? _parseCategoriesToResponses(json['categories']) : {}),
-        overallScore: _parseScore(json['overallScore']) ?? _parseScore(json['overall_score']),
-        categoryScores: _parseCategoryScores(json['categoryScores'] ?? json['category_scores']),
+            : (json['categories'] != null
+                ? _parseCategoriesToResponses(json['categories'])
+                : {}),
+        overallScore: _parseScore(json['overallScore']) ??
+            _parseScore(json['overall_score']),
+        categoryScores: _parseCategoryScores(
+                json['categoryScores'] ?? json['category_scores']) ??
+            _extractCategoryScoresFromCategories(json['categories']),
         status: json['status']?.toString() ?? 'completed',
         language: json['language']?.toString() ?? 'es',
         createdAt: json['createdAt'] != null
@@ -89,13 +131,75 @@ class Evaluation {
   }
 
   static Map<String, double>? _parseCategoryScores(dynamic scores) {
-    if (scores == null) return null;
-    if (scores is Map) {
-      return scores.map((key, value) => MapEntry(
-        key.toString(),
-        _parseScore(value) ?? 0.0,
-      ));
+    print('🔍 _parseCategoryScores - Tipo recibido: ${scores.runtimeType}');
+
+    print('🔍 _parseCategoryScores - Valor: $scores');
+
+    if (scores == null) {
+      print('❌ categoryScores es NULL');
+
+      return null;
     }
+
+    if (scores is Map) {
+      print('✅ categoryScores es un Map con ${scores.length} entradas');
+
+      scores.forEach((key, value) {
+        print('  - $key: $value (tipo: ${value.runtimeType})');
+      });
+
+      final result = scores.map((key, value) {
+        final parsedValue = _parseScore(value) ?? 0.0;
+
+        print('  ✓ Parseado $key: $parsedValue');
+
+        return MapEntry(key.toString(), parsedValue);
+      });
+
+      print('✅ categoryScores parseados: $result');
+
+      return result;
+    }
+
+    print('❌ categoryScores no es un Map, es: ${scores.runtimeType}');
+    return null;
+  }
+
+  static Map<String, double>? _extractCategoryScoresFromCategories(
+      dynamic categories) {
+    print(
+        '🔍 _extractCategoryScoresFromCategories - Intentando extraer scores de categories');
+
+    if (categories == null) {
+      print('❌ categories es NULL');
+
+      return null;
+    }
+
+    if (categories is Map) {
+      final categoryScores = <String, double>{};
+
+      categories.forEach((categoryKey, categoryData) {
+        if (categoryData is Map && categoryData.containsKey('score')) {
+          final score = _parseScore(categoryData['score']);
+
+          if (score != null) {
+            categoryScores[categoryKey.toString()] = score;
+
+            print('  ✓ Extraído score de $categoryKey: $score');
+          }
+        }
+      });
+
+      if (categoryScores.isNotEmpty) {
+        print('✅ categoryScores extraídos de categories: $categoryScores');
+
+        return categoryScores;
+      }
+    }
+
+    print('❌ No se pudieron extraer categoryScores de categories');
+
     return null;
   }
 

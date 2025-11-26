@@ -61,7 +61,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       }
 
       _userId = user.id.toString();
-      print('👤 Cargando evaluaciones SOLO del servidor para usuario: ${user.name} (ID: $_userId)');
+      print(
+          '👤 Cargando evaluaciones SOLO del servidor para usuario: ${user.name} (ID: $_userId)');
 
       // SOLO cargar reportes del servidor (NO locales)
       final result = await _apiService.getUserEvaluations(
@@ -71,9 +72,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
 
       if (result['success'] == true) {
         final evaluationsData = result['evaluations'] as List;
-        final serverReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
+        final serverReports =
+            evaluationsData.map((e) => Evaluation.fromJson(e)).toList();
 
         final total = result['total'] ?? 0;
         final hasMore = result['hasMore'] ?? false;
@@ -130,9 +130,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
 
       if (result['success'] == true) {
         final evaluationsData = result['evaluations'] as List;
-        final newReports = evaluationsData
-            .map((e) => Evaluation.fromJson(e))
-            .toList();
+        final newReports =
+            evaluationsData.map((e) => Evaluation.fromJson(e)).toList();
 
         setState(() {
           _serverReports.addAll(newReports);
@@ -141,7 +140,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
           _isLoadingMore = false;
         });
 
-        print('✅ Más reportes cargados: +${newReports.length} (total: ${_serverReports.length})');
+        print(
+            '✅ Más reportes cargados: +${newReports.length} (total: ${_serverReports.length})');
       }
     } catch (e) {
       print('❌ Error cargando más reportes: $e');
@@ -265,7 +265,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: BianTheme.warningYellow.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -382,7 +383,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: scoreColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -578,50 +580,51 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       if (result['success'] == true) {
         // Reconstruir el evaluation desde los datos completos del servidor
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
-        final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
+        final species = fullEvaluation.speciesId == 'birds'
+            ? Species.birds()
+            : Species.pigs();
 
-        print('📊 overallScore servidor: ${fullEvaluation.overallScore}');
-        print('📊 categoryScores servidor: ${fullEvaluation.categoryScores}');
+        print('📊 DEBUG Final - overallScore: ${fullEvaluation.overallScore}');
+
+        print(
+            '📊 DEBUG Final - categoryScores: ${fullEvaluation.categoryScores}');
+
+        print(
+            '📊 DEBUG Final - responses length: ${fullEvaluation.responses.length}');
 
         Map<String, dynamic> results;
 
-        // Si el servidor tiene overallScore válido, USARLO
-        if (fullEvaluation.overallScore != null && fullEvaluation.overallScore! > 0) {
-          print('✅ USANDO overallScore del servidor: ${fullEvaluation.overallScore}%');
+        // CONFIAR en lo que el backend envía - ya se parseó correctamente
 
-          // Si tiene categoryScores, usarlos; si no, distribuir proporcionalmente
-          Map<String, double> categoryScores;
-          if (fullEvaluation.categoryScores != null && fullEvaluation.categoryScores!.isNotEmpty) {
-            categoryScores = fullEvaluation.categoryScores!;
-          } else {
-            // Distribuir el score general en todas las categorías
-            categoryScores = {
-              'feeding': fullEvaluation.overallScore!,
-              'health': fullEvaluation.overallScore!,
-              'behavior': fullEvaluation.overallScore!,
-              'infrastructure': fullEvaluation.overallScore!,
-              'management': fullEvaluation.overallScore!,
-            };
-          }
+        if (fullEvaluation.overallScore != null &&
+            fullEvaluation.categoryScores != null &&
+            fullEvaluation.categoryScores!.isNotEmpty) {
+          print('✅ USANDO datos del servidor directamente');
 
           results = {
             'overall_score': fullEvaluation.overallScore!,
-            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
-            'category_scores': categoryScores,
+            'compliance_level':
+                _getComplianceLevel(fullEvaluation.overallScore!),
+            'category_scores': fullEvaluation.categoryScores!,
             'recommendations': _generateRecommendationKeys(
               fullEvaluation.overallScore!,
-              categoryScores,
+              fullEvaluation.categoryScores!,
             ),
             'critical_points': [],
             'strong_points': [],
           };
+
+          print(
+              '✅ Results del servidor: overall=${results['overall_score']}%, categories=${results['category_scores']}');
         } else {
-          // Fallback: recalcular desde responses
+          // Solo recalcular si el servidor no envió los datos completos
+
+          print('⚠️ Servidor no envió scores completos, recalculando...');
+
           results = _recalculateResults(fullEvaluation, species);
+
+          print('📊 Results recalculados: ${results}');
         }
-
-        print('✅ Results finales - overall: ${results['overall_score']}%, categories: ${results['category_scores']}');
-
         final translatedRecommendations = _translateRecommendations(
           results['recommendations'],
           fullEvaluation.language,
@@ -681,26 +684,32 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
     }
   }
 
-  List<String> _generateRecommendationKeys(double overallScore, Map<String, double> categoryScores) {
+  List<String> _generateRecommendationKeys(
+      double overallScore, Map<String, double> categoryScores) {
     final recommendationKeys = <String>[];
-    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
+    if (overallScore < 60)
+      recommendationKeys.add('immediate_attention_required');
     if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
       recommendationKeys.add('improve_feeding_practices');
     }
     if (categoryScores['health'] != null && categoryScores['health']! < 70) {
       recommendationKeys.add('strengthen_health_program');
     }
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+    if (categoryScores['infrastructure'] != null &&
+        categoryScores['infrastructure']! < 70) {
       recommendationKeys.add('improve_infrastructure');
     }
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+    if (categoryScores['management'] != null &&
+        categoryScores['management']! < 70) {
       recommendationKeys.add('train_staff_welfare');
     }
-    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+    if (recommendationKeys.isEmpty)
+      recommendationKeys.add('maintain_current_practices');
     return recommendationKeys;
   }
 
-  Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
+  Map<String, dynamic> _recalculateResults(
+      Evaluation evaluation, Species species) {
     int totalQuestions = 0;
     int positiveResponses = 0;
     final categoryScores = <String, double>{};
@@ -753,7 +762,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    final overallScore =
+        totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
 
     String complianceLevel;
     if (overallScore >= 90) {
@@ -769,20 +779,24 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
     }
 
     final recommendationKeys = <String>[];
-    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
+    if (overallScore < 60)
+      recommendationKeys.add('immediate_attention_required');
     if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
       recommendationKeys.add('improve_feeding_practices');
     }
     if (categoryScores['health'] != null && categoryScores['health']! < 70) {
       recommendationKeys.add('strengthen_health_program');
     }
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+    if (categoryScores['infrastructure'] != null &&
+        categoryScores['infrastructure']! < 70) {
       recommendationKeys.add('improve_infrastructure');
     }
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+    if (categoryScores['management'] != null &&
+        categoryScores['management']! < 70) {
       recommendationKeys.add('train_staff_welfare');
     }
-    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+    if (recommendationKeys.isEmpty)
+      recommendationKeys.add('maintain_current_practices');
 
     return {
       'overall_score': overallScore,
@@ -794,7 +808,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
     };
   }
 
-  List<String> _translateRecommendations(List recommendationKeys, String language) {
+  List<String> _translateRecommendations(
+      List recommendationKeys, String language) {
     final translations = <String, String>{
       'immediate_attention_required': language == 'es'
           ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
