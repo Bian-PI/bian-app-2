@@ -238,18 +238,21 @@ class LocalReportsStorage {
 
       // 1. Obtener reportes offline (sin usuario)
       final offlineKey = '${_keyLocalReportsPrefix}offline_mode';
-      final offlineReportsJson = prefs.getStringList(offlineKey) ?? [];
+      final offlineReportsString = prefs.getString(offlineKey);
 
-      if (offlineReportsJson.isEmpty) {
+      if (offlineReportsString == null || offlineReportsString.isEmpty) {
         print('ℹ️ No hay reportes offline para migrar');
         return 0;
       }
 
+      // 2. Parsear los reportes offline desde JSON
+      final List<dynamic> offlineReportsJson = jsonDecode(offlineReportsString);
+
       print('📦 Encontrados ${offlineReportsJson.length} reportes offline');
 
-      // 2. Parsear y actualizar userId en cada reporte
+      // 3. Convertir a objetos Evaluation
       final offlineReports = offlineReportsJson
-          .map((json) => Evaluation.fromJson(jsonDecode(json)))
+          .map((json) => Evaluation.fromJson(json as Map<String, dynamic>))
           .toList();
 
       final updatedReports = offlineReports.map((report) {
@@ -258,19 +261,30 @@ class LocalReportsStorage {
         return report; // El userId se agrega al sincronizar
       }).toList();
 
-      // 3. Guardar en la clave del usuario
+      // 4. Obtener reportes existentes del usuario (si los hay)
       final userKey = '$_keyLocalReportsPrefix$userId';
-      final userReportsJson = prefs.getStringList(userKey) ?? [];
+      final userReportsString = prefs.getString(userKey);
 
-      // Combinar reportes existentes del usuario con los offline migrados
-      final allReportsJson = [
-        ...userReportsJson,
-        ...offlineReportsJson, // Mantener el JSON original
+      List<Evaluation> existingUserReports = [];
+      if (userReportsString != null && userReportsString.isNotEmpty) {
+        final List<dynamic> existingJson = jsonDecode(userReportsString);
+        existingUserReports = existingJson
+            .map((json) => Evaluation.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      // 5. Combinar reportes existentes del usuario con los offline migrados
+      final allReports = [
+        ...existingUserReports,
+        ...updatedReports,
       ];
 
-      await prefs.setStringList(userKey, allReportsJson);
+      // 6. Guardar todos los reportes combinados como JSON
+      final allReportsJson = allReports.map((r) => r.toJson()).toList();
+      final encoded = jsonEncode(allReportsJson);
+      await prefs.setString(userKey, encoded);
 
-      // 4. Marcar todos como pendientes de sincronización
+      // 7. Marcar todos los reportes migrados como pendientes de sincronización
       final userPendingKey = '$_keyPendingSyncPrefix$userId';
       final pendingIds = prefs.getStringList(userPendingKey) ?? [];
 
@@ -282,14 +296,14 @@ class LocalReportsStorage {
 
       await prefs.setStringList(userPendingKey, pendingIds);
 
-      // 5. Limpiar reportes offline
+      // 8. Limpiar reportes offline
       await prefs.remove(offlineKey);
       await prefs.remove('${_keyPendingSyncPrefix}offline_mode');
 
-      print('✅ Migrados ${offlineReportsJson.length} reportes offline al usuario $userId');
+      print('✅ Migrados ${updatedReports.length} reportes offline al usuario $userId');
       print('📌 Todos marcados como pendientes de sincronización');
 
-      return offlineReportsJson.length;
+      return updatedReports.length;
     } catch (e) {
       print('❌ Error migrando reportes offline: $e');
       return 0;

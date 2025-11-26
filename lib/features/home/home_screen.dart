@@ -910,29 +910,31 @@ class _HomeScreenState extends State<HomeScreen> {
     required Species species,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(int.parse(species.gradientColors[0])),
-              Color(int.parse(species.gradientColors[1])),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 0),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(int.parse(species.gradientColors[0])),
+                Color(int.parse(species.gradientColors[1])),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Color(int.parse(species.gradientColors[0])).withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Color(int.parse(species.gradientColors[0])).withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
         child: Row(
           children: [
             Container(
@@ -974,6 +976,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
           ],
+        ),
         ),
       ),
     );
