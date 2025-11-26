@@ -24,6 +24,7 @@ class ResultsScreen extends StatelessWidget {
   final Species species;
   final Map<String, dynamic> results;
   final Map<String, dynamic> structuredJson;
+  final bool isLocal; // Indica si es un reporte local (no sincronizado)
 
   const ResultsScreen({
     super.key,
@@ -31,6 +32,7 @@ class ResultsScreen extends StatelessWidget {
     required this.species,
     required this.results,
     required this.structuredJson,
+    this.isLocal = false, // Por defecto, asumimos que está sincronizado
   });
 
   /// Prepara los datos de la evaluación para enviar al backend Java
@@ -1387,11 +1389,11 @@ class ResultsScreen extends StatelessWidget {
     final loc = AppLocalizations.of(context);
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
-    final complianceLevel = results['compliance_level'] as String;
-    final categoryScores = results['category_scores'] as Map<String, double>;
-    final criticalPoints = results['critical_points'] as List;
-    final strongPoints = results['strong_points'] as List;
-    final recommendations = structuredJson['recommendations'] as List;
+    final complianceLevel = (results['compliance_level'] as String?) ?? '';
+    final categoryScores = (results['category_scores'] as Map<String, double>?) ?? {};
+    final criticalPoints = (results['critical_points'] as List?) ?? [];
+    final strongPoints = (results['strong_points'] as List?) ?? [];
+    final recommendations = (structuredJson['recommendations'] as List?) ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -1479,111 +1481,112 @@ class ResultsScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Botón de sincronización con servidor (solo si hay usuario y conexión)
-            Consumer<ConnectivityService>(
-              builder: (context, connectivityService, _) {
-                return StreamBuilder<bool>(
-                  stream: connectivityService.connectionStatus,
-                  initialData: true, // Optimista: asumir conexión inicialmente
+            // Botón de sincronización con servidor (SOLO si el reporte es LOCAL)
+            if (isLocal)
+              Consumer<ConnectivityService>(
+                builder: (context, connectivityService, _) {
+                  return StreamBuilder<bool>(
+                    stream: connectivityService.connectionStatus,
+                    initialData: true, // Optimista: asumir conexión inicialmente
 
-                  builder: (context, snapshot) {
-                    final hasConnection =
-                        snapshot.data ?? true; // Por defecto optimista
+                    builder: (context, snapshot) {
+                      final hasConnection =
+                          snapshot.data ?? true; // Por defecto optimista
 
-                    return FutureBuilder<bool>(
-                      future: SecureStorage()
-                          .getUser()
-                          .then((user) => user != null),
+                      return FutureBuilder<bool>(
+                        future: SecureStorage()
+                            .getUser()
+                            .then((user) => user != null),
 
-                      initialData: true, // Asumir que hay usuario por defecto
+                        initialData: true, // Asumir que hay usuario por defecto
 
-                      builder: (context, userSnapshot) {
-                        final hasUser = userSnapshot.data ?? false;
+                        builder: (context, userSnapshot) {
+                          final hasUser = userSnapshot.data ?? false;
 
-                        // Si no hay usuario, mostrar mensaje de que necesita login
+                          // Si no hay usuario, mostrar mensaje de que necesita login
 
-                        if (!hasUser) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: BianTheme.lightGray.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: BianTheme.mediumGray),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.person_off,
-                                  color: BianTheme.darkGray,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    loc.translate('sync_requires_login'),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: BianTheme.darkGray,
+                          if (!hasUser) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: BianTheme.lightGray.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: BianTheme.mediumGray),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person_off,
+                                    color: BianTheme.darkGray,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      loc.translate('sync_requires_login'),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: BianTheme.darkGray,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
+                                ],
+                              ),
+                            );
+                          }
 
-                        // Si no hay conexión Y tenemos datos confirmados, mostrar modo offline
+                          // Si no hay conexión Y tenemos datos confirmados, mostrar modo offline
 
-                        if (!hasConnection && snapshot.hasData) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: BianTheme.warningYellow.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: BianTheme.warningYellow),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.cloud_off,
-                                  color: BianTheme.warningYellow,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    loc.translate('offline_mode_active'),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                          if (!hasConnection && snapshot.hasData) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: BianTheme.warningYellow.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: BianTheme.warningYellow),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.cloud_off,
+                                    color: BianTheme.warningYellow,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      loc.translate('offline_mode_active'),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Si hay usuario Y conexión, mostrar botón de sync
+                          return ElevatedButton.icon(
+                            onPressed: () => _syncToServer(context),
+                            icon: const Icon(Icons.cloud_upload),
+                            label: Text(loc.translate('sync_to_server')),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: BianTheme.successGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              minimumSize: const Size(double.infinity, 52),
                             ),
                           );
-                        }
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
 
-                        // Si hay usuario Y conexión, mostrar botón de sync
-                        return ElevatedButton.icon(
-                          onPressed: () => _syncToServer(context),
-                          icon: const Icon(Icons.cloud_upload),
-                          label: Text(loc.translate('sync_to_server')),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: BianTheme.successGreen,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            minimumSize: const Size(double.infinity, 52),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
+            if (isLocal) const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () => Navigator.pop(context),
               child: Text(loc.translate('close')),

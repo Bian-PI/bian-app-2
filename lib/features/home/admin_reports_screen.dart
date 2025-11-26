@@ -9,7 +9,7 @@ import '../../core/widgets/custom_snackbar.dart';
 import '../evaluation/results_screen.dart';
 import 'package:intl/intl.dart';
 
-/// Pantalla de administrador para ver TODOS los reportes del sistema
+/// Pantalla de administrador mejorada con búsqueda y filtros
 class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
 
@@ -19,14 +19,15 @@ class AdminReportsScreen extends StatefulWidget {
 
 class _AdminReportsScreenState extends State<AdminReportsScreen> {
   final _apiService = ApiService();
+  final _searchController = TextEditingController();
 
   List<Evaluation> _allReports = [];
-  int _reportTotal = 0;
-  bool _hasMoreReports = false;
-  int _reportOffset = 0;
-  final int _reportLimit = 20;
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
+  List<Evaluation> _filteredReports = [];
+  bool _isLoading = false;
+  String _searchQuery = '';
+  String _selectedSpeciesFilter = 'all'; // 'all', 'birds', 'pigs'
+  double _minScoreFilter = 0;
+  Map<String, int> _userReportCount = {};
 
   @override
   void initState() {
@@ -34,81 +35,124 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     _loadAllReports();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadAllReports() async {
-    if (_isLoading || _isLoadingMore) return;
+    if (_isLoading) return;
 
     setState(() {
-      if (_reportOffset == 0) {
-        _isLoading = true;
-      } else {
-        _isLoadingMore = true;
-      }
+      _isLoading = true;
     });
 
     try {
+      print('📥 [ADMIN] Cargando todos los reportes...');
+
       final result = await _apiService.getAllEvaluationsAdmin(
-        limit: _reportLimit,
-        offset: _reportOffset,
+        limit: 500, // Cargar todos de una vez
+        offset: 0,
       );
 
+      if (!mounted) return;
+
       if (result['success'] == true) {
-        final List<dynamic> evaluationsData = result['evaluations'];
+        final List<dynamic> evaluationsData = result['evaluations'] ?? [];
         final List<Evaluation> newReports = evaluationsData
             .map((json) => Evaluation.fromJson(json as Map<String, dynamic>))
             .toList();
 
-        final int total = result['total'];
-        final bool hasMore = result['hasMore'];
+        // Calcular estadísticas de usuarios
+        _userReportCount = {};
+        for (var report in newReports) {
+          final userId = report.user?.id?.toString() ?? report.evaluatorDocument ?? 'unknown';
+          _userReportCount[userId] = (_userReportCount[userId] ?? 0) + 1;
+        }
 
         setState(() {
-          if (_reportOffset == 0) {
-            _allReports = newReports;
-          } else {
-            _allReports.addAll(newReports);
-          }
-          _reportTotal = total;
-          _hasMoreReports = hasMore;
-          _reportOffset = _allReports.length;
+          _allReports = newReports;
+          _filteredReports = newReports;
           _isLoading = false;
-          _isLoadingMore = false;
         });
 
-        print('✅ [ADMIN] Reportes cargados: ${_allReports.length} / $total');
+        print('✅ [ADMIN] ${_allReports.length} reportes cargados');
       } else {
         setState(() {
           _isLoading = false;
-          _isLoadingMore = false;
+          _allReports = [];
+          _filteredReports = [];
         });
 
         if (mounted) {
           CustomSnackbar.showError(
             context,
-            'Error al cargar reportes',
+            'Error: ${result['message'] ?? 'No se pudieron cargar reportes'}',
           );
         }
       }
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
-        _isLoadingMore = false;
+        _allReports = [];
+        _filteredReports = [];
       });
+
       print('❌ Error cargando reportes (admin): $e');
+      CustomSnackbar.showError(
+        context,
+        'Error de conexión: $e',
+      );
     }
   }
 
-  Future<void> _refreshReports() async {
+  void _applyFilters() {
     setState(() {
-      _reportOffset = 0;
-      _allReports.clear();
+      _filteredReports = _allReports.where((report) {
+        // Filtro de búsqueda (documento, granja, ubicación, evaluador)
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          final matchesFarm = report.farmName.toLowerCase().contains(query);
+          final matchesLocation = report.farmLocation.toLowerCase().contains(query);
+          final matchesEvaluator = report.evaluatorName.toLowerCase().contains(query);
+          final matchesDocument = report.evaluatorDocument.toLowerCase().contains(query);
+
+          if (!matchesFarm && !matchesLocation && !matchesEvaluator && !matchesDocument) {
+            return false;
+          }
+        }
+
+        // Filtro de especie
+        if (_selectedSpeciesFilter != 'all' && report.speciesId != _selectedSpeciesFilter) {
+          return false;
+        }
+
+        // Filtro de score mínimo
+        if ((report.overallScore ?? 0) < _minScoreFilter) {
+          return false;
+        }
+
+        return true;
+      }).toList();
+
+      // Ordenar por fecha (más recientes primero)
+      _filteredReports.sort((a, b) {
+        return b.evaluationDate.compareTo(a.evaluationDate);
+      });
     });
-    await _loadAllReports();
   }
 
-  /// Obtiene los detalles completos del servidor y muestra el reporte en ResultsScreen
+  Future<void> _refreshReports() async {
+    await _loadAllReports();
+    _applyFilters();
+  }
+
   void _viewReport(Evaluation evaluation) async {
     final loc = AppLocalizations.of(context);
 
-    // Mostrar indicador de carga
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -118,50 +162,38 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     );
 
     try {
-      // Obtener detalles completos del servidor
       final result = await _apiService.getEvaluationById(evaluation.id);
 
-      if (mounted) Navigator.pop(context); // Cerrar loading
+      if (mounted) Navigator.pop(context);
 
       if (result['success'] == true) {
-        // Reconstruir el evaluation desde los datos completos del servidor
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
         final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
 
         Map<String, dynamic> results;
 
-        // Si el servidor tiene overallScore válido, USARLO
-        if (fullEvaluation.overallScore != null && fullEvaluation.overallScore! > 0) {
-          print('✅ [ADMIN] USANDO overallScore del servidor: ${fullEvaluation.overallScore}%');
-
-          // Si tiene categoryScores, usarlos; si no, distribuir proporcionalmente
-          Map<String, double> categoryScores;
-          if (fullEvaluation.categoryScores != null && fullEvaluation.categoryScores!.isNotEmpty) {
-            categoryScores = fullEvaluation.categoryScores!;
-          } else {
-            // Distribuir el score general en todas las categorías
-            categoryScores = {
-              'feeding': fullEvaluation.overallScore!,
-              'health': fullEvaluation.overallScore!,
-              'behavior': fullEvaluation.overallScore!,
-              'infrastructure': fullEvaluation.overallScore!,
-              'management': fullEvaluation.overallScore!,
-            };
-          }
+        // USAR la misma lógica que my_evaluations_screen.dart
+        if (fullEvaluation.overallScore != null &&
+            fullEvaluation.categoryScores != null &&
+            fullEvaluation.categoryScores!.isNotEmpty) {
+          print('✅ [ADMIN] USANDO datos del servidor directamente');
 
           results = {
-            'overall_score': fullEvaluation.overallScore!,
+            'overall_score': fullEvaluation.overallScore!,  // ← KEY CORRECTA
             'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
-            'category_scores': categoryScores,
+            'category_scores': fullEvaluation.categoryScores!,  // ← KEY CORRECTA
             'recommendations': _generateRecommendationKeys(
               fullEvaluation.overallScore!,
-              categoryScores,
+              fullEvaluation.categoryScores!,
             ),
             'critical_points': [],
             'strong_points': [],
           };
+
+          print('✅ [ADMIN] Results: overall=${results['overall_score']}%, categories=${results['category_scores']}');
         } else {
-          // Fallback: recalcular desde responses
+          // Recalcular si el servidor no envió datos completos
+          print('⚠️ [ADMIN] Recalculando scores...');
           results = _recalculateResults(fullEvaluation, species);
         }
 
@@ -176,6 +208,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           translatedRecommendations,
         );
 
+        print('✅ [ADMIN] Navegando a ResultsScreen');
+
         if (mounted) {
           Navigator.push(
             context,
@@ -185,323 +219,53 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                 species: species,
                 results: results,
                 structuredJson: structuredJson,
+                isLocal: false,
               ),
             ),
           );
         }
       } else {
-        // Error al obtener detalles
         if (mounted) {
-          CustomSnackbar.showError(
-            context,
-            loc.translate('error_loading_evaluation'),
-          );
+          CustomSnackbar.showError(context, loc.translate('error_loading_report'));
         }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Cerrar loading si está abierto
-        CustomSnackbar.showError(
-          context,
-          'Error: ${e.toString()}',
-        );
+        Navigator.pop(context);
+        CustomSnackbar.showError(context, 'Error: ${e.toString()}');
       }
       print('❌ Error al cargar evaluación: $e');
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.admin_panel_settings, color: Colors.white),
-            const SizedBox(width: 8),
-            Text('Todos los Reportes (Admin)'),
-          ],
-        ),
-        backgroundColor: BianTheme.primaryRed,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refreshReports,
-              child: _allReports.isEmpty
-                  ? _buildEmptyState(loc)
-                  : ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        // Estadísticas
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: BianTheme.primaryRed.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: BianTheme.primaryRed.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildStatItem(
-                                icon: Icons.assessment,
-                                label: 'Total Reportes',
-                                value: '$_reportTotal',
-                              ),
-                              _buildStatItem(
-                                icon: Icons.people,
-                                label: 'Usuarios únicos',
-                                value: '${_getUniqueUsersCount()}',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Lista de reportes
-                        ..._allReports.map((report) => _buildReportCard(report)),
-
-                        // Botón para cargar más
-                        if (_hasMoreReports)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: _isLoadingMore
-                                ? const Center(child: CircularProgressIndicator())
-                                : ElevatedButton(
-                                    onPressed: _loadAllReports,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: BianTheme.infoBlue,
-                                      minimumSize: const Size(double.infinity, 48),
-                                    ),
-                                    child: Text(loc.translate('load_more')),
-                                  ),
-                          ),
-                      ],
-                    ),
-            ),
-    );
+  String _getComplianceLevel(double score) {
+    if (score >= 85) return 'excellent';
+    if (score >= 70) return 'good';
+    if (score >= 50) return 'acceptable';
+    return 'needs_improvement';
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: BianTheme.primaryRed, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: BianTheme.primaryRed,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: BianTheme.mediumGray,
-          ),
-        ),
-      ],
-    );
+  List<String> _generateRecommendationKeys(
+    double overallScore,
+    Map<String, double> categoryScores,
+  ) {
+    final recommendations = <String>[];
+
+    categoryScores.forEach((category, score) {
+      if (score < 70) {
+        recommendations.add('improve_$category');
+      }
+    });
+
+    if (overallScore < 85) {
+      recommendations.add('general_improvement');
+    }
+
+    return recommendations;
   }
 
-  int _getUniqueUsersCount() {
-    // Contar usuarios únicos basados en documento de identidad
-    final uniqueDocuments = _allReports
-        .map((r) => r.evaluatorDocument)
-        .where((doc) => doc.isNotEmpty)
-        .toSet();
-    return uniqueDocuments.length;
-  }
-
-  Widget _buildEmptyState(AppLocalizations loc) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inbox,
-              size: 80,
-              color: BianTheme.mediumGray.withOpacity(0.5),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No hay reportes en el sistema',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: BianTheme.mediumGray,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportCard(Evaluation evaluation) {
-    final score = evaluation.overallScore ?? 0.0;
-
-    Color scoreColor;
-    if (score >= 90) {
-      scoreColor = BianTheme.successGreen;
-    } else if (score >= 75) {
-      scoreColor = const Color(0xFF4CAF50);
-    } else if (score >= 60) {
-      scoreColor = BianTheme.warningYellow;
-    } else {
-      scoreColor = BianTheme.errorRed;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _viewReport(evaluation),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: scoreColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${score.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  SvgPicture.asset(
-                    evaluation.speciesId == 'birds'
-                        ? 'assets/icons/ave.svg'
-                        : 'assets/icons/cerdo.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(
-                      BianTheme.primaryRed,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                evaluation.farmName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                evaluation.farmLocation,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: BianTheme.mediumGray,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.person,
-                    size: 14,
-                    color: BianTheme.mediumGray,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      evaluation.evaluatorName ?? 'Usuario',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: BianTheme.mediumGray,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: BianTheme.mediumGray,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    DateFormat('dd/MM/yyyy').format(evaluation.evaluationDate),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BianTheme.mediumGray,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getComplianceLevel(double overallScore) {
-    if (overallScore >= 90) {
-      return 'excellent';
-    } else if (overallScore >= 75) {
-      return 'good';
-    } else if (overallScore >= 60) {
-      return 'acceptable';
-    } else if (overallScore >= 40) {
-      return 'needs_improvement';
-    } else {
-      return 'critical';
-    }
-  }
-
-  List<String> _generateRecommendationKeys(double overallScore, Map<String, double> categoryScores) {
-    final recommendationKeys = <String>[];
-    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendationKeys.add('improve_feeding_practices');
-    }
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendationKeys.add('strengthen_health_program');
-    }
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendationKeys.add('improve_infrastructure');
-    }
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendationKeys.add('train_staff_welfare');
-    }
-    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
-    return recommendationKeys;
+  List<String> _translateRecommendations(List recommendations, String language) {
+    return recommendations.map((key) => key.toString()).toList();
   }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
@@ -514,7 +278,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
       int categoryPositive = 0;
 
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
+        if (field.type.toString().contains('yesNo')) {
           final key = '${category.id}_${field.id}';
           final value = evaluation.responses[key];
 
@@ -522,29 +286,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             categoryTotal++;
             totalQuestions++;
 
-            bool isPositive = false;
-            if (field.id.contains('access') ||
-                field.id.contains('quality') ||
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
-            }
-
-            if (isPositive) {
+            if (value == true || value == 'true') {
               categoryPositive++;
               positiveResponses++;
             }
@@ -554,79 +296,415 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
       if (categoryTotal > 0) {
         categoryScores[category.id] = (categoryPositive / categoryTotal) * 100;
+      } else {
+        categoryScores[category.id] = 0.0;
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
-
-    String complianceLevel;
-    if (overallScore >= 90) {
-      complianceLevel = 'excellent';
-    } else if (overallScore >= 75) {
-      complianceLevel = 'good';
-    } else if (overallScore >= 60) {
-      complianceLevel = 'acceptable';
-    } else if (overallScore >= 40) {
-      complianceLevel = 'needs_improvement';
-    } else {
-      complianceLevel = 'critical';
-    }
-
-    final recommendationKeys = <String>[];
-    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendationKeys.add('improve_feeding_practices');
-    }
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendationKeys.add('strengthen_health_program');
-    }
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendationKeys.add('improve_infrastructure');
-    }
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendationKeys.add('train_staff_welfare');
-    }
-    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0.0;
 
     return {
-      'overall_score': overallScore,
-      'compliance_level': complianceLevel,
-      'category_scores': categoryScores,
-      'recommendations': recommendationKeys,
+      'overall_score': overallScore,  // ← KEY CORRECTA
+      'compliance_level': _getComplianceLevel(overallScore),
+      'category_scores': categoryScores,  // ← KEY CORRECTA
+      'recommendations': _generateRecommendationKeys(overallScore, categoryScores),
       'critical_points': [],
       'strong_points': [],
     };
   }
 
-  List<String> _translateRecommendations(List recommendationKeys, String language) {
-    final translations = <String, String>{
-      'immediate_attention_required': language == 'es'
-          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
-          : 'Immediate attention required to improve animal welfare conditions',
-      'improve_feeding_practices': language == 'es'
-          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
-          : 'Improve feeding practices and ensure constant access to quality water and food',
-      'strengthen_health_program': language == 'es'
-          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
-          : 'Strengthen animal health program, including vaccination and disease control',
-      'improve_infrastructure': language == 'es'
-          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
-          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': language == 'es'
-          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
-          : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': language == 'es'
-          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
-          : 'Maintain current good practices and continue monitoring animal welfare',
-    };
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
 
-    final translatedRecommendations = <String>[];
-    for (var key in recommendationKeys) {
-      if (translations.containsKey(key)) {
-        translatedRecommendations.add(translations[key]!);
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(Icons.admin_panel_settings, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(loc.translate('admin_all_reports')),
+          ],
+        ),
+        backgroundColor: BianTheme.primaryRed,
+      ),
+      body: Column(
+        children: [
+          // Barra de búsqueda y filtros
+          _buildSearchAndFilters(loc),
+
+          // Estadísticas
+          _buildStatistics(loc),
+
+          // Lista de reportes
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredReports.isEmpty
+                    ? _buildEmptyState(loc)
+                    : RefreshIndicator(
+                        onRefresh: _refreshReports,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredReports.length,
+                          itemBuilder: (context, index) {
+                            return _buildReportCard(_filteredReports[index]);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilters(AppLocalizations loc) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Barra de búsqueda
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: loc.translate('search_placeholder'),
+              hintStyle: TextStyle(fontSize: 14),
+              prefixIcon: Icon(Icons.search, color: BianTheme.primaryRed),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                        _applyFilters();
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: BianTheme.mediumGray),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: BianTheme.primaryRed, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+              _applyFilters();
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          // Filtros en fila
+          Row(
+            children: [
+              // Filtro de especie
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedSpeciesFilter,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 'all', child: Text(loc.translate('filter_all_species'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 'birds', child: Text(loc.translate('filter_birds'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 'pigs', child: Text(loc.translate('filter_pigs'), style: TextStyle(fontSize: 14))),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedSpeciesFilter = value!;
+                    });
+                    _applyFilters();
+                  },
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Filtro de score mínimo
+              Expanded(
+                child: DropdownButtonFormField<double>(
+                  value: _minScoreFilter,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 0.0, child: Text(loc.translate('filter_score_all'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 50.0, child: Text(loc.translate('filter_score_50'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 70.0, child: Text(loc.translate('filter_score_70'), style: TextStyle(fontSize: 14))),
+                    DropdownMenuItem(value: 85.0, child: Text(loc.translate('filter_score_85'), style: TextStyle(fontSize: 14))),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _minScoreFilter = value!;
+                    });
+                    _applyFilters();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatistics(AppLocalizations loc) {
+    // Contar usuarios ÚNICOS de verdad
+    final Set<String> uniqueUserIds = {};
+    for (var report in _allReports) {
+      final userId = report.user?.id?.toString() ?? report.evaluatorDocument;
+      if (userId.isNotEmpty) {
+        uniqueUserIds.add(userId);
       }
     }
 
-    return translatedRecommendations;
+    final uniqueUsers = uniqueUserIds.length;
+    final totalReports = _filteredReports.length;
+    final avgScore = _filteredReports.isEmpty
+        ? 0.0
+        : _filteredReports.map((r) => r.overallScore ?? 0.0).reduce((a, b) => a + b) / totalReports;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple, // Color sólido sin degradado
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            icon: Icons.assessment,
+            label: loc.translate('stats_reports'),
+            value: '$totalReports',
+          ),/*
+          _buildStatItem(
+            icon: Icons.people,
+            label: loc.translate('stats_users'),
+            value: '$uniqueUsers',
+          ),*/
+          _buildStatItem(
+            icon: Icons.trending_up,
+            label: loc.translate('stats_average'),
+            value: '${avgScore.toStringAsFixed(0)}%',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 28),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReportCard(Evaluation report) {
+    final loc = AppLocalizations.of(context);
+    final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    final speciesColor = Color(int.parse(species.gradientColors[0]));
+    final score = report.overallScore ?? 0.0;
+    final scoreColor = score >= 85
+        ? BianTheme.successGreen
+        : score >= 70
+            ? BianTheme.warningYellow
+            : BianTheme.errorRed;
+
+    final dateStr = DateFormat('dd MMM yyyy', 'es').format(report.evaluationDate);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: InkWell(
+        onTap: () => _viewReport(report),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Icono de especie
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: speciesColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SvgPicture.asset(
+                      species.iconPath,
+                      width: 28,
+                      height: 28,
+                      colorFilter: ColorFilter.mode(speciesColor, BlendMode.srcIn),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Info principal
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          report.farmName.isEmpty ? loc.translate('no_name') : report.farmName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          report.farmLocation.isEmpty ? loc.translate('no_location') : report.farmLocation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: BianTheme.mediumGray,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Score
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: scoreColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: scoreColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '${score.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: scoreColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Info adicional - SIN contador de reportes
+              Row(
+                children: [
+                  Icon(Icons.person, size: 14, color: BianTheme.mediumGray),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      report.evaluatorName.isEmpty ? loc.translate('no_evaluator') : report.evaluatorName,
+                      style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.calendar_today, size: 14, color: BianTheme.mediumGray),
+                  const SizedBox(width: 4),
+                  Text(
+                    dateStr,
+                    style: TextStyle(fontSize: 12, color: BianTheme.mediumGray),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppLocalizations loc) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 80,
+            color: BianTheme.mediumGray.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            loc.translate('no_reports_found'),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: BianTheme.mediumGray,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            loc.translate('adjust_search_filters'),
+            style: TextStyle(
+              fontSize: 14,
+              color: BianTheme.mediumGray,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
