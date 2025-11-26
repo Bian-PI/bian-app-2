@@ -42,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _rememberAccount = false;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
+  bool _hasSavedCredentials = false;
   String? _biometricType;
   int _pendingReportsCount = 0;
 
@@ -104,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() {
         _rememberAccount = rememberEnabled;
         _biometricEnabled = biometricEnabled;
+        _hasSavedCredentials = savedEmail != null;
         if (savedEmail != null) {
           _emailController.text = savedEmail;
         }
@@ -192,7 +194,12 @@ class _LoginScreenState extends State<LoginScreen>
 
         _sessionManager.startMonitoring();
 
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          if (_rememberAccount) {
+            _hasSavedCredentials = true;
+          }
+        });
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -346,13 +353,48 @@ class _LoginScreenState extends State<LoginScreen>
         setState(() => _rememberAccount = true);
       }
     } else {
+      // Confirmar antes de desmarcar
+      final loc = AppLocalizations.of(context);
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(loc.translate('warning')),
+          content: Text(
+            'Al desmarcar esta opción, tus credenciales guardadas se eliminarán y deberás iniciar sesión manualmente la próxima vez.\n\n¿Deseas continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.translate('cancel')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BianTheme.errorRed,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar credenciales'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
       setState(() {
         _rememberAccount = false;
         _biometricEnabled = false;
+        _hasSavedCredentials = false;
       });
       await _biometricService.disableBiometric();
       await _biometricService.clearRememberedAccount();
       _passwordController.clear();
+
+      if (mounted) {
+        CustomSnackbar.showInfo(
+          context,
+          'Credenciales eliminadas correctamente',
+        );
+      }
     }
   }
 
@@ -696,6 +738,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
 
                                   if (_biometricEnabled &&
+                                      _hasSavedCredentials &&
                                       !_isLoading &&
                                       currentConnection)
                                     Padding(

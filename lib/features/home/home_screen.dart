@@ -17,6 +17,7 @@ import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
 import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
+import 'local_reports_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -805,6 +806,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.storage, color: BianTheme.infoBlue),
+            title: const Text('Reportes Locales'),
+            trailing: _pendingSyncCount > 0
+                ? Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: BianTheme.warningYellow,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$_pendingSyncCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : null,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+              ).then((_) => _loadAllData()); // Recargar al volver
             },
           ),
           ListTile(
