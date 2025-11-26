@@ -100,13 +100,22 @@ class _LoginScreenState extends State<LoginScreen>
     final savedEmail = await _biometricService.getSavedEmail();
     final biometricEnabled = await _biometricService.isBiometricEnabled();
 
-    if (mounted && savedEmail != null) {
+    if (mounted) {
       setState(() {
         _rememberAccount = rememberEnabled;
         _biometricEnabled = biometricEnabled;
-        _emailController.text = savedEmail;
+        if (savedEmail != null) {
+          _emailController.text = savedEmail;
+        }
       });
-      print('✅ Credenciales cargadas: $savedEmail');
+
+      if (savedEmail != null) {
+        print('✅ Credenciales cargadas: $savedEmail');
+        print('🔐 Biometría habilitada: $biometricEnabled');
+        print('💾 Recordar cuenta: $rememberEnabled');
+      } else {
+        print('ℹ️ No hay credenciales guardadas');
+      }
     }
   }
 
@@ -225,7 +234,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _loginWithBiometric() async {
+    print('🔐 Iniciando login con biometría...');
+
     if (!_biometricEnabled) {
+      print('❌ Biometría no habilitada');
       CustomSnackbar.showWarning(
         context,
         'La autenticación biométrica no está habilitada',
@@ -234,24 +246,34 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     final loc = AppLocalizations.of(context);
+
+    // Primero verificar que hay credenciales guardadas
+    final credentials = await _biometricService.getSavedCredentials();
+    if (credentials == null) {
+      print('❌ No hay credenciales guardadas');
+      CustomSnackbar.showError(context, 'No hay credenciales guardadas para este dispositivo');
+      return;
+    }
+
+    print('✅ Credenciales encontradas para: ${credentials['email']}');
+
+    // Solicitar autenticación biométrica
+    print('👆 Solicitando autenticación biométrica...');
     final authenticated = await _biometricService.authenticate(
       reason: loc.translate('authenticate_with', [_biometricType ?? 'Biometría']),
     );
 
     if (!authenticated) {
+      print('❌ Autenticación biométrica fallida o cancelada');
       CustomSnackbar.showError(context, 'Autenticación biométrica fallida');
       return;
     }
 
-    final credentials = await _biometricService.getSavedCredentials();
-    if (credentials == null) {
-      CustomSnackbar.showError(context, 'No hay credenciales guardadas');
-      return;
-    }
-
+    print('✅ Autenticación biométrica exitosa');
     setState(() => _isLoading = true);
 
     try {
+      print('📡 Haciendo login con credenciales guardadas...');
       final result = await _apiService.login(
         credentials['email']!,
         credentials['password']!,
@@ -260,6 +282,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
 
       if (result['success'] == true) {
+        print('✅ Login exitoso con biometría');
         await _storage.saveToken(result['token']);
 
         if (result['user'] != null) {
@@ -285,10 +308,12 @@ class _LoginScreenState extends State<LoginScreen>
           );
         }
       } else {
+        print('❌ Login fallido: ${result['message']}');
         setState(() => _isLoading = false);
         _showSnackBar(loc.translate('invalid_credentials'), isError: true);
       }
     } catch (e) {
+      print('❌ Error en login biométrico: $e');
       setState(() => _isLoading = false);
       _showSnackBar(loc.translate('connection_error'), isError: true);
     }
