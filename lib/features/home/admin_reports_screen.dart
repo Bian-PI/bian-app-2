@@ -128,14 +128,42 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
         final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
 
-        print('📊 [ADMIN] DEBUG - overallScore: ${fullEvaluation.overallScore}');
-        print('📊 [ADMIN] DEBUG - categoryScores: ${fullEvaluation.categoryScores}');
-        print('📊 [ADMIN] DEBUG - responses length: ${fullEvaluation.responses.length}');
+        Map<String, dynamic> results;
 
-        // SIEMPRE recalcular desde responses para asegurar datos correctos
-        final results = _recalculateResults(fullEvaluation, species);
+        // Si el servidor tiene overallScore válido, USARLO
+        if (fullEvaluation.overallScore != null && fullEvaluation.overallScore! > 0) {
+          print('✅ [ADMIN] USANDO overallScore del servidor: ${fullEvaluation.overallScore}%');
 
-        print('📊 [ADMIN] DEBUG - results calculados: $results');
+          // Si tiene categoryScores, usarlos; si no, distribuir proporcionalmente
+          Map<String, double> categoryScores;
+          if (fullEvaluation.categoryScores != null && fullEvaluation.categoryScores!.isNotEmpty) {
+            categoryScores = fullEvaluation.categoryScores!;
+          } else {
+            // Distribuir el score general en todas las categorías
+            categoryScores = {
+              'feeding': fullEvaluation.overallScore!,
+              'health': fullEvaluation.overallScore!,
+              'behavior': fullEvaluation.overallScore!,
+              'infrastructure': fullEvaluation.overallScore!,
+              'management': fullEvaluation.overallScore!,
+            };
+          }
+
+          results = {
+            'overall_score': fullEvaluation.overallScore!,
+            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
+            'category_scores': categoryScores,
+            'recommendations': _generateRecommendationKeys(
+              fullEvaluation.overallScore!,
+              categoryScores,
+            ),
+            'critical_points': [],
+            'strong_points': [],
+          };
+        } else {
+          // Fallback: recalcular desde responses
+          results = _recalculateResults(fullEvaluation, species);
+        }
 
         final translatedRecommendations = _translateRecommendations(
           results['recommendations'],

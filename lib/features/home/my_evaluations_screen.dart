@@ -580,14 +580,47 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
         final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
 
-        print('📊 DEBUG - overallScore del servidor: ${fullEvaluation.overallScore}');
-        print('📊 DEBUG - categoryScores del servidor: ${fullEvaluation.categoryScores}');
-        print('📊 DEBUG - responses length: ${fullEvaluation.responses.length}');
+        print('📊 overallScore servidor: ${fullEvaluation.overallScore}');
+        print('📊 categoryScores servidor: ${fullEvaluation.categoryScores}');
 
-        // SIEMPRE recalcular desde responses para asegurar datos correctos
-        final results = _recalculateResults(fullEvaluation, species);
+        Map<String, dynamic> results;
 
-        print('📊 DEBUG - results calculados: $results');
+        // Si el servidor tiene overallScore válido, USARLO
+        if (fullEvaluation.overallScore != null && fullEvaluation.overallScore! > 0) {
+          print('✅ USANDO overallScore del servidor: ${fullEvaluation.overallScore}%');
+
+          // Si tiene categoryScores, usarlos; si no, distribuir proporcionalmente
+          Map<String, double> categoryScores;
+          if (fullEvaluation.categoryScores != null && fullEvaluation.categoryScores!.isNotEmpty) {
+            categoryScores = fullEvaluation.categoryScores!;
+          } else {
+            // Distribuir el score general en todas las categorías
+            categoryScores = {
+              'feeding': fullEvaluation.overallScore!,
+              'health': fullEvaluation.overallScore!,
+              'behavior': fullEvaluation.overallScore!,
+              'infrastructure': fullEvaluation.overallScore!,
+              'management': fullEvaluation.overallScore!,
+            };
+          }
+
+          results = {
+            'overall_score': fullEvaluation.overallScore!,
+            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
+            'category_scores': categoryScores,
+            'recommendations': _generateRecommendationKeys(
+              fullEvaluation.overallScore!,
+              categoryScores,
+            ),
+            'critical_points': [],
+            'strong_points': [],
+          };
+        } else {
+          // Fallback: recalcular desde responses
+          results = _recalculateResults(fullEvaluation, species);
+        }
+
+        print('✅ Results finales - overall: ${results['overall_score']}%, categories: ${results['category_scores']}');
 
         final translatedRecommendations = _translateRecommendations(
           results['recommendations'],
