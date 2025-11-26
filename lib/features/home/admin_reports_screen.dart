@@ -172,37 +172,43 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
         Map<String, dynamic> results;
 
-        if (fullEvaluation.overallScore != null && fullEvaluation.overallScore! > 0) {
-          Map<String, double> categoryScores;
-          if (fullEvaluation.categoryScores != null && fullEvaluation.categoryScores!.isNotEmpty) {
-            categoryScores = fullEvaluation.categoryScores!;
-          } else {
-            categoryScores = {
-              'feeding': fullEvaluation.overallScore!,
-              'health': fullEvaluation.overallScore!,
-              'behavior': fullEvaluation.overallScore!,
-              'infrastructure': fullEvaluation.overallScore!,
-              'management': fullEvaluation.overallScore!,
-            };
-          }
+        // USAR la misma lógica que my_evaluations_screen.dart
+        if (fullEvaluation.overallScore != null &&
+            fullEvaluation.categoryScores != null &&
+            fullEvaluation.categoryScores!.isNotEmpty) {
+          print('✅ [ADMIN] USANDO datos del servidor directamente');
 
           results = {
-            'overallScore': fullEvaluation.overallScore,
-            'categoryScores': categoryScores,
+            'overall_score': fullEvaluation.overallScore!,  // ← KEY CORRECTA
+            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
+            'category_scores': fullEvaluation.categoryScores!,  // ← KEY CORRECTA
+            'recommendations': _generateRecommendationKeys(
+              fullEvaluation.overallScore!,
+              fullEvaluation.categoryScores!,
+            ),
+            'critical_points': [],
+            'strong_points': [],
           };
+
+          print('✅ [ADMIN] Results: overall=${results['overall_score']}%, categories=${results['category_scores']}');
         } else {
+          // Recalcular si el servidor no envió datos completos
+          print('⚠️ [ADMIN] Recalculando scores...');
           results = _recalculateResults(fullEvaluation, species);
         }
+
+        final translatedRecommendations = _translateRecommendations(
+          results['recommendations'],
+          fullEvaluation.language,
+        );
 
         final structuredJson = await fullEvaluation.generateStructuredJSON(
           species,
           results,
-          [], // Recommendations vacío
+          translatedRecommendations,
         );
 
-        print('✅ [ADMIN] Datos preparados para mostrar:');
-        print('  - overallScore: ${results['overallScore']}');
-        print('  - categoryScores: ${results['categoryScores']}');
+        print('✅ [ADMIN] Navegando a ResultsScreen');
 
         if (mounted) {
           Navigator.push(
@@ -213,7 +219,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                 species: species,
                 results: results,
                 structuredJson: structuredJson,
-                isLocal: false, // Reportes del servidor, no mostrar sync
+                isLocal: false,
               ),
             ),
           );
@@ -230,6 +236,36 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
       }
       print('❌ Error al cargar evaluación: $e');
     }
+  }
+
+  String _getComplianceLevel(double score) {
+    if (score >= 85) return 'excellent';
+    if (score >= 70) return 'good';
+    if (score >= 50) return 'acceptable';
+    return 'needs_improvement';
+  }
+
+  List<String> _generateRecommendationKeys(
+    double overallScore,
+    Map<String, double> categoryScores,
+  ) {
+    final recommendations = <String>[];
+
+    categoryScores.forEach((category, score) {
+      if (score < 70) {
+        recommendations.add('improve_$category');
+      }
+    });
+
+    if (overallScore < 85) {
+      recommendations.add('general_improvement');
+    }
+
+    return recommendations;
+  }
+
+  List<String> _translateRecommendations(List recommendations, String language) {
+    return recommendations.map((key) => key.toString()).toList();
   }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
@@ -268,8 +304,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0.0;
 
     return {
-      'overallScore': overallScore,
-      'categoryScores': categoryScores,
+      'overall_score': overallScore,  // ← KEY CORRECTA
+      'compliance_level': _getComplianceLevel(overallScore),
+      'category_scores': categoryScores,  // ← KEY CORRECTA
+      'recommendations': _generateRecommendationKeys(overallScore, categoryScores),
+      'critical_points': [],
+      'strong_points': [],
     };
   }
 
@@ -433,7 +473,16 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   }
 
   Widget _buildStatistics(AppLocalizations loc) {
-    final uniqueUsers = _userReportCount.keys.length;
+    // Contar usuarios ÚNICOS de verdad
+    final Set<String> uniqueUserIds = {};
+    for (var report in _allReports) {
+      final userId = report.user?.id?.toString() ?? report.evaluatorDocument;
+      if (userId.isNotEmpty) {
+        uniqueUserIds.add(userId);
+      }
+    }
+
+    final uniqueUsers = uniqueUserIds.length;
     final totalReports = _filteredReports.length;
     final avgScore = _filteredReports.isEmpty
         ? 0.0
@@ -443,11 +492,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.deepPurple, Colors.deepPurple[700]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.deepPurple, // Color sólido sin degradado
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
