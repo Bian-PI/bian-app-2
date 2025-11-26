@@ -201,6 +201,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
           species: species,
           results: results,
           structuredJson: structuredJson,
+          isLocal: true, // Este es un reporte local, mostrar botón de sincronizar
         ),
       ),
     );

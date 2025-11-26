@@ -87,6 +87,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           species: species,
           results: results,
           structuredJson: structuredJson,
+          isLocal: true, // Reporte creado en modo offline, es local
         ),
       ),
     );

@@ -406,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(loc.translate('delete_draft')),
-        content: Text('¿Seguro que deseas eliminar este borrador?'),
+        content: Text(loc.translate('delete_draft')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -527,8 +527,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            const Text(
-                              'Toca aquí para ir a Reportes Locales y sincronizar',
+                            Text(
+                              loc.translate('tap_to_go_local_reports'),
                               style: TextStyle(
                                 color: BianTheme.primaryRed,
                                 fontSize: 12,
@@ -556,15 +556,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildWelcomeCard(context),
-                      
-                      const SizedBox(height: 30),
-                      
-                      Text(
-                        loc.translate('select_species'),
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSpeciesCards(context),
 
                       const SizedBox(height: 30),
 
@@ -591,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         const SizedBox(height: 16),
                         ..._drafts.map((draft) => _buildDraftCard(context, draft)),
                       ],
-                      
+
                     ],
                   ),
                 ),
@@ -727,7 +718,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           ListTile(
             leading: const Icon(Icons.storage, color: BianTheme.infoBlue),
-            title: const Text('Reportes Locales'),
+            title: Text(loc.translate('local_reports')),
             trailing: _pendingSyncCount > 0
                 ? Container(
                     padding: const EdgeInsets.all(6),
@@ -759,19 +750,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.admin_panel_settings, color: Colors.deepPurple),
-              title: const Text(
-                'Todos los Reportes (Admin)',
+              title: Text(
+                loc.translate('admin_all_reports'),
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text('Ver todos los reportes del sistema'),
+              subtitle: Text(loc.translate('view_all_reports')),
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.deepPurple.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'ADMIN',
+                child: Text(
+                  loc.translate('admin_badge'),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -814,6 +805,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildWelcomeCard(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final isAdmin = _currentUser?.role?.toLowerCase() == 'admin';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -837,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${loc.translate('welcome')}, ${_currentUser?.name?.split(' ').first ?? 'Usuario'}!',
+                  '${loc.translate('welcome')}, ${_currentUser?.name?.split(' ').first ?? loc.translate('user')}!',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -848,12 +840,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  loc.translate('manage_animal_welfare'),
+                  isAdmin
+                      ? loc.translate('admin_welcome_description')
+                      : loc.translate('user_welcome_description'),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -1045,17 +1039,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Acciones rápidas',
+          loc.translate('quick_actions'),
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 16),
 
-        // Botón principal: Nueva Evaluación
-        _buildActionButton(
-          title: 'Nueva Evaluación',
-          subtitle: 'Comienza una evaluación',
+        // Botón principal: Nueva Evaluación con gradient
+        _buildPrimaryActionButton(
+          title: loc.translate('new_evaluation'),
+          subtitle: loc.translate('start_evaluation'),
           icon: Icons.add_circle_outline,
-          color: BianTheme.primaryRed,
           onTap: () => _showSpeciesSelectionDialog(context),
         ),
 
@@ -1067,8 +1060,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             if (_pendingSyncCount > 0) ...[
               Expanded(
                 child: _buildActionButton(
-                  title: 'Reportes Locales',
-                  subtitle: 'Pendientes de sincronizar',
+                  title: loc.translate('local_reports_action'),
+                  subtitle: loc.translate('pending_to_sync'),
                   icon: Icons.cloud_upload,
                   color: BianTheme.warningYellow,
                   badge: '$_pendingSyncCount',
@@ -1084,8 +1077,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
             Expanded(
               child: _buildActionButton(
-                title: 'Mis Evaluaciones',
-                subtitle: 'Ver historial completo',
+                title: loc.translate('my_evaluations_action'),
+                subtitle: loc.translate('view_full_history'),
                 icon: Icons.assessment_outlined,
                 color: BianTheme.successGreen,
                 onTap: () {
@@ -1114,6 +1107,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                loc.translate('select_species_dialog'),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: BianTheme.darkGray,
+                ),
+              ),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -1146,7 +1148,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Aves',
+                              loc.translate('birds_label'),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1189,7 +1191,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Cerdos',
+                              loc.translate('pigs_label'),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1213,6 +1215,69 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryActionButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: BianTheme.primaryGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: BianTheme.primaryRed.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
+          ],
         ),
       ),
     );
