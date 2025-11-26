@@ -527,7 +527,19 @@ class ApiService {
     try {
       print('📥 [ADMIN] Obteniendo TODAS las evaluaciones...');
 
-      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllEvaluations}');
+      // Obtener el usuario actual (admin)
+      final user = await _storage.getUser();
+      if (user == null || user.id == null) {
+        print('❌ No hay usuario admin logueado');
+        return {'success': false, 'message': 'no_user'};
+      }
+
+      final adminId = user.id!;
+      print('📥 [ADMIN] Admin ID: $adminId');
+
+      // Usar el endpoint correcto con el ID del admin
+      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
+      print('📍 URL: $url');
 
       final token = await _storage.getToken();
       final response = await http.get(
@@ -559,6 +571,14 @@ class ApiService {
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         print('❌ No autorizado - Requiere permisos de admin');
         return {'success': false, 'message': 'unauthorized'};
+      } else if (response.statusCode == 404) {
+        print('⚠️ No se encontraron reportes o endpoint no existe');
+        return {
+          'success': true,
+          'evaluations': [],
+          'total': 0,
+          'hasMore': false,
+        };
       } else {
         print('❌ Error del servidor: ${response.statusCode}');
         return {'success': false, 'message': 'server_error'};
