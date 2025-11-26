@@ -1040,31 +1040,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       children: [
         Text(
           loc.translate('quick_actions'),
-          style: Theme.of(context).textTheme.headlineMedium,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: BianTheme.darkGray,
+          ),
         ),
+        const SizedBox(height: 20),
+
+        // Botón principal: Nueva Evaluación - SIMPLE
+        InkWell(
+          onTap: () => _showSpeciesSelectionDialog(context),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: BianTheme.primaryRed,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: BianTheme.primaryRed.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.add_circle_outline, color: Colors.white, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.translate('new_evaluation'),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        loc.translate('start_evaluation'),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 22),
+              ],
+            ),
+          ),
+        ),
+
         const SizedBox(height: 16),
 
-        // Botón principal: Nueva Evaluación con gradient
-        _buildPrimaryActionButton(
-          title: loc.translate('new_evaluation'),
-          subtitle: loc.translate('start_evaluation'),
-          icon: Icons.add_circle_outline,
-          onTap: () => _showSpeciesSelectionDialog(context),
-        ),
-
-        const SizedBox(height: 12),
-
+        // Cards en fila
         Row(
           children: [
-            // Solo mostrar Reportes Locales si hay pendientes
+            // Reportes Locales (solo si hay pendientes)
             if (_pendingSyncCount > 0) ...[
               Expanded(
-                child: _buildActionButton(
+                child: _buildSimpleCard(
                   title: loc.translate('local_reports_action'),
-                  subtitle: loc.translate('pending_to_sync'),
+                  count: _pendingSyncCount,
                   icon: Icons.cloud_upload,
                   color: BianTheme.warningYellow,
-                  badge: '$_pendingSyncCount',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -1073,12 +1126,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
             ],
+
+            // Mis Evaluaciones
             Expanded(
-              child: _buildActionButton(
+              child: _buildSimpleCard(
                 title: loc.translate('my_evaluations_action'),
-                subtitle: loc.translate('view_full_history'),
+                count: _serverReportsCount,
                 icon: Icons.assessment_outlined,
                 color: BianTheme.successGreen,
                 onTap: () {
@@ -1091,47 +1146,172 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
         ),
+
+        // Admin Card (solo para administradores)
+        if (_currentUser?.role?.toLowerCase() == 'admin') ...[
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminReportsScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.deepPurple.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 32),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.translate('admin_all_reports'),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          loc.translate('view_all_reports'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.deepPurple[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      loc.translate('admin_badge'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildSimpleCard({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 12),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   void _showSpeciesSelectionDialog(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final birds = Species.birds();
+    final pigs = Species.pigs();
+
+    // Colores de aves (azul)
+    final birdsColor = Color(int.parse(birds.gradientColors[0]));
+    // Colores de cerdos (rosa/rojo)
+    final pigsColor = Color(int.parse(pigs.gradientColors[0]));
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 loc.translate('select_species_dialog'),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: BianTheme.darkGray,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Row(
                 children: [
+                  // AVES - Color azul
                   Expanded(
                     child: InkWell(
                       onTap: () {
                         Navigator.pop(context);
-                        _navigateToEvaluation(Species.birds());
+                        _navigateToEvaluation(birds);
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          color: birdsColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            color: birdsColor.withOpacity(0.4),
                             width: 2,
                           ),
                         ),
@@ -1139,20 +1319,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           children: [
                             SvgPicture.asset(
                               'assets/icons/ave.svg',
-                              width: 48,
-                              height: 48,
+                              width: 56,
+                              height: 56,
                               colorFilter: ColorFilter.mode(
-                                BianTheme.primaryRed,
+                                birdsColor,
                                 BlendMode.srcIn,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Text(
                               loc.translate('birds_label'),
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
-                                color: BianTheme.primaryRed,
+                                color: birdsColor,
                               ),
                             ),
                           ],
@@ -1161,20 +1341,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(width: 16),
+                  // CERDOS - Color rosa/rojo
                   Expanded(
                     child: InkWell(
                       onTap: () {
                         Navigator.pop(context);
-                        _navigateToEvaluation(Species.pigs());
+                        _navigateToEvaluation(pigs);
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          color: pigsColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            color: pigsColor.withOpacity(0.4),
                             width: 2,
                           ),
                         ),
@@ -1182,20 +1363,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           children: [
                             SvgPicture.asset(
                               'assets/icons/cerdo.svg',
-                              width: 48,
-                              height: 48,
+                              width: 56,
+                              height: 56,
                               colorFilter: ColorFilter.mode(
-                                BianTheme.primaryRed,
+                                pigsColor,
                                 BlendMode.srcIn,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Text(
                               loc.translate('pigs_label'),
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
-                                color: BianTheme.primaryRed,
+                                color: pigsColor,
                               ),
                             ),
                           ],
@@ -1210,7 +1391,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   loc.translate('cancel'),
-                  style: TextStyle(color: BianTheme.mediumGray),
+                  style: TextStyle(
+                    color: BianTheme.mediumGray,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
@@ -1220,68 +1404,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPrimaryActionButton({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: BianTheme.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: BianTheme.primaryRed.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildActionButton({
     required String title,
