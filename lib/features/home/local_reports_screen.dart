@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
@@ -540,6 +541,18 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
                                     ],
                                   ),
                                 ),
+                              const SizedBox(width: 8),
+                              SvgPicture.asset(
+                                report.speciesId == 'birds'
+                                    ? 'assets/icons/ave.svg'
+                                    : 'assets/icons/cerdo.svg',
+                                width: 20,
+                                height: 20,
+                                colorFilter: ColorFilter.mode(
+                                  BianTheme.primaryRed,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),

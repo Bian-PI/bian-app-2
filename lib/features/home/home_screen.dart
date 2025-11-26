@@ -19,6 +19,7 @@ import '../evaluation/evaluation_screen.dart';
 import '../evaluation/results_screen.dart';
 import 'local_reports_screen.dart';
 import 'my_evaluations_screen.dart';
+import 'admin_reports_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -752,6 +753,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ).then((_) => _loadAllData()); // Recargar al volver
             },
           ),
+
+          // Opción solo para administradores
+          if (_currentUser?.role?.toLowerCase() == 'admin') ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings, color: Colors.deepPurple),
+              title: const Text(
+                'Todos los Reportes (Admin)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text('Ver todos los reportes del sistema'),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'ADMIN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminReportsScreen()),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+
           ListTile(
             leading: const Icon(Icons.language_rounded, color: BianTheme.primaryRed),
             title: Text(loc.translate('language')),
@@ -1011,6 +1049,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 16),
+
+        // Botón principal: Nueva Evaluación
+        _buildActionButton(
+          title: 'Nueva Evaluación',
+          subtitle: 'Selecciona especie y comienza',
+          icon: Icons.add_circle_outline,
+          color: BianTheme.primaryRed,
+          onTap: () => _showSpeciesSelectionDialog(context),
+        ),
+
+        const SizedBox(height: 12),
+
         Row(
           children: [
             // Solo mostrar Reportes Locales si hay pendientes
@@ -1049,6 +1099,145 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       ],
+    );
+  }
+
+  void _showSpeciesSelectionDialog(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.pets,
+                size: 48,
+                color: BianTheme.primaryRed,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Selecciona la especie',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Elige el tipo de animal para la evaluación',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: BianTheme.mediumGray,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToEvaluation(Species.birds());
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/ave.svg',
+                              width: 48,
+                              height: 48,
+                              colorFilter: ColorFilter.mode(
+                                BianTheme.primaryRed,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Aves',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: BianTheme.primaryRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToEvaluation(Species.pigs());
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: BianTheme.primaryRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: BianTheme.primaryRed.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/cerdo.svg',
+                              width: 48,
+                              height: 48,
+                              colorFilter: ColorFilter.mode(
+                                BianTheme.primaryRed,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Cerdos',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: BianTheme.primaryRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  loc.translate('cancel'),
+                  style: TextStyle(color: BianTheme.mediumGray),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

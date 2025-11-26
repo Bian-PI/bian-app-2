@@ -81,8 +81,8 @@ class ConnectivityService {
       return false;
     }
 
-    final hasNetworkType = results.any((result) => 
-      result == ConnectivityResult.mobile || 
+    final hasNetworkType = results.any((result) =>
+      result == ConnectivityResult.mobile ||
       result == ConnectivityResult.wifi ||
       result == ConnectivityResult.ethernet
     );
@@ -92,17 +92,32 @@ class ConnectivityService {
       return false;
     }
 
-    try {
-      print('🌐 Haciendo ping a Google...');
-      final response = await http.get(Uri.parse('https://www.google.com'))
-          .timeout(Duration(seconds: 5));
-      final hasInternet = response.statusCode == 200;
-      print(hasInternet ? '✅ Ping exitoso (200)' : '❌ Ping falló (${response.statusCode})');
-      return hasInternet;
-    } catch (e) {
-      print('❌ Ping falló con excepción: $e');
-      return false;
+    // Probar múltiples endpoints para validar conexión real
+    // Solo necesitamos que UNO funcione para considerar que hay internet
+    final testUrls = [
+      'https://www.google.com',
+      'https://1.1.1.1', // Cloudflare DNS
+      'https://dns.google', // Google DNS
+    ];
+
+    for (final url in testUrls) {
+      try {
+        print('🌐 Probando conectividad con $url...');
+        final response = await http.head(Uri.parse(url))
+            .timeout(Duration(seconds: 8));
+        if (response.statusCode >= 200 && response.statusCode < 500) {
+          print('✅ Conectividad confirmada con $url (${response.statusCode})');
+          return true;
+        }
+        print('⚠️ $url respondió con ${response.statusCode}, probando siguiente...');
+      } catch (e) {
+        print('⚠️ $url falló: $e, probando siguiente...');
+        continue;
+      }
     }
+
+    print('❌ Todos los endpoints fallaron - Sin conectividad real');
+    return false;
   }
 
   void dispose() {

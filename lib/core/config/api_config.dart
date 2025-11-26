@@ -19,6 +19,7 @@ class ApiConfig {
   static String getEvaluationById(String evaluationId) => "/animals/evaluation/$evaluationId";
   static String getAllUserEvaluations(String userId) => "/animals/evaluation/all/$userId";
   static String getAdminEvaluations(int adminId) => "/animals/evaluation/users/$adminId";
+  static const String getAllEvaluations = "/animals/evaluation/all"; // Para admins: TODOS los reportes
 
   static Map<String, String> get headers => {
     'Content-Type': 'application/json',

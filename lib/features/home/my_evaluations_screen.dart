@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/models/evaluation_model.dart';
 import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
@@ -290,12 +291,16 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(
+                  SvgPicture.asset(
                     evaluation.speciesId == 'birds'
-                        ? Icons.grain
-                        : Icons.pets,
-                    color: BianTheme.primaryRed,
-                    size: 20,
+                        ? 'assets/icons/ave.svg'
+                        : 'assets/icons/cerdo.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      BianTheme.primaryRed,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ],
               ),
@@ -392,12 +397,16 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(
+                  SvgPicture.asset(
                     evaluation.speciesId == 'birds'
-                        ? Icons.grain
-                        : Icons.pets,
-                    color: BianTheme.primaryRed,
-                    size: 20,
+                        ? 'assets/icons/ave.svg'
+                        : 'assets/icons/cerdo.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      BianTheme.primaryRed,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ],
               ),
@@ -547,32 +556,73 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
     );
   }
 
-  /// Reconstruye y muestra el reporte del servidor en ResultsScreen
+  /// Obtiene los detalles completos del servidor y muestra el reporte en ResultsScreen
   void _viewServerReport(Evaluation evaluation) async {
-    final species = evaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
-    final results = _recalculateResults(evaluation, species);
-    final translatedRecommendations = _translateRecommendations(
-      results['recommendations'],
-      evaluation.language,
-    );
+    final loc = AppLocalizations.of(context);
 
-    final structuredJson = await evaluation.generateStructuredJSON(
-      species,
-      results,
-      translatedRecommendations,
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ResultsScreen(
-          evaluation: evaluation,
-          species: species,
-          results: results,
-          structuredJson: structuredJson,
-        ),
+    // Mostrar indicador de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
       ),
     );
+
+    try {
+      // Obtener detalles completos del servidor
+      final result = await _apiService.getEvaluationById(evaluation.id);
+
+      if (mounted) Navigator.pop(context); // Cerrar loading
+
+      if (result['success'] == true) {
+        // Reconstruir el evaluation desde los datos completos del servidor
+        final fullEvaluation = Evaluation.fromJson(result['evaluation']);
+        final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
+        final results = _recalculateResults(fullEvaluation, species);
+        final translatedRecommendations = _translateRecommendations(
+          results['recommendations'],
+          fullEvaluation.language,
+        );
+
+        final structuredJson = await fullEvaluation.generateStructuredJSON(
+          species,
+          results,
+          translatedRecommendations,
+        );
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResultsScreen(
+                evaluation: fullEvaluation,
+                species: species,
+                results: results,
+                structuredJson: structuredJson,
+              ),
+            ),
+          );
+        }
+      } else {
+        // Error al obtener detalles
+        if (mounted) {
+          CustomSnackbar.showError(
+            context,
+            loc.translate('error_loading_evaluation'),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Cerrar loading si está abierto
+        CustomSnackbar.showError(
+          context,
+          'Error: ${e.toString()}',
+        );
+      }
+      print('❌ Error al cargar evaluación: $e');
+    }
   }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
