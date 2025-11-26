@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Evaluation> _drafts = [];
   List<Evaluation> _reports = [];
+  List<Evaluation> _localReports = []; // Reportes locales separados
   int _farmsCount = 0;
   int _pendingSyncCount = 0; // Contador de reportes pendientes de sincronización
 
@@ -91,22 +92,22 @@ class _HomeScreenState extends State<HomeScreen> {
         total = result['total'] ?? 0;
         hasMore = result['hasMore'] ?? false;
 
-        // Combinar: locales primero, luego del servidor
-        reports = [...localReports, ...serverReports];
+        // Separar locales de servidor para estadísticas correctas
+        reports = serverReports;
         print('✅ Reportes del servidor: ${serverReports.length} de $total');
-        print('📊 Total reportes (locales + servidor): ${reports.length}');
+        print('📊 Reportes locales: ${localReports.length}');
       } else {
         print('⚠️ No se pudieron cargar reportes del servidor');
-        // Solo locales + cache local
+        // Solo cache local (sin incluir locales en stats)
         final cachedReports = await ReportsStorage.getAllReports();
-        reports = [...localReports, ...cachedReports];
+        reports = cachedReports;
         print('📦 Usando cache: ${cachedReports.length} reportes');
       }
     } catch (e) {
       print('❌ Error cargando reportes del servidor: $e');
-      // Fallback: locales + cache
+      // Fallback: cache (sin locales en stats)
       final cachedReports = await ReportsStorage.getAllReports();
-      reports = [...localReports, ...cachedReports];
+      reports = cachedReports;
       print('📦 Fallback a cache local: ${cachedReports.length} reportes');
     }
 
@@ -115,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isVerified = verified;
       _drafts = drafts;
       _reports = reports;
+      _localReports = localReports;
       _farmsCount = farms.length;
       _pendingSyncCount = pendingSyncCount;
       _reportTotal = total;
@@ -539,56 +541,64 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Banner de reportes pendientes de sincronización
             if (_pendingSyncCount > 0)
-              Container(
-                color: BianTheme.primaryRed.withOpacity(0.1),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: BianTheme.primaryRed,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$_pendingSyncCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                  ).then((_) => _loadAllData());
+                },
+                child: Container(
+                  color: BianTheme.primaryRed.withOpacity(0.1),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: BianTheme.primaryRed,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$_pendingSyncCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            loc.translate('pending_sync_reports'),
-                            style: const TextStyle(
-                              color: BianTheme.primaryRed,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              loc.translate('pending_sync_reports'),
+                              style: const TextStyle(
+                                color: BianTheme.primaryRed,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            loc.translate('pending_sync_message'),
-                            style: TextStyle(
-                              color: BianTheme.primaryRed.withOpacity(0.8),
-                              fontSize: 12,
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Toca aquí para ir a Reportes Locales y sincronizar',
+                              style: TextStyle(
+                                color: BianTheme.primaryRed,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.cloud_upload_outlined,
-                      color: BianTheme.primaryRed,
-                      size: 28,
-                    ),
-                  ],
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: BianTheme.primaryRed,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -612,9 +622,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildSpeciesCards(context),
                       
                       const SizedBox(height: 30),
-                      
+
                       _buildQuickStats(context),
-                      
+
+                      const SizedBox(height: 24),
+
+                      _buildQuickActions(context),
+
                       if (_drafts.isNotEmpty) ...[
                         const SizedBox(height: 30),
                         Row(
@@ -647,7 +661,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: Theme.of(context).textTheme.headlineMedium,
                           ),
                           Text(
-                            '${_reports.length}',
+                            '${_localReports.length + _reports.length}',
                             style: TextStyle(
                               color: BianTheme.primaryRed,
                               fontSize: 18,
@@ -658,9 +672,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      if (_reports.isEmpty)
+                      if (_reports.isEmpty && _localReports.isEmpty)
                         _buildEmptyReportsCard(context)
                       else ...[
+                        // Mostrar locales primero
+                        ..._localReports.map((report) => _buildReportCard(context, report)),
+                        // Luego los del servidor
                         ..._reports.map((report) => _buildReportCard(context, report)),
 
                         if (_hasMoreReports) ...[
@@ -693,7 +710,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 20),
                           Center(
                             child: Text(
-                              'Mostrando todos los reportes ($_reportTotal)',
+                              'Mostrando todos los reportes (${_localReports.length + _reportTotal})',
                               style: TextStyle(
                                 color: BianTheme.mediumGray,
                                 fontSize: 13,
@@ -723,72 +740,88 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           DrawerHeader(
             decoration: const BoxDecoration(gradient: BianTheme.primaryGradient),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.person, size: 40, color: BianTheme.primaryRed),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _currentUser?.name ?? 'Usuario',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          RoleHelper.translateRole(context, _currentUser?.role),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _isVerified
-                                ? Colors.green.withOpacity(0.3)
-                                : Colors.orange.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isVerified ? Icons.check_circle : Icons.warning,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _isVerified
-                                    ? loc.translate('verified')
-                                    : loc.translate('not_verified'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 36, color: BianTheme.primaryRed),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _currentUser?.name ?? 'Usuario',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                );
-              },
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _currentUser?.email ?? '',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        RoleHelper.translateRole(context, _currentUser?.role),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _isVerified
+                            ? Colors.green.withOpacity(0.3)
+                            : Colors.orange.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isVerified ? Icons.verified : Icons.warning,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _isVerified
+                                ? loc.translate('verified')
+                                : loc.translate('not_verified'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
 
@@ -1086,6 +1119,131 @@ class _HomeScreenState extends State<HomeScreen> {
             style: const TextStyle(fontSize: 12, color: BianTheme.mediumGray),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Acciones rápidas',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                title: 'Reportes Locales',
+                icon: Icons.storage,
+                color: BianTheme.infoBlue,
+                badge: _pendingSyncCount > 0 ? '$_pendingSyncCount' : null,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                  ).then((_) => _loadAllData());
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionButton(
+                title: loc.translate('profile'),
+                icon: Icons.person_outline,
+                color: BianTheme.primaryRed,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                title: loc.translate('language'),
+                icon: Icons.language_rounded,
+                color: BianTheme.successGreen,
+                onTap: _showLanguageDialog,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(), // Espacio vacío para mantener simetría
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: BianTheme.cardShadow,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: BianTheme.darkGray,
+                ),
+              ),
+            ),
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

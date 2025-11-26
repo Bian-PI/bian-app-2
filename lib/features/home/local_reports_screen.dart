@@ -21,6 +21,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   List<String> _pendingSyncIds = [];
   bool _isLoading = true;
   bool _isSyncing = false;
+  String? _syncingReportId; // ID del reporte que se está sincronizando
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   Future<void> _syncReport(Evaluation report) async {
     AppLocalizations.of(context);
 
-    setState(() => _isSyncing = true);
+    setState(() => _syncingReportId = report.id);
 
     try {
       print('📤 Sincronizando reporte: ${report.id}');
@@ -91,7 +92,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isSyncing = false);
+        setState(() => _syncingReportId = null);
       }
     }
   }
@@ -584,29 +585,27 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
                     ),
                   ],
                 ),
-                if (isPending && !_isSyncing) ...[
+                if (isPending) ...[
                   const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => _syncReport(report),
-                    icon: const Icon(Icons.cloud_upload, size: 18),
-                    label: const Text('Sincronizar ahora'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: BianTheme.infoBlue,
-                      minimumSize: const Size(double.infinity, 40),
-                    ),
-                  ),
-                ],
-                if (_isSyncing)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: Center(
+                  if (_syncingReportId == report.id)
+                    const Center(
                       child: SizedBox(
                         height: 24,
                         width: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: () => _syncReport(report),
+                      icon: const Icon(Icons.cloud_upload, size: 18),
+                      label: const Text('Sincronizar ahora'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BianTheme.infoBlue,
+                        minimumSize: const Size(double.infinity, 40),
+                      ),
                     ),
-                  ),
+                ],
               ],
             ),
           ),

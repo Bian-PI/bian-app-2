@@ -413,15 +413,15 @@ class ApiService {
     try {
       print('📤 Sincronizando reporte offline...');
       print('📦 Data: $reportData');
-      
+
       final response = await post(
-        '/evaluations/sync',
+        '/animals/evaluation',
         reportData,
-        requiresAuth: false,
+        requiresAuth: true,  // ✅ Enviar token de autenticación
       );
-      
-      print('📥 Sync response status: ${response.statusCode}');
-      print('📥 Sync response body: ${response.body}');
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
