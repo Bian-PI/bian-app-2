@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/models/evaluation_model.dart';
+import '../../core/models/species_model.dart';
 import '../../core/theme/bian_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/api/api_service.dart';
@@ -7,6 +8,7 @@ import '../../core/widgets/custom_snackbar.dart';
 import '../../core/storage/reports_storage.dart';
 import '../../core/storage/local_reports_storage.dart';
 import '../../core/storage/secure_storage.dart';
+import '../evaluation/results_screen.dart';
 import 'package:intl/intl.dart';
 
 /// Pantalla dedicada para mostrar todas las evaluaciones del usuario actual
@@ -58,13 +60,9 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       }
 
       _userId = user.id.toString();
-      print('👤 Cargando evaluaciones para usuario: ${user.name} (ID: $_userId)');
+      print('👤 Cargando evaluaciones SOLO del servidor para usuario: ${user.name} (ID: $_userId)');
 
-      // 1. Cargar reportes LOCALES pendientes de sincronización
-      final localReports = await LocalReportsStorage.getAllLocalReports();
-      print('📦 Reportes locales encontrados: ${localReports.length}');
-
-      // 2. Cargar reportes del servidor filtrados por usuario
+      // SOLO cargar reportes del servidor (NO locales)
       final result = await _apiService.getUserEvaluations(
         limit: _reportLimit,
         offset: 0,
@@ -83,7 +81,7 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
 
         setState(() {
           _serverReports = serverReports;
-          _localReports = localReports;
+          _localReports = []; // NO mostrar locales aquí
           _reportTotal = total;
           _hasMoreReports = hasMore;
           _reportOffset = serverReports.length;
@@ -92,13 +90,9 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       } else {
         print('⚠️ Error cargando reportes del servidor: ${result['message']}');
 
-        // Fallback: usar cache local
-        final cachedReports = await ReportsStorage.getAllReports();
-        print('📦 Usando cache local: ${cachedReports.length} reportes');
-
         setState(() {
-          _serverReports = cachedReports;
-          _localReports = localReports;
+          _serverReports = [];
+          _localReports = [];
           _isLoading = false;
         });
 
@@ -371,8 +365,8 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          // Navegar a detalles del reporte
-          _showServerReportDetails(evaluation, loc);
+          // Navegar a ResultsScreen con el reporte completo reconstruido
+          _viewServerReport(evaluation);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -553,51 +547,157 @@ class _MyEvaluationsScreenState extends State<MyEvaluationsScreen> {
     );
   }
 
-  void _showServerReportDetails(Evaluation evaluation, AppLocalizations loc) {
-    final score = evaluation.overallScore ?? 0.0;
+  /// Reconstruye y muestra el reporte del servidor en ResultsScreen
+  void _viewServerReport(Evaluation evaluation) async {
+    final species = evaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    final results = _recalculateResults(evaluation, species);
+    final translatedRecommendations = _translateRecommendations(
+      results['recommendations'],
+      evaluation.language,
+    );
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(loc.translate('evaluation_details')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              evaluation.farmName,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${loc.translate('score')}: ${score.toStringAsFixed(1)}%',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${loc.translate('location')}: ${evaluation.farmLocation}',
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${loc.translate('date')}: ${DateFormat('dd/MM/yyyy').format(evaluation.evaluationDate)}',
-              style: const TextStyle(fontSize: 14),
-            ),
-          ],
+    final structuredJson = await evaluation.generateStructuredJSON(
+      species,
+      results,
+      translatedRecommendations,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ResultsScreen(
+          evaluation: evaluation,
+          species: species,
+          results: results,
+          structuredJson: structuredJson,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(loc.translate('close')),
-          ),
-        ],
       ),
     );
+  }
+
+  Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
+    int totalQuestions = 0;
+    int positiveResponses = 0;
+    final categoryScores = <String, double>{};
+
+    for (var category in species.categories) {
+      int categoryTotal = 0;
+      int categoryPositive = 0;
+
+      for (var field in category.fields) {
+        if (field.type == FieldType.yesNo) {
+          final key = '${category.id}_${field.id}';
+          final value = evaluation.responses[key];
+
+          if (value != null) {
+            categoryTotal++;
+            totalQuestions++;
+
+            bool isPositive = false;
+            if (field.id.contains('access') ||
+                field.id.contains('quality') ||
+                field.id.contains('sufficient') ||
+                field.id.contains('health') ||
+                field.id.contains('vaccination') ||
+                field.id.contains('natural_behavior') ||
+                field.id.contains('movement') ||
+                field.id.contains('ventilation') ||
+                field.id.contains('training') ||
+                field.id.contains('records') ||
+                field.id.contains('biosecurity') ||
+                field.id.contains('handling') ||
+                field.id.contains('lighting') ||
+                field.id.contains('enrichment') ||
+                field.id.contains('resting_area') ||
+                field.id.contains('castration')) {
+              isPositive = value == true;
+            } else {
+              isPositive = value == false;
+            }
+
+            if (isPositive) {
+              categoryPositive++;
+              positiveResponses++;
+            }
+          }
+        }
+      }
+
+      if (categoryTotal > 0) {
+        categoryScores[category.id] = (categoryPositive / categoryTotal) * 100;
+      }
+    }
+
+    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+
+    String complianceLevel;
+    if (overallScore >= 90) {
+      complianceLevel = 'excellent';
+    } else if (overallScore >= 75) {
+      complianceLevel = 'good';
+    } else if (overallScore >= 60) {
+      complianceLevel = 'acceptable';
+    } else if (overallScore >= 40) {
+      complianceLevel = 'needs_improvement';
+    } else {
+      complianceLevel = 'critical';
+    }
+
+    final recommendationKeys = <String>[];
+    if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
+    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
+      recommendationKeys.add('improve_feeding_practices');
+    }
+    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
+      recommendationKeys.add('strengthen_health_program');
+    }
+    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+      recommendationKeys.add('improve_infrastructure');
+    }
+    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+      recommendationKeys.add('train_staff_welfare');
+    }
+    if (recommendationKeys.isEmpty) recommendationKeys.add('maintain_current_practices');
+
+    return {
+      'overall_score': overallScore,
+      'compliance_level': complianceLevel,
+      'category_scores': categoryScores,
+      'recommendations': recommendationKeys,
+      'critical_points': [],
+      'strong_points': [],
+    };
+  }
+
+  List<String> _translateRecommendations(List recommendationKeys, String language) {
+    final translations = <String, String>{
+      'immediate_attention_required': language == 'es'
+          ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
+          : 'Immediate attention required to improve animal welfare conditions',
+      'improve_feeding_practices': language == 'es'
+          ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
+          : 'Improve feeding practices and ensure constant access to quality water and food',
+      'strengthen_health_program': language == 'es'
+          ? 'Fortalecer el programa de salud animal, incluyendo vacunación y control de enfermedades'
+          : 'Strengthen animal health program, including vaccination and disease control',
+      'improve_infrastructure': language == 'es'
+          ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
+          : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
+      'train_staff_welfare': language == 'es'
+          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
+          : 'Train staff in animal welfare and maintain updated records',
+      'maintain_current_practices': language == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
+    };
+
+    final translatedRecommendations = <String>[];
+    for (var key in recommendationKeys) {
+      if (translations.containsKey(key)) {
+        translatedRecommendations.add(translations[key]!);
+      }
+    }
+
+    return translatedRecommendations;
   }
 }

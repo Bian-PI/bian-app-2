@@ -32,7 +32,8 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   Future<void> _loadLocalReports() async {
     setState(() => _isLoading = true);
 
-    final reports = await LocalReportsStorage.getAllLocalReports();
+    // SOLO cargar reportes pendientes de sincronización (no sincronizados)
+    final reports = await LocalReportsStorage.getPendingSyncReports();
     final pendingIds = await LocalReportsStorage.getPendingSyncIds();
 
     setState(() {
