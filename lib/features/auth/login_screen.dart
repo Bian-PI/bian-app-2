@@ -320,22 +320,31 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _toggleRememberAccount(bool value) async {
-    if (value && _biometricAvailable) {
-      final accepted = await PrivacyConsentDialog.show(context);
-      if (!accepted) return;
+    if (value) {
+      // Verificar disponibilidad de biometría si aún no se ha verificado
+      if (!_biometricAvailable) {
+        await _checkBiometricAvailability();
+      }
 
-      setState(() {
-        _rememberAccount = true;
-        _biometricEnabled = true;
-      });
+      // Si la biometría está disponible, solicitar consentimiento
+      if (_biometricAvailable) {
+        final accepted = await PrivacyConsentDialog.show(context);
+        if (!accepted) return;
 
-      await _biometricService.enableBiometric();
-      CustomSnackbar.showSuccess(
-        context,
-        'Biometría activada. Inicia sesión para guardar tus credenciales.',
-      );
-    } else if (value) {
-      setState(() => _rememberAccount = true);
+        setState(() {
+          _rememberAccount = true;
+          _biometricEnabled = true;
+        });
+
+        await _biometricService.enableBiometric();
+        CustomSnackbar.showSuccess(
+          context,
+          'Biometría activada. Inicia sesión para guardar tus credenciales.',
+        );
+      } else {
+        // Si no hay biometría disponible, solo marcar remember account
+        setState(() => _rememberAccount = true);
+      }
     } else {
       setState(() {
         _rememberAccount = false;
