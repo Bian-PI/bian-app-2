@@ -693,37 +693,6 @@ class ApiService {
     }
   }
 
-  /// Obtiene un reporte específico por su ID de evaluación
-  ///
-  /// [evaluationId]: ID único del reporte de evaluación
-  Future<Map<String, dynamic>> getEvaluationById(String evaluationId) async {
-    try {
-      final url = Uri.parse('${ApiConfig.evaluationsBaseUrl}${ApiConfig.getEvaluationById(evaluationId)}');
-
-      print('📥 Obteniendo reporte: $url');
-
-      final response = await http.get(
-        url,
-        headers: ApiConfig.headers,
-      ).timeout(ApiConfig.receiveTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'evaluation': data,
-        };
-      } else if (response.statusCode == 404) {
-        return {'success': false, 'message': 'evaluation_not_found'};
-      } else {
-        return {'success': false, 'message': 'server_error'};
-      }
-    } catch (e) {
-      print('❌ Error obteniendo reporte: $e');
-      return {'success': false, 'message': 'connection_error'};
-    }
-  }
-
   /// Obtiene todos los reportes de un usuario específico
   ///
   /// [userId]: ID del usuario
