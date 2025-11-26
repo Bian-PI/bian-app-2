@@ -278,12 +278,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   }
 
   int _getUniqueUsersCount() {
-    // Contar usuarios únicos basados en email o nombre
-    final uniqueEmails = _allReports
-        .map((r) => r.evaluatorEmail)
-        .where((e) => e != null && e.isNotEmpty)
+    // Contar usuarios únicos basados en documento de identidad
+    final uniqueDocuments = _allReports
+        .map((r) => r.evaluatorDocument)
+        .where((doc) => doc.isNotEmpty)
         .toSet();
-    return uniqueEmails.length;
+    return uniqueDocuments.length;
   }
 
   Widget _buildEmptyState(AppLocalizations loc) {
