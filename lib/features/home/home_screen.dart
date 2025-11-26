@@ -936,10 +936,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Expanded(
               child: _buildStatCard(
-                title: loc.translate('evaluations'),
-                value: '${_reports.length}',
-                icon: Icons.assignment_turned_in_rounded,
-                color: BianTheme.successGreen,
+                title: loc.translate('drafts'),
+                value: '${_drafts.length}',
+                icon: Icons.draft_outlined,
+                color: BianTheme.warningYellow,
               ),
             ),
             const SizedBox(width: 16),
