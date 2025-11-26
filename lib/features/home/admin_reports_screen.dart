@@ -128,25 +128,14 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
         final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
 
-        // Si la evaluación del servidor ya tiene scores calculados, usarlos directamente
-        Map<String, dynamic> results;
-        if (fullEvaluation.overallScore != null && fullEvaluation.categoryScores != null) {
-          // Usar los scores que vienen del servidor
-          results = {
-            'overall_score': fullEvaluation.overallScore!,
-            'compliance_level': _getComplianceLevel(fullEvaluation.overallScore!),
-            'category_scores': fullEvaluation.categoryScores!,
-            'recommendations': _generateRecommendationKeys(
-              fullEvaluation.overallScore!,
-              fullEvaluation.categoryScores!,
-            ),
-            'critical_points': [],
-            'strong_points': [],
-          };
-        } else {
-          // Si no tiene scores, recalcular desde responses
-          results = _recalculateResults(fullEvaluation, species);
-        }
+        print('📊 [ADMIN] DEBUG - overallScore: ${fullEvaluation.overallScore}');
+        print('📊 [ADMIN] DEBUG - categoryScores: ${fullEvaluation.categoryScores}');
+        print('📊 [ADMIN] DEBUG - responses length: ${fullEvaluation.responses.length}');
+
+        // SIEMPRE recalcular desde responses para asegurar datos correctos
+        final results = _recalculateResults(fullEvaluation, species);
+
+        print('📊 [ADMIN] DEBUG - results calculados: $results');
 
         final translatedRecommendations = _translateRecommendations(
           results['recommendations'],

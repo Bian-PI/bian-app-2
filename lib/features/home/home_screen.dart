@@ -1110,33 +1110,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.pets,
-                size: 48,
-                color: BianTheme.primaryRed,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Selecciona la especie',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Elige el tipo de animal para la evaluación',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: BianTheme.mediumGray,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
