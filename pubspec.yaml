@@ -45,6 +45,7 @@ dependencies:
   permission_handler: ^11.3.1
   device_info_plus: ^12.2.0
   open_filex: ^4.5.0
+  device_preview: ^1.2.0
 
 dev_dependencies:
   flutter_test:

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // <-- Nuevo
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
+import 'package:device_preview/device_preview.dart';
 
 import 'core/providers/language_provider.dart';
 import 'core/providers/app_mode_provider.dart';
@@ -39,14 +41,17 @@ void main() async {
   final connectivityService = ConnectivityService();
   await connectivityService.initialize();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => AppModeProvider()..initialize()),
-        Provider<ConnectivityService>.value(value: connectivityService),
-      ],
-      child: const BianApp(),
+runApp(
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => LanguageProvider()),
+          ChangeNotifierProvider(create: (_) => AppModeProvider()..initialize()),
+          Provider<ConnectivityService>.value(value: connectivityService),
+        ],
+        child: const BianApp(),
+      ),
     ),
   );
 }
@@ -91,6 +96,8 @@ class _BianAppState extends State<BianApp> {
         return MaterialApp(
           navigatorKey: _navigatorKey,
           title: 'BIAN - Bienestar Animal',
+          useInheritedMediaQuery: true,
+          builder: DevicePreview.appBuilder,
           debugShowCheckedModeBanner: false,
           locale: languageProvider.locale,
           supportedLocales: const [
