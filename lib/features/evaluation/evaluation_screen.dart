@@ -1282,19 +1282,42 @@ Widget build(BuildContext context) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          loc.translate(currentCategory.id),
+                          loc.translate(currentCategory.nameKey ?? currentCategory.id),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          '${currentCategory.fields.length} ${loc.translate('indicators')}',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '${currentCategory.fields.length} ${loc.translate('indicators')}',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                            // Mostrar peso si existe (metodología ICA)
+                            if (currentCategory.weight < 1.0) ...[
+                              SizedBox(width: 8),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Peso: ${(currentCategory.weight * 100).toInt()}%',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -1413,6 +1436,59 @@ Widget build(BuildContext context) {
     String categoryId,
   ) {
     final loc = AppLocalizations.of(context);
+    final bool isICAScale = field.type == FieldType.scale0to2;
+    
+    // Obtener la pregunta del indicador
+    String questionText = '';
+    if (field.question != null) {
+      questionText = loc.translate(field.question!);
+      // Si no hay traducción, usar el ID como fallback
+      if (questionText == field.question) {
+        questionText = loc.translate(field.id);
+      }
+    } else {
+      questionText = loc.translate(field.id);
+    }
+    
+    // Obtener descripción del indicador (solo para ICA)
+    String? descriptionText;
+    if (isICAScale && field.description != null) {
+      descriptionText = loc.translate(field.description!);
+      if (descriptionText == field.description) {
+        descriptionText = null; // No mostrar si no hay traducción
+      }
+    }
+    
+    // Obtener método de evaluación
+    String? methodText;
+    if (isICAScale && field.evaluationMethod != null) {
+      switch (field.evaluationMethod!) {
+        case EvaluationMethod.visualInspectionWithSampling:
+          methodText = loc.translate('method_visual_sampling');
+          if (methodText == 'method_visual_sampling') {
+            methodText = 'Inspección visual con muestreo';
+          }
+          break;
+        case EvaluationMethod.visualInspectionNoSampling:
+          methodText = loc.translate('method_visual_no_sampling');
+          if (methodText == 'method_visual_no_sampling') {
+            methodText = 'Inspección visual sin muestreo';
+          }
+          break;
+        case EvaluationMethod.documentInspection:
+          methodText = loc.translate('method_document');
+          if (methodText == 'method_document') {
+            methodText = 'Inspección documental';
+          }
+          break;
+        case EvaluationMethod.visualAndDocumental:
+          methodText = loc.translate('method_visual_document');
+          if (methodText == 'method_visual_document') {
+            methodText = 'Inspección visual y documental';
+          }
+          break;
+      }
+    }
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1439,37 +1515,161 @@ Widget build(BuildContext context) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Encabezado con label y badge de requerido
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  loc.translate(field.id),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: BianTheme.darkGray,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Label del indicador
+                    Text(
+                      loc.translate(field.label),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: BianTheme.darkGray,
+                      ),
+                    ),
+                    // Método de evaluación (solo ICA)
+                    if (methodText != null) ...[
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: BianTheme.mediumGray,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            methodText,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: BianTheme.mediumGray,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (field.required)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: BianTheme.errorRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    loc.translate('required'),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: BianTheme.errorRed,
-                      fontWeight: FontWeight.bold,
+              // Badges
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Badge de puntaje máximo (solo ICA)
+                  if (isICAScale) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Max: ${field.maxScore}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color(int.parse(widget.species.gradientColors[0])),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                    SizedBox(width: 8),
+                  ],
+                  if (field.required)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: BianTheme.errorRed.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        loc.translate('required'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: BianTheme.errorRed,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-          SizedBox(height: 12),
+          
+          // Descripción del indicador (solo si existe y es ICA)
+          if (descriptionText != null) ...[
+            SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: BianTheme.backgroundGray,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: BianTheme.mediumGray,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      descriptionText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BianTheme.darkGray.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          // Pregunta de evaluación
+          if (questionText.isNotEmpty) ...[
+            SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.help_outline,
+                    size: 18,
+                    color: Color(int.parse(widget.species.gradientColors[0])),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      questionText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: BianTheme.darkGray,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          SizedBox(height: 16),
           _buildInputWidget(field, key, value, categoryId),
         ],
       ),
@@ -1485,6 +1685,12 @@ Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     
     switch (field.type) {
+      // ═══════════════════════════════════════════════════════════════
+      // ESCALA ICA 0-2 (Nueva para metodología ICA)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.scale0to2:
+        return _buildScale0to2Widget(field, key, value, categoryId);
+
       case FieldType.yesNo:
         return Row(
           children: [
@@ -1580,8 +1786,237 @@ Widget build(BuildContext context) {
           },
         );
 
+      case FieldType.select:
+        // TODO: Implementar si se necesita
+        return SizedBox();
+
       default:
         return SizedBox();
+    }
+  }
+
+  /// Widget para escala ICA 0-2
+  /// 0 = No cumple (rojo)
+  /// 1 = Cumple parcialmente (amarillo)
+  /// 2 = Cumple totalmente (verde)
+  Widget _buildScale0to2Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Colores para cada nivel
+    final colors = [
+      BianTheme.errorRed,      // 0 - No cumple
+      Colors.amber.shade700,   // 1 - Cumple parcialmente  
+      BianTheme.successGreen,  // 2 - Cumple totalmente
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.cancel,           // 0
+      Icons.remove_circle,    // 1
+      Icons.check_circle,     // 2
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Botones de selección 0, 1, 2
+        Row(
+          children: List.generate(3, (index) {
+            final isSelected = currentValue == index;
+            final color = colors[index];
+            
+            // Obtener etiqueta traducida para cada nivel
+            String label;
+            switch (index) {
+              case 0:
+                label = loc.translate('${field.id}_0');
+                // Si no hay traducción específica, usar genérica
+                if (label == '${field.id}_0') {
+                  label = loc.translate('scale_0');
+                  if (label == 'scale_0') label = 'No cumple (0)';
+                }
+                break;
+              case 1:
+                label = loc.translate('${field.id}_1');
+                if (label == '${field.id}_1') {
+                  label = loc.translate('scale_1');
+                  if (label == 'scale_1') label = 'Parcial (1)';
+                }
+                break;
+              case 2:
+                label = loc.translate('${field.id}_2');
+                if (label == '${field.id}_2') {
+                  label = loc.translate('scale_2');
+                  if (label == 'scale_2') label = 'Cumple (2)';
+                }
+                break;
+              default:
+                label = index.toString();
+            }
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 4,
+                  right: index == 2 ? 0 : 4,
+                ),
+                child: InkWell(
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? color : BianTheme.lightGray,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Número grande
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              index.toString(),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : BianTheme.mediumGray,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        // Icono
+                        Icon(
+                          icons[index],
+                          color: isSelected ? color : BianTheme.mediumGray,
+                          size: 24,
+                        ),
+                        SizedBox(height: 4),
+                        // Label corto
+                        Text(
+                          _getShortScaleLabel(index, loc),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? color : BianTheme.mediumGray,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[currentValue].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[currentValue].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[currentValue],
+                  color: colors[currentValue],
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getScaleDescription(field.id, currentValue, loc),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Obtiene etiqueta corta para la escala
+  String _getShortScaleLabel(int value, AppLocalizations loc) {
+    switch (value) {
+      case 0:
+        return 'No cumple';
+      case 1:
+        return 'Parcial';
+      case 2:
+        return 'Cumple';
+      default:
+        return value.toString();
+    }
+  }
+
+  /// Obtiene la descripción del nivel seleccionado
+  String _getScaleDescription(String fieldId, int value, AppLocalizations loc) {
+    // Intentar obtener traducción específica del indicador
+    final specificKey = '${fieldId}_$value';
+    final specificTranslation = loc.translate(specificKey);
+    
+    if (specificTranslation != specificKey) {
+      return specificTranslation;
+    }
+    
+    // Usar descripciones genéricas
+    switch (value) {
+      case 0:
+        return loc.translate('scale_0_desc') != 'scale_0_desc' 
+            ? loc.translate('scale_0_desc')
+            : 'No cumple con el criterio evaluado. Requiere intervención inmediata.';
+      case 1:
+        return loc.translate('scale_1_desc') != 'scale_1_desc'
+            ? loc.translate('scale_1_desc')
+            : 'Cumple parcialmente con el criterio. Se recomienda mejorar.';
+      case 2:
+        return loc.translate('scale_2_desc') != 'scale_2_desc'
+            ? loc.translate('scale_2_desc')
+            : 'Cumple totalmente con el criterio evaluado.';
+      default:
+        return '';
     }
   }
 
