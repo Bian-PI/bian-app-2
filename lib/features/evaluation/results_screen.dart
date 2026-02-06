@@ -1466,14 +1466,21 @@ class ResultsScreen extends StatelessWidget {
                   loc.translate(point.toString()),
                 );
               }),
+            
+            // ═══════════════════════════════════════════════════════════════
+            // TABLA DE ANÁLISIS DETALLADO (NUEVA SECCIÓN)
+            // ═══════════════════════════════════════════════════════════════
+            const SizedBox(height: 24),
+            _buildDetailedAnalysisSection(context, loc),
+            
             const SizedBox(height: 24),
             Text(
               loc.translate('recommendations'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
-            ...recommendations.map(
-                (rec) => _buildRecommendationCard(context, rec.toString())),
+            // Usar recomendaciones mejoradas basadas en resultados
+            ..._buildSmartRecommendations(context, loc, overallScore, categoryScores, criticalPoints),
             const SizedBox(height: 32),
 
             _buildAIAnalysisButton(context, loc, overallScore, categoryScores,
@@ -2362,6 +2369,484 @@ class ResultsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// ═══════════════════════════════════════════════════════════════════════════
+  /// SECCIÓN DE ANÁLISIS DETALLADO - Tabla con todas las preguntas y respuestas
+  /// ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildDetailedAnalysisSection(BuildContext context, AppLocalizations loc) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.table_chart, color: BianTheme.primaryRed),
+            const SizedBox(width: 8),
+            Text(
+              loc.translate('detailed_analysis') != 'detailed_analysis'
+                  ? loc.translate('detailed_analysis')
+                  : 'Análisis Detallado por Indicador',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Iterar por cada categoría
+        ...species.categories.map((category) {
+          return _buildCategoryDetailTable(context, loc, category, isICAEvaluation);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCategoryDetailTable(
+    BuildContext context, 
+    AppLocalizations loc, 
+    dynamic category,
+    bool isICAEvaluation,
+  ) {
+    final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+    final details = categoryDetails?[category.id] as Map<String, dynamic>?;
+    
+    // Obtener peso de la categoría
+    double weight = category.weight ?? 1.0;
+    int obtained = details?['obtained'] as int? ?? 0;
+    int maxPossible = details?['max_possible'] as int? ?? 0;
+    double percentage = details?['percentage'] as double? ?? 0.0;
+    
+    // Color según resultado
+    Color headerColor;
+    if (isICAEvaluation) {
+      if (percentage >= 90) headerColor = const Color(0xFF1B5E20);
+      else if (percentage >= 76) headerColor = const Color(0xFF4CAF50);
+      else if (percentage >= 50) headerColor = const Color(0xFFFF9800);
+      else headerColor = const Color(0xFFD32F2F);
+    } else {
+      if (percentage >= 80) headerColor = BianTheme.successGreen;
+      else if (percentage >= 60) headerColor = BianTheme.warningYellow;
+      else headerColor = BianTheme.errorRed;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: headerColor.withOpacity(0.3), width: 2),
+        boxShadow: BianTheme.cardShadow,
+      ),
+      child: Column(
+        children: [
+          // Header de la categoría
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: headerColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.translate('category_${category.id}') != 'category_${category.id}'
+                            ? loc.translate('category_${category.id}')
+                            : loc.translate(category.id),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: headerColor,
+                        ),
+                      ),
+                      if (isICAEvaluation && weight < 1.0)
+                        Text(
+                          'Peso: ${(weight * 100).toInt()}% | Contribución: ${(percentage * weight).toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.mediumGray,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: headerColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isICAEvaluation 
+                        ? '$obtained/$maxPossible (${percentage.toStringAsFixed(1)}%)'
+                        : '${percentage.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Tabla de indicadores
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 20,
+              headingRowColor: MaterialStateProperty.all(BianTheme.backgroundGray),
+              columns: [
+                DataColumn(label: Text('Indicador', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Respuesta', style: TextStyle(fontWeight: FontWeight.bold))),
+                if (isICAEvaluation) ...[
+                  DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Max', style: TextStyle(fontWeight: FontWeight.bold))),
+                ],
+              ],
+              rows: category.fields.map<DataRow>((field) {
+                final key = '${category.id}_${field.id}';
+                final value = evaluation.responses[key];
+                
+                // Formatear valor de respuesta
+                String displayValue;
+                int? score;
+                Color valueColor = BianTheme.darkGray;
+                
+                if (field.type.toString().contains('scale0to2')) {
+                  score = value is int ? value : (value is double ? value.toInt() : null);
+                  if (score == 0) {
+                    displayValue = 'No cumple (0)';
+                    valueColor = BianTheme.errorRed;
+                  } else if (score == 1) {
+                    displayValue = 'Parcial (1)';
+                    valueColor = Colors.amber.shade700;
+                  } else if (score == 2) {
+                    displayValue = 'Cumple (2)';
+                    valueColor = BianTheme.successGreen;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('yesNo')) {
+                  if (value == true) {
+                    displayValue = 'Sí';
+                    valueColor = BianTheme.successGreen;
+                  } else if (value == false) {
+                    displayValue = 'No';
+                    valueColor = BianTheme.errorRed;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else {
+                  displayValue = value?.toString() ?? 'Sin respuesta';
+                }
+                
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Container(
+                        constraints: BoxConstraints(maxWidth: 180),
+                        child: Text(
+                          loc.translate('${field.id}_label') != '${field.id}_label'
+                              ? loc.translate('${field.id}_label')
+                              : loc.translate(field.id),
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        displayValue,
+                        style: TextStyle(
+                          color: valueColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    if (isICAEvaluation) ...[
+                      DataCell(
+                        Text(
+                          score?.toString() ?? '-',
+                          style: TextStyle(
+                            color: valueColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          field.maxScore?.toString() ?? '2',
+                          style: const TextStyle(color: BianTheme.mediumGray),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ═══════════════════════════════════════════════════════════════════════════
+  /// RECOMENDACIONES INTELIGENTES basadas en los resultados específicos
+  /// ═══════════════════════════════════════════════════════════════════════════
+  List<Widget> _buildSmartRecommendations(
+    BuildContext context,
+    AppLocalizations loc,
+    double overallScore,
+    Map<String, double> categoryScores,
+    List criticalPoints,
+  ) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final recommendations = <Map<String, dynamic>>[];
+    final isSpanish = evaluation.language == 'es';
+    
+    // 1. Recomendación general basada en el score total
+    if (overallScore < 50) {
+      recommendations.add({
+        'priority': 'CRÍTICA',
+        'color': BianTheme.errorRed,
+        'icon': Icons.error,
+        'title': isSpanish ? 'Atención Urgente Requerida' : 'Urgent Attention Required',
+        'description': isSpanish 
+            ? 'La granja presenta un nivel de bienestar animal bajo. Se requiere intervención inmediata para mejorar las condiciones. Contacte a un profesional veterinario especializado en bienestar animal.'
+            : 'The farm shows a low animal welfare level. Immediate intervention is required to improve conditions. Contact a veterinary professional specialized in animal welfare.',
+      });
+    } else if (overallScore < 76) {
+      recommendations.add({
+        'priority': 'IMPORTANTE',
+        'color': Colors.orange,
+        'icon': Icons.warning_amber,
+        'title': isSpanish ? 'Plan de Mejora Necesario' : 'Improvement Plan Needed',
+        'description': isSpanish 
+            ? 'La granja tiene un nivel de bienestar medio. Se recomienda implementar un plan de mejora progresivo enfocado en las áreas críticas identificadas.'
+            : 'The farm has a medium welfare level. It is recommended to implement a progressive improvement plan focused on the identified critical areas.',
+      });
+    } else if (overallScore < 90) {
+      recommendations.add({
+        'priority': 'SUGERENCIA',
+        'color': BianTheme.successGreen,
+        'icon': Icons.thumb_up,
+        'title': isSpanish ? 'Buen Desempeño - Optimización Posible' : 'Good Performance - Optimization Possible',
+        'description': isSpanish 
+            ? 'La granja presenta un alto nivel de bienestar. Para alcanzar la excelencia, enfóquese en los puntos críticos restantes.'
+            : 'The farm shows a high welfare level. To achieve excellence, focus on the remaining critical points.',
+      });
+    } else {
+      recommendations.add({
+        'priority': 'EXCELENTE',
+        'color': const Color(0xFF1B5E20),
+        'icon': Icons.workspace_premium,
+        'title': isSpanish ? '¡Felicitaciones! Excelente Bienestar' : 'Congratulations! Excellent Welfare',
+        'description': isSpanish 
+            ? 'La granja cumple con los más altos estándares de bienestar animal según la metodología ICA. Mantenga las buenas prácticas y continúe monitoreando.'
+            : 'The farm meets the highest animal welfare standards according to ICA methodology. Maintain good practices and continue monitoring.',
+      });
+    }
+    
+    // 2. Recomendaciones específicas por categoría (ICA)
+    if (isICAEvaluation) {
+      // Recursos
+      if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
+        recommendations.add({
+          'priority': 'RECURSOS',
+          'color': const Color(0xFF1565C0),
+          'icon': Icons.home_work,
+          'title': isSpanish ? 'Mejorar Infraestructura y Recursos' : 'Improve Infrastructure and Resources',
+          'description': isSpanish 
+              ? 'Revisar calidad de cama, bebederos, comederos y condiciones térmicas. Verificar que los espacios cumplan con la normativa vigente.'
+              : 'Review bedding quality, drinkers, feeders and thermal conditions. Verify that spaces comply with current regulations.',
+        });
+      }
+      
+      // Animal
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add({
+          'priority': 'ANIMAL',
+          'color': const Color(0xFF7B1FA2),
+          'icon': Icons.pets,
+          'title': isSpanish ? 'Atención a Indicadores del Animal' : 'Attention to Animal Indicators',
+          'description': isSpanish 
+              ? 'Verificar signos de estrés térmico, lesiones, condición del plumaje y salud podal. Implementar programa de monitoreo continuo.'
+              : 'Check for thermal stress signs, injuries, plumage condition and foot health. Implement continuous monitoring program.',
+        });
+      }
+      
+      // Gestión
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add({
+          'priority': 'GESTIÓN',
+          'color': const Color(0xFF00796B),
+          'icon': Icons.assignment,
+          'title': isSpanish ? 'Fortalecer Documentación y Protocolos' : 'Strengthen Documentation and Protocols',
+          'description': isSpanish 
+              ? 'Implementar POE de bienestar animal, programa de iluminación, protocolos de emergencia térmica y capacitación del personal según requerimientos ICA.'
+              : 'Implement animal welfare SOP, lighting program, thermal emergency protocols and staff training according to ICA requirements.',
+        });
+      }
+    }
+    
+    // 3. Recomendaciones específicas por puntos críticos
+    final criticalSet = criticalPoints.map((p) => p.toString()).toSet();
+    
+    if (criticalSet.any((p) => p.contains('poe_animal_welfare'))) {
+      recommendations.add({
+        'priority': 'DOCUMENTACIÓN',
+        'color': Colors.indigo,
+        'icon': Icons.description,
+        'title': isSpanish ? 'Implementar POE de Bienestar Animal' : 'Implement Animal Welfare SOP',
+        'description': isSpanish 
+            ? 'Crear un Procedimiento Operativo Estandarizado que incluya: plan de vacunación, densidades, manejo de aves, y todos los procesos relacionados con bienestar animal.'
+            : 'Create a Standard Operating Procedure that includes: vaccination plan, densities, bird handling, and all animal welfare-related processes.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('training') || p.contains('capacitacion'))) {
+      recommendations.add({
+        'priority': 'CAPACITACIÓN',
+        'color': Colors.teal,
+        'icon': Icons.school,
+        'title': isSpanish ? 'Capacitar al Personal' : 'Train Staff',
+        'description': isSpanish 
+            ? 'Asegurar que todo el personal que maneja aves cuente con certificación en bienestar animal y técnicas de sacrificio humanitario según normativa ICA.'
+            : 'Ensure all bird-handling staff has certification in animal welfare and humane slaughter techniques according to ICA regulations.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('thermal') || p.contains('termic'))) {
+      recommendations.add({
+        'priority': 'AMBIENTE',
+        'color': Colors.deepOrange,
+        'icon': Icons.thermostat,
+        'title': isSpanish ? 'Control de Temperatura' : 'Temperature Control',
+        'description': isSpanish 
+            ? 'Implementar monitoreo térmico diario y protocolo de emergencias para cambios abruptos de temperatura. Verificar funcionamiento de ventiladores y cortinas.'
+            : 'Implement daily thermal monitoring and emergency protocol for abrupt temperature changes. Verify fans and curtains operation.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('water') || p.contains('agua'))) {
+      recommendations.add({
+        'priority': 'AGUA',
+        'color': Colors.blue,
+        'icon': Icons.water_drop,
+        'title': isSpanish ? 'Mejorar Suministro de Agua' : 'Improve Water Supply',
+        'description': isSpanish 
+            ? 'Verificar calidad del agua con análisis periódicos, revisar funcionamiento de bebederos y asegurar relación adecuada de animales por bebedero.'
+            : 'Verify water quality with periodic analysis, check drinker operation and ensure adequate animal-to-drinker ratio.',
+      });
+    }
+
+    // Construir widgets
+    return recommendations.map((rec) => _buildSmartRecommendationCard(
+      context,
+      priority: rec['priority'] as String,
+      color: rec['color'] as Color,
+      icon: rec['icon'] as IconData,
+      title: rec['title'] as String,
+      description: rec['description'] as String,
+    )).toList();
+  }
+
+  Widget _buildSmartRecommendationCard(
+    BuildContext context, {
+    required String priority,
+    required Color color,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header con prioridad
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    priority,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Descripción
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                color: BianTheme.darkGray,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
