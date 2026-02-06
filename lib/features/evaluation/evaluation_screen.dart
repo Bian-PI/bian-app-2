@@ -612,125 +612,311 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     }
   }
 
+  /// Calcula los resultados de la evaluación según metodología ICA
+  /// 
+  /// Para aves (scale0to2):
+  /// - Medidas Basadas en los Recursos (MBR): 35%
+  /// - Medidas Basadas en el Animal (MBA): 35%
+  /// - Medidas Basadas en la Gestión (MBG): 30%
+  /// 
+  /// Clasificación final:
+  /// - ≥90%: EXCELENTE BIENESTAR
+  /// - 76%-90%: ALTO BIENESTAR
+  /// - 50%-75%: MEDIO BIENESTAR
+  /// - <50%: BAJO BIENESTAR
   Map<String, dynamic> _calculateResults() {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
     final categoryScores = <String, double>{};
+    final categoryDetails = <String, Map<String, dynamic>>{};
     final criticalPoints = <String>[];
     final strongPoints = <String>[];
+    
+    double weightedTotalScore = 0.0;
+    double totalWeight = 0.0;
+    
+    // Verificar si es evaluación ICA (tiene campos scale0to2)
+    bool isICAEvaluation = widget.species.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scale0to2));
 
     for (var category in widget.species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
-
+      int categoryObtained = 0;
+      int categoryMaxPossible = 0;
+      int answeredFields = 0;
+      
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = _evaluation.responses[key];
+        final key = '${category.id}_${field.id}';
+        final value = _evaluation.responses[key];
+        
+        if (field.type == FieldType.scale0to2) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA ICA: Escala 0-2
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // Generalmente 2
           
           if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
             
-            bool isPositive = false;
-            if (field.id.contains('access') || 
-                field.id.contains('quality') || 
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
+            // Identificar puntos críticos (score 0)
+            if (score == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
             }
+          }
+        } else if (field.type == FieldType.yesNo) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA LEGACY: Sí/No
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += 1;
+          
+          if (value != null) {
+            answeredFields++;
+            
+            // Determinar si la respuesta es positiva según el tipo de campo
+            bool isPositive = _isPositiveResponse(field.id, value);
             
             if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
+              categoryObtained += 1;
             } else {
               criticalPoints.add('${category.id}_${field.id}');
             }
           }
         }
+        // Otros tipos de campo (number, text, percentage) no afectan el score
       }
 
-      if (categoryTotal > 0) {
-        final score = (categoryPositive / categoryTotal) * 100;
-        categoryScores[category.id] = score;
+      // Calcular porcentaje de la categoría
+      if (categoryMaxPossible > 0 && answeredFields > 0) {
+        final categoryPercentage = (categoryObtained / categoryMaxPossible) * 100;
+        categoryScores[category.id] = categoryPercentage;
         
-        if (score >= 80) {
+        // Guardar detalles de la categoría
+        categoryDetails[category.id] = {
+          'obtained': categoryObtained,
+          'max_possible': categoryMaxPossible,
+          'percentage': categoryPercentage,
+          'weight': category.weight,
+          'answered': answeredFields,
+          'total_fields': category.fields.where((f) => 
+            f.type == FieldType.scale0to2 || f.type == FieldType.yesNo).length,
+        };
+        
+        // Calcular contribución ponderada al score total
+        if (isICAEvaluation && category.weight < 1.0) {
+          // Usar peso de la categoría para ICA
+          weightedTotalScore += categoryPercentage * category.weight;
+          totalWeight += category.weight;
+        } else {
+          // Sin ponderación para evaluaciones legacy
+          weightedTotalScore += categoryPercentage;
+          totalWeight += 1.0;
+        }
+        
+        // Identificar puntos fuertes (≥80%)
+        if (categoryPercentage >= 80) {
           strongPoints.add(category.id);
         }
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    // Calcular score general
+    double overallScore = 0.0;
+    if (totalWeight > 0) {
+      if (isICAEvaluation) {
+        // Para ICA: ya está ponderado, solo normalizar si no suma 100%
+        overallScore = weightedTotalScore / totalWeight * 100;
+        // Si los pesos suman 1.0 (100%), simplemente usar el weightedTotalScore
+        if ((totalWeight - 1.0).abs() < 0.01) {
+          overallScore = weightedTotalScore;
+        }
+      } else {
+        // Para legacy: promedio simple
+        overallScore = weightedTotalScore / totalWeight;
+      }
+    }
 
+    // Determinar nivel de cumplimiento según metodología ICA
     String complianceLevel;
-    if (overallScore >= 90) {
-      complianceLevel = 'excellent';
-    } else if (overallScore >= 75) {
-      complianceLevel = 'good';
-    } else if (overallScore >= 60) {
-      complianceLevel = 'acceptable';
-    } else if (overallScore >= 40) {
-      complianceLevel = 'needs_improvement';
+    String welfareClassification;
+    
+    if (isICAEvaluation) {
+      // Clasificación ICA
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 76) {
+        complianceLevel = 'high';
+        welfareClassification = 'GRANJA CON ALTO BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'medium';
+        welfareClassification = 'GRANJA CON MEDIO BIENESTAR';
+      } else {
+        complianceLevel = 'low';
+        welfareClassification = 'GRANJA CON BAJO BIENESTAR';
+      }
     } else {
-      complianceLevel = 'critical';
+      // Clasificación legacy
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'Excelente';
+      } else if (overallScore >= 75) {
+        complianceLevel = 'good';
+        welfareClassification = 'Bueno';
+      } else if (overallScore >= 60) {
+        complianceLevel = 'acceptable';
+        welfareClassification = 'Aceptable';
+      } else if (overallScore >= 40) {
+        complianceLevel = 'needs_improvement';
+        welfareClassification = 'Necesita mejora';
+      } else {
+        complianceLevel = 'critical';
+        welfareClassification = 'Crítico';
+      }
     }
 
-    final recommendationKeys = <String>[];
-    
-    if (overallScore < 60) {
-      recommendationKeys.add('immediate_attention_required');
-    }
-    
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendationKeys.add('improve_feeding_practices');
-    }
-    
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendationKeys.add('strengthen_health_program');
-    }
-    
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendationKeys.add('improve_infrastructure');
-    }
-    
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendationKeys.add('train_staff_welfare');
-    }
-
-    if (recommendationKeys.isEmpty) {
-      recommendationKeys.add('maintain_current_practices');
-    }
+    // Generar recomendaciones
+    final recommendationKeys = _generateRecommendations(
+      overallScore, 
+      categoryScores, 
+      criticalPoints,
+      isICAEvaluation,
+    );
 
     return {
       'overall_score': overallScore,
       'overall_score_formatted': overallScore.toStringAsFixed(1),
       'compliance_level': complianceLevel,
+      'welfare_classification': welfareClassification,
+      'is_ica_evaluation': isICAEvaluation,
       'category_scores': categoryScores,
-      'critical_points': criticalPoints.take(10).toList(),
+      'category_details': categoryDetails,
+      'critical_points': criticalPoints.take(15).toList(),
       'strong_points': strongPoints,
       'recommendations': recommendationKeys,
+      'total_weight_applied': totalWeight,
     };
+  }
+
+  /// Determina si una respuesta Sí/No es positiva según el tipo de indicador
+  bool _isPositiveResponse(String fieldId, dynamic value) {
+    // Campos donde Sí (true) es positivo
+    final positiveWhenTrue = [
+      'access', 'quality', 'sufficient', 'health', 'vaccination',
+      'natural_behavior', 'movement', 'ventilation', 'training',
+      'records', 'biosecurity', 'handling', 'lighting', 'enrichment',
+      'resting_area', 'castration', 'feed', 'water',
+    ];
+    
+    for (var keyword in positiveWhenTrue) {
+      if (fieldId.contains(keyword)) {
+        return value == true;
+      }
+    }
+    
+    // Por defecto, false es positivo (ausencia de problemas)
+    return value == false;
+  }
+
+  /// Genera recomendaciones basadas en los resultados
+  List<String> _generateRecommendations(
+    double overallScore,
+    Map<String, double> categoryScores,
+    List<String> criticalPoints,
+    bool isICAEvaluation,
+  ) {
+    final recommendations = <String>[];
+    
+    if (isICAEvaluation) {
+      // Recomendaciones específicas ICA
+      if (overallScore < 50) {
+        recommendations.add('immediate_attention_required');
+      }
+      
+      // Verificar cada categoría ICA
+      if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
+        recommendations.add('improve_resources');
+      }
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add('improve_animal_indicators');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('improve_management');
+      }
+      
+      // Recomendaciones por puntos críticos específicos
+      for (var critical in criticalPoints.take(5)) {
+        if (critical.contains('poe_animal_welfare')) {
+          recommendations.add('implement_poe');
+        }
+        if (critical.contains('welfare_training') || critical.contains('euthanasia_training')) {
+          recommendations.add('train_staff_welfare');
+        }
+        if (critical.contains('thermal')) {
+          recommendations.add('implement_thermal_protocol');
+        }
+        if (critical.contains('lighting')) {
+          recommendations.add('implement_lighting_program');
+        }
+      }
+    } else {
+      // Recomendaciones legacy
+      if (overallScore < 60) {
+        recommendations.add('immediate_attention_required');
+      }
+      if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
+        recommendations.add('improve_feeding_practices');
+      }
+      if (categoryScores['health'] != null && categoryScores['health']! < 70) {
+        recommendations.add('strengthen_health_program');
+      }
+      if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+        recommendations.add('improve_infrastructure');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('train_staff_welfare');
+      }
+    }
+    
+    if (recommendations.isEmpty) {
+      recommendations.add('maintain_current_practices');
+    }
+    
+    return recommendations.toSet().toList(); // Eliminar duplicados
   }
 
   List<String> _translateRecommendations(List recommendationKeys) {
     final translations = <String, String>{
+      // Recomendaciones generales
       'immediate_attention_required': widget.currentLanguage == 'es' 
           ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
           : 'Immediate attention required to improve animal welfare conditions',
+      'maintain_current_practices': widget.currentLanguage == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
+      
+      // Recomendaciones ICA
+      'improve_resources': widget.currentLanguage == 'es'
+          ? 'Mejorar las medidas basadas en recursos: calidad de cama, bebederos, comederos y condiciones ambientales'
+          : 'Improve resource-based measures: bedding quality, drinkers, feeders and environmental conditions',
+      'improve_animal_indicators': widget.currentLanguage == 'es'
+          ? 'Atender los indicadores basados en el animal: verificar signos de estrés térmico, lesiones y condición física'
+          : 'Address animal-based indicators: check for thermal stress signs, injuries and physical condition',
+      'improve_management': widget.currentLanguage == 'es'
+          ? 'Fortalecer las medidas de gestión: documentación, protocolos y capacitación del personal'
+          : 'Strengthen management measures: documentation, protocols and staff training',
+      'implement_poe': widget.currentLanguage == 'es'
+          ? 'Implementar el Procedimiento Operativo Estandarizado (POE) de Bienestar Animal según normativa ICA'
+          : 'Implement the Standard Operating Procedure (SOP) for Animal Welfare according to ICA regulations',
+      'train_staff_welfare': widget.currentLanguage == 'es'
+          ? 'Capacitar al personal en bienestar animal y técnicas de manejo humanitario'
+          : 'Train staff in animal welfare and humane handling techniques',
+      'implement_thermal_protocol': widget.currentLanguage == 'es'
+          ? 'Implementar protocolo de monitoreo térmico diario y manejo de emergencias'
+          : 'Implement daily thermal monitoring protocol and emergency management',
+      'implement_lighting_program': widget.currentLanguage == 'es'
+          ? 'Establecer programa de iluminación con régimen luz/oscuridad adecuado'
+          : 'Establish lighting program with adequate light/dark regime',
+      
+      // Recomendaciones legacy
       'improve_feeding_practices': widget.currentLanguage == 'es'
           ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
           : 'Improve feeding practices and ensure constant access to quality water and food',
@@ -740,12 +926,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'improve_infrastructure': widget.currentLanguage == 'es'
           ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
           : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': widget.currentLanguage == 'es'
-          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
-          : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': widget.currentLanguage == 'es'
-          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
-          : 'Maintain current good practices and continue monitoring animal welfare',
     };
 
     final translatedRecommendations = <String>[];
