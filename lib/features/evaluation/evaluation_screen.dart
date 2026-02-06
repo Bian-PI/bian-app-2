@@ -1054,6 +1054,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               species: widget.species,
               results: results,
               structuredJson: structuredJson,
+              isLocal: widget.isOfflineMode, // Marcar como local si es modo offline
             ),
           ),
         );
