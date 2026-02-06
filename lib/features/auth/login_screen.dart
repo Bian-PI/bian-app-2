@@ -1,5 +1,6 @@
 import 'package:bian_app/core/providers/language_provider.dart';
 import 'package:bian_app/core/utils/connectivity_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -426,6 +427,44 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  Future<void> _doDevLogin() async {
+    if (!kDebugMode || !ApiService.bypassAuthForDev) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await _apiService.loginDev();
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        await _storage.saveToken(result['token']);
+
+        if (result['user'] != null) {
+          final user = User.fromJson(result['user']);
+          await _storage.saveUser(user);
+        }
+
+        Provider.of<AppModeProvider>(context, listen: false).setLoggedIn(true);
+        _sessionManager.startMonitoring();
+
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showSnackBar('Error en dev login: $e', isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -803,6 +842,27 @@ class _LoginScreenState extends State<LoginScreen>
                                           Size(double.infinity, 52),
                                     ),
                                   ),
+
+                                  if (kDebugMode && ApiService.bypassAuthForDev)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: OutlinedButton.icon(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _doDevLogin,
+                                        icon: const Icon(Icons.developer_mode),
+                                        label: const Text('Dev Login (sin API)'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: BianTheme.warningYellow,
+                                          side: const BorderSide(
+                                            color: BianTheme.warningYellow,
+                                            width: 2,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          minimumSize: const Size(double.infinity, 52),
+                                        ),
+                                      ),
+                                    ),
 
                                   if (_pendingReportsCount > 0)
                                     Padding(
