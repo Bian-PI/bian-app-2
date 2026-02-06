@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:bian_app/core/utils/connectivity_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/api/api_service.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import '../auth/login_screen.dart';
@@ -43,6 +45,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkSession() async {
+    // En modo desarrollo con bypass activo, saltar verificación de conectividad
+    if (kDebugMode && ApiService.bypassAuthForDev) {
+      print('⚠️ DEV MODE: Saltando verificación de conectividad');
+      final hasSession = await _storage.hasActiveSession();
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              hasSession ? const HomeScreen() : const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
+      return;
+    }
+
     print('🔍 Verificando conectividad desde Splash...');
     final connectivityService = ConnectivityService();
 
