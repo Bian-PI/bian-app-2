@@ -183,12 +183,17 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      _getIconData(cat.icon),
+                      _getCategoryIcon(cat.id),
                       size: 20,
                       color: Color(int.parse(widget.species.gradientColors[0])),
                     ),
                     const SizedBox(width: 12),
-                    Text(loc.translate(cat.id)),
+                    Expanded(
+                      child: Text(
+                        _getCategoryName(cat, loc),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
                   ],
                 ),
               )),
@@ -244,6 +249,68 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         ],
       ),
     );
+  }
+
+  /// Obtiene el nombre traducido de la categoría
+  String _getCategoryName(dynamic category, AppLocalizations loc) {
+    // Intentar con nameKey primero
+    if (category.nameKey != null) {
+      final translated = loc.translate(category.nameKey);
+      if (translated != category.nameKey) {
+        return translated;
+      }
+    }
+    
+    // Intentar con category_ID
+    final categoryKey = 'category_${category.id}';
+    final translated = loc.translate(categoryKey);
+    if (translated != categoryKey) {
+      return translated;
+    }
+    
+    // Traducciones hardcoded para ICA
+    final hardcodedTranslations = {
+      'resources': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en los Recursos' 
+          : 'Resource-Based Measures',
+      'animal': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en el Animal' 
+          : 'Animal-Based Measures',
+      'management': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en la Gestión' 
+          : 'Management-Based Measures',
+      // Legacy categories
+      'feeding': widget.currentLanguage == 'es' ? 'Alimentación' : 'Feeding',
+      'health': widget.currentLanguage == 'es' ? 'Salud' : 'Health',
+      'behavior': widget.currentLanguage == 'es' ? 'Comportamiento' : 'Behavior',
+      'infrastructure': widget.currentLanguage == 'es' ? 'Infraestructura' : 'Infrastructure',
+    };
+    
+    return hardcodedTranslations[category.id] ?? category.id;
+  }
+
+  /// Obtiene el icono correspondiente a la categoría
+  IconData _getCategoryIcon(String categoryId) {
+    switch (categoryId) {
+      // ICA categories
+      case 'resources':
+        return Icons.home_work;
+      case 'animal':
+        return Icons.pets;
+      case 'management':
+        return Icons.assignment;
+      // Legacy categories
+      case 'feeding':
+        return Icons.restaurant;
+      case 'health':
+        return Icons.medical_services;
+      case 'behavior':
+        return Icons.psychology;
+      case 'infrastructure':
+        return Icons.foundation;
+      default:
+        return Icons.category;
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -1452,7 +1519,7 @@ Widget build(BuildContext context) {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _getIconData(currentCategory.icon),
+                      _getCategoryIcon(currentCategory.id),
                       color: Colors.white,
                       size: 28,
                     ),
@@ -1463,7 +1530,7 @@ Widget build(BuildContext context) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          loc.translate(currentCategory.nameKey ?? currentCategory.id),
+                          _getCategoryName(currentCategory, loc),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
