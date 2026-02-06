@@ -1599,22 +1599,44 @@ class ResultsScreen extends StatelessWidget {
 
   Widget _buildScoreHeader(BuildContext context, double score, String level) {
     final loc = AppLocalizations.of(context);
+    
+    // Verificar si es evaluación ICA
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final String welfareClassification = results['welfare_classification']?.toString() ?? '';
 
     Color scoreColor;
     IconData scoreIcon;
 
-    if (score >= 90) {
-      scoreColor = BianTheme.successGreen;
-      scoreIcon = Icons.celebration;
-    } else if (score >= 75) {
-      scoreColor = const Color(0xFF4CAF50);
-      scoreIcon = Icons.thumb_up;
-    } else if (score >= 60) {
-      scoreColor = BianTheme.warningYellow;
-      scoreIcon = Icons.warning_amber;
+    if (isICAEvaluation) {
+      // Colores según clasificación ICA
+      if (score >= 90) {
+        scoreColor = const Color(0xFF1B5E20); // Verde oscuro - Excelente
+        scoreIcon = Icons.workspace_premium;
+      } else if (score >= 76) {
+        scoreColor = const Color(0xFF4CAF50); // Verde - Alto
+        scoreIcon = Icons.verified;
+      } else if (score >= 50) {
+        scoreColor = const Color(0xFFFF9800); // Naranja - Medio
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = const Color(0xFFD32F2F); // Rojo - Bajo
+        scoreIcon = Icons.dangerous;
+      }
     } else {
-      scoreColor = BianTheme.errorRed;
-      scoreIcon = Icons.error_outline;
+      // Colores legacy
+      if (score >= 90) {
+        scoreColor = BianTheme.successGreen;
+        scoreIcon = Icons.celebration;
+      } else if (score >= 75) {
+        scoreColor = const Color(0xFF4CAF50);
+        scoreIcon = Icons.thumb_up;
+      } else if (score >= 60) {
+        scoreColor = BianTheme.warningYellow;
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = BianTheme.errorRed;
+        scoreIcon = Icons.error_outline;
+      }
     }
 
     return Container(
@@ -1628,6 +1650,25 @@ class ResultsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Badge ICA si aplica
+          if (isICAEvaluation) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Metodología ICA',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Icon(scoreIcon, size: 64, color: Colors.white),
           const SizedBox(height: 16),
           Text(
@@ -1646,16 +1687,85 @@ class ResultsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              loc.translate(level),
+              isICAEvaluation && welfareClassification.isNotEmpty
+                  ? welfareClassification
+                  : loc.translate(level),
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
+          // Mostrar rangos ICA
+          if (isICAEvaluation) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    loc.translate('ica_classification_ranges') != 'ica_classification_ranges'
+                        ? loc.translate('ica_classification_ranges')
+                        : 'Rangos de clasificación:',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildRangeBadge('≥90%', 'Excelente', const Color(0xFF1B5E20)),
+                      _buildRangeBadge('76-90%', 'Alto', const Color(0xFF4CAF50)),
+                      _buildRangeBadge('50-75%', 'Medio', const Color(0xFFFF9800)),
+                      _buildRangeBadge('<50%', 'Bajo', const Color(0xFFD32F2F)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildRangeBadge(String range, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 1),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          range,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: Colors.white70,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1760,13 +1870,50 @@ class ResultsScreen extends StatelessWidget {
 
   Widget _buildCategoryScoreCard(BuildContext context, AppLocalizations loc,
       String categoryId, double score) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+    
+    // Obtener peso y detalles de la categoría
+    double? weight;
+    int? obtained;
+    int? maxPossible;
+    
+    if (categoryDetails != null && categoryDetails[categoryId] != null) {
+      final details = categoryDetails[categoryId] as Map<String, dynamic>;
+      weight = details['weight'] as double?;
+      obtained = details['obtained'] as int?;
+      maxPossible = details['max_possible'] as int?;
+    }
+    
+    // Intentar obtener peso del species model si no está en details
+    if (weight == null) {
+      final category = species.categories.where((c) => c.id == categoryId).firstOrNull;
+      if (category != null && category.weight < 1.0) {
+        weight = category.weight;
+      }
+    }
+
     Color barColor;
-    if (score >= 80) {
-      barColor = BianTheme.successGreen;
-    } else if (score >= 60) {
-      barColor = BianTheme.warningYellow;
+    if (isICAEvaluation) {
+      // Colores ICA
+      if (score >= 90) {
+        barColor = const Color(0xFF1B5E20);
+      } else if (score >= 76) {
+        barColor = const Color(0xFF4CAF50);
+      } else if (score >= 50) {
+        barColor = const Color(0xFFFF9800);
+      } else {
+        barColor = const Color(0xFFD32F2F);
+      }
     } else {
-      barColor = BianTheme.errorRed;
+      // Colores legacy
+      if (score >= 80) {
+        barColor = BianTheme.successGreen;
+      } else if (score >= 60) {
+        barColor = BianTheme.warningYellow;
+      } else {
+        barColor = BianTheme.errorRed;
+      }
     }
 
     return Container(
@@ -1775,7 +1922,14 @@ class ResultsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BianTheme.lightGray),
+        border: Border.all(color: barColor.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: barColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1783,20 +1937,64 @@ class ResultsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                loc.translate(categoryId),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Intentar traducir con nameKey primero
+                    Text(
+                      loc.translate('category_$categoryId') != 'category_$categoryId'
+                          ? loc.translate('category_$categoryId')
+                          : loc.translate(categoryId),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    // Mostrar peso si es ICA
+                    if (isICAEvaluation && weight != null && weight < 1.0) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: BianTheme.backgroundGray,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Peso: ${(weight * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: BianTheme.mediumGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              Text(
-                '${score.toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: barColor,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${score.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: barColor,
+                    ),
+                  ),
+                  // Mostrar puntos obtenidos/máximos si es ICA
+                  if (isICAEvaluation && obtained != null && maxPossible != null) ...[
+                    Text(
+                      '$obtained / $maxPossible pts',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BianTheme.mediumGray,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -1805,11 +2003,23 @@ class ResultsScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: score / 100,
-              minHeight: 10,
+              minHeight: 12,
               backgroundColor: BianTheme.lightGray,
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),
+          // Contribución ponderada al total
+          if (isICAEvaluation && weight != null && weight < 1.0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Contribución al total: ${(score * weight).toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 11,
+                color: BianTheme.mediumGray,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );
