@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ica_birds_translations.dart';
 
 class AppLocalizations {
   final Locale locale;
@@ -984,6 +985,7 @@ class AppLocalizations {
 
   String translate(String key, [List<String>? params]) {
     String? value = _localizedValues[locale.languageCode]?[key];
+    value ??= icaBirdsTranslations[locale.languageCode]?[key];
 
     if (value == null) {
       return key;
