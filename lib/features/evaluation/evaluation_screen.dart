@@ -268,8 +268,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       return translated;
     }
     
-    // Traducciones hardcoded para ICA
+    // Traducciones hardcoded
     final hardcodedTranslations = {
+      // ICA categories (Aves)
       'resources': widget.currentLanguage == 'es' 
           ? 'Medidas Basadas en los Recursos' 
           : 'Resource-Based Measures',
@@ -279,6 +280,16 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'management': widget.currentLanguage == 'es' 
           ? 'Medidas Basadas en la Gestión' 
           : 'Management-Based Measures',
+      // EBA categories (Porcinos)
+      'resource': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Recurso' 
+          : 'Resource Indicators',
+      'transport': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Transporte' 
+          : 'Transport Indicators',
+      'slaughter': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Sacrificio' 
+          : 'Slaughter Indicators',
       // Legacy categories
       'feeding': widget.currentLanguage == 'es' ? 'Alimentación' : 'Feeding',
       'health': widget.currentLanguage == 'es' ? 'Salud' : 'Health',
@@ -292,13 +303,20 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   /// Obtiene el icono correspondiente a la categoría
   IconData _getCategoryIcon(String categoryId) {
     switch (categoryId) {
-      // ICA categories
+      // ICA categories (Aves)
       case 'resources':
         return Icons.home_work;
       case 'animal':
         return Icons.pets;
       case 'management':
         return Icons.assignment;
+      // EBA categories (Porcinos)
+      case 'resource':
+        return Icons.home_work;
+      case 'transport':
+        return Icons.local_shipping;
+      case 'slaughter':
+        return Icons.gavel;
       // Legacy categories
       case 'feeding':
         return Icons.restaurant;
@@ -679,18 +697,30 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     }
   }
 
-  /// Calcula los resultados de la evaluación según metodología ICA
+  /// Calcula los resultados de la evaluación según metodología ICA o EBA
   /// 
-  /// Para aves (scale0to2):
+  /// Para aves (scale0to2) - ICA:
   /// - Medidas Basadas en los Recursos (MBR): 35%
   /// - Medidas Basadas en el Animal (MBA): 35%
   /// - Medidas Basadas en la Gestión (MBG): 30%
   /// 
-  /// Clasificación final:
+  /// Para porcinos (scale0to4) - EBA 3.0:
+  /// - Indicadores de Recurso: 40%
+  /// - Indicadores del Animal: 40%
+  /// - Indicadores de Gestión: 20%
+  /// 
+  /// Clasificación ICA (aves):
   /// - ≥90%: EXCELENTE BIENESTAR
   /// - 76%-90%: ALTO BIENESTAR
   /// - 50%-75%: MEDIO BIENESTAR
   /// - <50%: BAJO BIENESTAR
+  ///
+  /// Clasificación EBA (porcinos):
+  /// - ≥90%: EXCELENTE BIENESTAR
+  /// - 75%-90%: BUEN BIENESTAR
+  /// - 50%-75%: BIENESTAR ACEPTABLE
+  /// - 25%-50%: BIENESTAR DEFICIENTE
+  /// - <25%: BIENESTAR CRÍTICO
   Map<String, dynamic> _calculateResults() {
     final categoryScores = <String, double>{};
     final categoryDetails = <String, Map<String, dynamic>>{};
@@ -700,14 +730,20 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     double weightedTotalScore = 0.0;
     double totalWeight = 0.0;
     
-    // Verificar si es evaluación ICA (tiene campos scale0to2)
+    // Verificar tipo de evaluación
     bool isICAEvaluation = widget.species.categories.any((cat) => 
       cat.fields.any((f) => f.type == FieldType.scale0to2));
+    
+    bool isEBAEvaluation = widget.species.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scale0to4));
 
     for (var category in widget.species.categories) {
       int categoryObtained = 0;
       int categoryMaxPossible = 0;
       int answeredFields = 0;
+      
+      // Saltar categorías con peso 0 en el cálculo principal (ej: transporte, sacrificio)
+      bool skipInMainCalculation = category.weight == 0.0;
       
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
@@ -715,7 +751,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         
         if (field.type == FieldType.scale0to2) {
           // ═══════════════════════════════════════════════════════════════
-          // METODOLOGÍA ICA: Escala 0-2
+          // METODOLOGÍA ICA: Escala 0-2 (Aves)
           // ═══════════════════════════════════════════════════════════════
           categoryMaxPossible += field.maxScore; // Generalmente 2
           
@@ -726,6 +762,22 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             
             // Identificar puntos críticos (score 0)
             if (score == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
+        } else if (field.type == FieldType.scale0to4) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EBA 3.0: Escala 0-4 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // Generalmente 4
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score 0 o 1)
+            if (score <= 1) {
               criticalPoints.add('${category.id}_${field.id}');
             }
           }
@@ -764,18 +816,22 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           'weight': category.weight,
           'answered': answeredFields,
           'total_fields': category.fields.where((f) => 
-            f.type == FieldType.scale0to2 || f.type == FieldType.yesNo).length,
+            f.type == FieldType.scale0to2 || 
+            f.type == FieldType.scale0to4 || 
+            f.type == FieldType.yesNo).length,
         };
         
-        // Calcular contribución ponderada al score total
-        if (isICAEvaluation && category.weight < 1.0) {
-          // Usar peso de la categoría para ICA
-          weightedTotalScore += categoryPercentage * category.weight;
-          totalWeight += category.weight;
-        } else {
-          // Sin ponderación para evaluaciones legacy
-          weightedTotalScore += categoryPercentage;
-          totalWeight += 1.0;
+        // Calcular contribución ponderada al score total (solo si no es categoría de peso 0)
+        if (!skipInMainCalculation) {
+          if ((isICAEvaluation || isEBAEvaluation) && category.weight < 1.0 && category.weight > 0) {
+            // Usar peso de la categoría para ICA/EBA
+            weightedTotalScore += categoryPercentage * category.weight;
+            totalWeight += category.weight;
+          } else if (category.weight >= 1.0) {
+            // Sin ponderación para evaluaciones legacy
+            weightedTotalScore += categoryPercentage;
+            totalWeight += 1.0;
+          }
         }
         
         // Identificar puntos fuertes (≥80%)
@@ -788,8 +844,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     // Calcular score general
     double overallScore = 0.0;
     if (totalWeight > 0) {
-      if (isICAEvaluation) {
-        // Para ICA: ya está ponderado, solo normalizar si no suma 100%
+      if (isICAEvaluation || isEBAEvaluation) {
+        // Para ICA/EBA: ya está ponderado, solo normalizar si no suma 100%
         overallScore = weightedTotalScore / totalWeight * 100;
         // Si los pesos suman 1.0 (100%), simplemente usar el weightedTotalScore
         if ((totalWeight - 1.0).abs() < 0.01) {
@@ -801,12 +857,30 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       }
     }
 
-    // Determinar nivel de cumplimiento según metodología ICA
+    // Determinar nivel de cumplimiento según metodología
     String complianceLevel;
     String welfareClassification;
     
-    if (isICAEvaluation) {
-      // Clasificación ICA
+    if (isEBAEvaluation) {
+      // Clasificación EBA (Porcinos) - 5 niveles
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 75) {
+        complianceLevel = 'good';
+        welfareClassification = 'GRANJA CON BUEN BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'acceptable';
+        welfareClassification = 'GRANJA CON BIENESTAR ACEPTABLE';
+      } else if (overallScore >= 25) {
+        complianceLevel = 'deficient';
+        welfareClassification = 'GRANJA CON BIENESTAR DEFICIENTE';
+      } else {
+        complianceLevel = 'critical';
+        welfareClassification = 'GRANJA CON BIENESTAR CRÍTICO';
+      }
+    } else if (isICAEvaluation) {
+      // Clasificación ICA (Aves) - 4 niveles
       if (overallScore >= 90) {
         complianceLevel = 'excellent';
         welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
@@ -846,6 +920,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       categoryScores, 
       criticalPoints,
       isICAEvaluation,
+      isEBAEvaluation,
     );
 
     return {
@@ -854,6 +929,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'compliance_level': complianceLevel,
       'welfare_classification': welfareClassification,
       'is_ica_evaluation': isICAEvaluation,
+      'is_eba_evaluation': isEBAEvaluation,
       'category_scores': categoryScores,
       'category_details': categoryDetails,
       'critical_points': criticalPoints.take(15).toList(),
@@ -889,11 +965,59 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     Map<String, double> categoryScores,
     List<String> criticalPoints,
     bool isICAEvaluation,
+    bool isEBAEvaluation,
   ) {
     final recommendations = <String>[];
     
-    if (isICAEvaluation) {
-      // Recomendaciones específicas ICA
+    if (isEBAEvaluation) {
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones específicas EBA (Porcinos)
+      // ═══════════════════════════════════════════════════════════════
+      if (overallScore < 25) {
+        recommendations.add('critical_welfare_intervention');
+      } else if (overallScore < 50) {
+        recommendations.add('immediate_attention_required');
+      }
+      
+      // Verificar cada categoría EBA
+      if (categoryScores['resource'] != null && categoryScores['resource']! < 70) {
+        recommendations.add('improve_resource_indicators');
+      }
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add('improve_animal_health');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('improve_management_eba');
+      }
+      
+      // Recomendaciones por puntos críticos específicos EBA
+      for (var critical in criticalPoints.take(8)) {
+        if (critical.contains('eba_a') || critical.contains('drinker') || critical.contains('water')) {
+          recommendations.add('improve_water_supply');
+        }
+        if (critical.contains('eba_f') || critical.contains('feeder') || critical.contains('body_condition')) {
+          recommendations.add('improve_feeding_eba');
+        }
+        if (critical.contains('eba_e') || critical.contains('thi') || critical.contains('ammonia') || critical.contains('co2')) {
+          recommendations.add('improve_environment');
+        }
+        if (critical.contains('eba_h') || critical.contains('lameness') || critical.contains('lesion') || critical.contains('mortality')) {
+          recommendations.add('improve_health_monitoring');
+        }
+        if (critical.contains('eba_b') || critical.contains('fight') || critical.contains('enrichment')) {
+          recommendations.add('improve_behavior_welfare');
+        }
+        if (critical.contains('eba_p') || critical.contains('training')) {
+          recommendations.add('train_staff_eba');
+        }
+        if (critical.contains('eba_d') || critical.contains('sop') || critical.contains('contingency')) {
+          recommendations.add('implement_documentation');
+        }
+      }
+    } else if (isICAEvaluation) {
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones específicas ICA (Aves)
+      // ═══════════════════════════════════════════════════════════════
       if (overallScore < 50) {
         recommendations.add('immediate_attention_required');
       }
@@ -925,7 +1049,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         }
       }
     } else {
+      // ═══════════════════════════════════════════════════════════════
       // Recomendaciones legacy
+      // ═══════════════════════════════════════════════════════════════
       if (overallScore < 60) {
         recommendations.add('immediate_attention_required');
       }
@@ -960,7 +1086,46 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
           : 'Maintain current good practices and continue monitoring animal welfare',
       
-      // Recomendaciones ICA
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones EBA (Porcinos)
+      // ═══════════════════════════════════════════════════════════════
+      'critical_welfare_intervention': widget.currentLanguage == 'es'
+          ? 'URGENTE: El nivel de bienestar es crítico. Se requiere intervención inmediata de un profesional veterinario'
+          : 'URGENT: Welfare level is critical. Immediate veterinary professional intervention required',
+      'improve_resource_indicators': widget.currentLanguage == 'es'
+          ? 'Mejorar indicadores de recurso: revisar bebederos, comederos, densidad de alojamiento y condiciones ambientales'
+          : 'Improve resource indicators: review drinkers, feeders, housing density and environmental conditions',
+      'improve_animal_health': widget.currentLanguage == 'es'
+          ? 'Atender indicadores del animal: evaluar cojeras, lesiones cutáneas, problemas respiratorios y mortalidad'
+          : 'Address animal indicators: evaluate lameness, skin lesions, respiratory issues and mortality',
+      'improve_management_eba': widget.currentLanguage == 'es'
+          ? 'Fortalecer gestión: actualizar SOPs, plan de contingencia y capacitación del personal en bienestar animal'
+          : 'Strengthen management: update SOPs, contingency plan and staff training in animal welfare',
+      'improve_water_supply': widget.currentLanguage == 'es'
+          ? 'Mejorar suministro de agua: verificar caudal de bebederos, calidad microbiológica y relación animales/bebedero'
+          : 'Improve water supply: verify drinker flow, microbiological quality and animals/drinker ratio',
+      'improve_feeding_eba': widget.currentLanguage == 'es'
+          ? 'Optimizar alimentación: revisar espacios de comedero, condición corporal y tiempo de acceso al alimento'
+          : 'Optimize feeding: review feeder spaces, body condition and feed access time',
+      'improve_environment': widget.currentLanguage == 'es'
+          ? 'Mejorar ambiente: controlar THI, niveles de amoníaco/CO2, ruido e iluminación según estándares EBA'
+          : 'Improve environment: control THI, ammonia/CO2 levels, noise and lighting according to EBA standards',
+      'improve_health_monitoring': widget.currentLanguage == 'es'
+          ? 'Intensificar monitoreo de salud: vigilar cojeras, lesiones, signos respiratorios, diarrea y mortalidad'
+          : 'Intensify health monitoring: watch for lameness, lesions, respiratory signs, diarrhea and mortality',
+      'improve_behavior_welfare': widget.currentLanguage == 'es'
+          ? 'Mejorar bienestar conductual: reducir peleas, aumentar uso de enriquecimiento y mejorar relación humano-animal'
+          : 'Improve behavioral welfare: reduce fights, increase enrichment use and improve human-animal relationship',
+      'train_staff_eba': widget.currentLanguage == 'es'
+          ? 'Capacitar al personal: asegurar que ≥90% tenga formación anual certificada en bienestar animal'
+          : 'Train staff: ensure ≥90% have annual certified training in animal welfare',
+      'implement_documentation': widget.currentLanguage == 'es'
+          ? 'Implementar documentación: crear/actualizar SOPs críticos y plan de contingencia con simulacros anuales'
+          : 'Implement documentation: create/update critical SOPs and contingency plan with annual drills',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones ICA (Aves)
+      // ═══════════════════════════════════════════════════════════════
       'improve_resources': widget.currentLanguage == 'es'
           ? 'Mejorar las medidas basadas en recursos: calidad de cama, bebederos, comederos y condiciones ambientales'
           : 'Improve resource-based measures: bedding quality, drinkers, feeders and environmental conditions',
@@ -1942,6 +2107,9 @@ Widget build(BuildContext context) {
       // ═══════════════════════════════════════════════════════════════
       case FieldType.scale0to2:
         return _buildScale0to2Widget(field, key, value, categoryId);
+      
+      case FieldType.scale0to4:
+        return _buildScale0to4Widget(field, key, value, categoryId);
 
       case FieldType.yesNo:
         return Row(
@@ -2243,6 +2411,24 @@ Widget build(BuildContext context) {
     }
   }
 
+  /// Obtiene etiqueta corta para la escala 0-4 (EBA Porcinos)
+  String _getShortScaleLabel0to4(int value, AppLocalizations loc) {
+    switch (value) {
+      case 0:
+        return 'Crítico';
+      case 1:
+        return 'Deficiente';
+      case 2:
+        return 'Aceptable';
+      case 3:
+        return 'Bueno';
+      case 4:
+        return 'Excelente';
+      default:
+        return value.toString();
+    }
+  }
+
   /// Obtiene la descripción del nivel seleccionado
   String _getScaleDescription(String fieldId, int value, AppLocalizations loc) {
     // Intentar obtener traducción específica del indicador
@@ -2270,6 +2456,232 @@ Widget build(BuildContext context) {
       default:
         return '';
     }
+  }
+
+  /// Obtiene la descripción del nivel seleccionado para escala 0-4 (EBA Porcinos)
+  String _getScaleDescription0to4(String fieldId, int value, AppLocalizations loc) {
+    // Intentar obtener traducción específica del indicador
+    final specificKey = '${fieldId}_$value';
+    final specificTranslation = loc.translate(specificKey);
+    
+    if (specificTranslation != specificKey) {
+      return specificTranslation;
+    }
+    
+    // Usar descripciones genéricas para EBA
+    switch (value) {
+      case 0:
+        return 'No cumple con el criterio. Situación crítica que requiere acción inmediata.';
+      case 1:
+        return 'Deficiente. Incumplimiento significativo que requiere mejoras urgentes.';
+      case 2:
+        return 'Aceptable. Cumple mínimamente pero hay espacio para mejorar.';
+      case 3:
+        return 'Bueno. Cumple satisfactoriamente con el criterio evaluado.';
+      case 4:
+        return 'Excelente. Cumplimiento óptimo del criterio según estándares EBA.';
+      default:
+        return '';
+    }
+  }
+
+  /// Widget para escala 0-4 (EBA Porcinos)
+  Widget _buildScale0to4Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Colores para cada nivel (0-4)
+    final colors = [
+      const Color(0xFFD32F2F),  // 0 - Crítico (rojo oscuro)
+      const Color(0xFFFF5722),  // 1 - Deficiente (naranja rojizo)
+      const Color(0xFFFF9800),  // 2 - Aceptable (naranja)
+      const Color(0xFF4CAF50),  // 3 - Bueno (verde)
+      const Color(0xFF1B5E20),  // 4 - Excelente (verde oscuro)
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.dangerous,           // 0
+      Icons.warning_amber,       // 1
+      Icons.info_outline,        // 2
+      Icons.thumb_up,            // 3
+      Icons.workspace_premium,   // 4
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Primera fila: 0, 1, 2
+        Row(
+          children: List.generate(3, (index) {
+            final isSelected = currentValue == index;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 3,
+                  right: index == 2 ? 0 : 3,
+                ),
+                child: _buildScaleButton(
+                  index: index,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: _getShortScaleLabel0to4(index, loc),
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // Segunda fila: 3, 4
+        Row(
+          children: List.generate(2, (i) {
+            final index = i + 3;
+            final isSelected = currentValue == index;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 4,
+                  right: i == 1 ? 0 : 4,
+                ),
+                child: _buildScaleButton(
+                  index: index,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: _getShortScaleLabel0to4(index, loc),
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[currentValue].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[currentValue].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[currentValue],
+                  color: colors[currentValue],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getScaleDescription0to4(field.id, currentValue, loc),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Botón reutilizable para escalas
+  Widget _buildScaleButton({
+    required int index,
+    required bool isSelected,
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : BianTheme.lightGray,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Número
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  index.toString(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : BianTheme.mediumGray,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Icono
+            Icon(
+              icon,
+              color: isSelected ? color : BianTheme.mediumGray,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            // Label
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : BianTheme.mediumGray,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildYesNoButton({
