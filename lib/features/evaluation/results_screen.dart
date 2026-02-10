@@ -1607,15 +1607,37 @@ class ResultsScreen extends StatelessWidget {
   Widget _buildScoreHeader(BuildContext context, double score, String level) {
     final loc = AppLocalizations.of(context);
     
-    // Verificar si es evaluación ICA
+    // Verificar tipo de evaluación
     final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
     final String welfareClassification = results['welfare_classification']?.toString() ?? '';
 
     Color scoreColor;
     IconData scoreIcon;
+    String methodologyBadge = '';
 
-    if (isICAEvaluation) {
-      // Colores según clasificación ICA
+    if (isEBAEvaluation) {
+      // Colores según clasificación EBA (Porcinos) - 5 niveles
+      methodologyBadge = 'Metodología EBA 3.0';
+      if (score >= 90) {
+        scoreColor = const Color(0xFF1B5E20); // Verde oscuro - Excelente
+        scoreIcon = Icons.workspace_premium;
+      } else if (score >= 75) {
+        scoreColor = const Color(0xFF4CAF50); // Verde - Bueno
+        scoreIcon = Icons.verified;
+      } else if (score >= 50) {
+        scoreColor = const Color(0xFFFF9800); // Naranja - Aceptable
+        scoreIcon = Icons.info_outline;
+      } else if (score >= 25) {
+        scoreColor = const Color(0xFFFF5722); // Naranja rojizo - Deficiente
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = const Color(0xFFD32F2F); // Rojo - Crítico
+        scoreIcon = Icons.dangerous;
+      }
+    } else if (isICAEvaluation) {
+      // Colores según clasificación ICA (Aves) - 4 niveles
+      methodologyBadge = 'Metodología ICA';
       if (score >= 90) {
         scoreColor = const Color(0xFF1B5E20); // Verde oscuro - Excelente
         scoreIcon = Icons.workspace_premium;
@@ -1657,17 +1679,17 @@ class ResultsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Badge ICA si aplica
-          if (isICAEvaluation) ...[
+          // Badge de metodología si aplica
+          if (isICAEvaluation || isEBAEvaluation) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'Metodología ICA',
-                style: TextStyle(
+              child: Text(
+                methodologyBadge,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -1694,7 +1716,7 @@ class ResultsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              isICAEvaluation && welfareClassification.isNotEmpty
+              (isICAEvaluation || isEBAEvaluation) && welfareClassification.isNotEmpty
                   ? welfareClassification
                   : loc.translate(level),
               textAlign: TextAlign.center,
@@ -1900,9 +1922,25 @@ class ResultsScreen extends StatelessWidget {
       }
     }
 
+    // Verificar si es EBA
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
+
     Color barColor;
-    if (isICAEvaluation) {
-      // Colores ICA
+    if (isEBAEvaluation) {
+      // Colores EBA (5 niveles)
+      if (score >= 90) {
+        barColor = const Color(0xFF1B5E20);
+      } else if (score >= 75) {
+        barColor = const Color(0xFF4CAF50);
+      } else if (score >= 50) {
+        barColor = const Color(0xFFFF9800);
+      } else if (score >= 25) {
+        barColor = const Color(0xFFFF5722);
+      } else {
+        barColor = const Color(0xFFD32F2F);
+      }
+    } else if (isICAEvaluation) {
+      // Colores ICA (4 niveles)
       if (score >= 90) {
         barColor = const Color(0xFF1B5E20);
       } else if (score >= 76) {
@@ -1958,8 +1996,8 @@ class ResultsScreen extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    // Mostrar peso si es ICA
-                    if (isICAEvaluation && weight != null && weight < 1.0) ...[
+                    // Mostrar peso si es ICA o EBA
+                    if ((isICAEvaluation || isEBAEvaluation) && weight != null && weight < 1.0 && weight > 0) ...[
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1991,8 +2029,8 @@ class ResultsScreen extends StatelessWidget {
                       color: barColor,
                     ),
                   ),
-                  // Mostrar puntos obtenidos/máximos si es ICA
-                  if (isICAEvaluation && obtained != null && maxPossible != null) ...[
+                  // Mostrar puntos obtenidos/máximos si es ICA o EBA
+                  if ((isICAEvaluation || isEBAEvaluation) && obtained != null && maxPossible != null) ...[
                     Text(
                       '$obtained / $maxPossible pts',
                       style: TextStyle(
@@ -2016,7 +2054,7 @@ class ResultsScreen extends StatelessWidget {
             ),
           ),
           // Contribución ponderada al total
-          if (isICAEvaluation && weight != null && weight < 1.0) ...[
+          if ((isICAEvaluation || isEBAEvaluation) && weight != null && weight < 1.0 && weight > 0) ...[
             const SizedBox(height: 8),
             Text(
               'Contribución al total: ${(score * weight).toStringAsFixed(1)}%',
@@ -2524,7 +2562,11 @@ class ResultsScreen extends StatelessWidget {
                 int? score;
                 Color valueColor = BianTheme.darkGray;
                 
+                // Verificar si es EBA
+                final bool isEBAEval = results['is_eba_evaluation'] == true;
+                
                 if (field.type.toString().contains('scale0to2')) {
+                  // Escala ICA (Aves): 0-2
                   score = value is int ? value : (value is double ? value.toInt() : null);
                   if (score == 0) {
                     displayValue = 'No cumple (0)';
@@ -2535,6 +2577,28 @@ class ResultsScreen extends StatelessWidget {
                   } else if (score == 2) {
                     displayValue = 'Cumple (2)';
                     valueColor = BianTheme.successGreen;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('scale0to4')) {
+                  // Escala EBA (Porcinos): 0-4
+                  score = value is int ? value : (value is double ? value.toInt() : null);
+                  if (score == 0) {
+                    displayValue = 'Crítico (0)';
+                    valueColor = const Color(0xFFD32F2F);
+                  } else if (score == 1) {
+                    displayValue = 'Deficiente (1)';
+                    valueColor = const Color(0xFFFF5722);
+                  } else if (score == 2) {
+                    displayValue = 'Aceptable (2)';
+                    valueColor = const Color(0xFFFF9800);
+                  } else if (score == 3) {
+                    displayValue = 'Bueno (3)';
+                    valueColor = const Color(0xFF4CAF50);
+                  } else if (score == 4) {
+                    displayValue = 'Excelente (4)';
+                    valueColor = const Color(0xFF1B5E20);
                   } else {
                     displayValue = 'Sin respuesta';
                     valueColor = BianTheme.mediumGray;
@@ -2579,7 +2643,7 @@ class ResultsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isICAEvaluation) ...[
+                    if (isICAEvaluation || isEBAEval) ...[
                       DataCell(
                         Text(
                           score?.toString() ?? '-',
@@ -2591,7 +2655,7 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       DataCell(
                         Text(
-                          field.maxScore?.toString() ?? '2',
+                          field.maxScore?.toString() ?? (isEBAEval ? '4' : '2'),
                           style: const TextStyle(color: BianTheme.mediumGray),
                         ),
                       ),
