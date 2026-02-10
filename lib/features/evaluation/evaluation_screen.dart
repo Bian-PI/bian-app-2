@@ -1775,7 +1775,7 @@ Widget build(BuildContext context) {
                 children: [
                   if (_currentCategoryIndex > 0)
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: ElevatedButton.icon(
                         onPressed: () {
                           setState(() {
                             _currentCategoryIndex--;
@@ -1788,12 +1788,18 @@ Widget build(BuildContext context) {
                         },
                         icon: Icon(Icons.arrow_back),
                         label: Text(loc.translate('previous')),
-                        style: OutlinedButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
                           foregroundColor: Color(int.parse(widget.species.gradientColors[0])),
+                          elevation: 0,
                           side: BorderSide(
                             color: Color(int.parse(widget.species.gradientColors[0])),
+                            width: 1.5,
                           ),
                           minimumSize: Size(0, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                          ),
                         ),
                       ),
                     ),
@@ -1829,7 +1835,11 @@ Widget build(BuildContext context) {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(int.parse(widget.species.gradientColors[0])),
+                        foregroundColor: Colors.white,
                         minimumSize: Size(0, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
                       ),
                     ),
                   ),
