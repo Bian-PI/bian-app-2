@@ -1860,6 +1860,8 @@ Widget build(BuildContext context) {
   ) {
     final loc = AppLocalizations.of(context);
     final bool isICAScale = field.type == FieldType.scale0to2;
+    final bool isEBAScale = field.type == FieldType.scale0to4;
+    final bool showMethodologyInfo = isICAScale || isEBAScale;
     
     // Obtener la pregunta del indicador
     String questionText = '';
@@ -1873,41 +1875,49 @@ Widget build(BuildContext context) {
       questionText = loc.translate(field.id);
     }
     
-    // Obtener descripción del indicador (solo para ICA)
+    // Obtener descripción del indicador (para ICA y EBA)
     String? descriptionText;
-    if (isICAScale && field.description != null) {
+    if (showMethodologyInfo && field.description != null) {
       descriptionText = loc.translate(field.description!);
       if (descriptionText == field.description) {
         descriptionText = null; // No mostrar si no hay traducción
       }
     }
     
-    // Obtener método de evaluación
+    // Obtener método de evaluación (para ICA y EBA)
     String? methodText;
-    if (isICAScale && field.evaluationMethod != null) {
+    if (showMethodologyInfo && field.evaluationMethod != null) {
       switch (field.evaluationMethod!) {
         case EvaluationMethod.visualInspectionWithSampling:
           methodText = loc.translate('method_visual_sampling');
           if (methodText == 'method_visual_sampling') {
-            methodText = 'Inspección visual con muestreo';
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual con muestreo' 
+                : 'Visual inspection with sampling';
           }
           break;
         case EvaluationMethod.visualInspectionNoSampling:
           methodText = loc.translate('method_visual_no_sampling');
           if (methodText == 'method_visual_no_sampling') {
-            methodText = 'Inspección visual sin muestreo';
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual sin muestreo' 
+                : 'Visual inspection without sampling';
           }
           break;
         case EvaluationMethod.documentInspection:
           methodText = loc.translate('method_document');
           if (methodText == 'method_document') {
-            methodText = 'Inspección documental';
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección documental' 
+                : 'Documentary inspection';
           }
           break;
         case EvaluationMethod.visualAndDocumental:
           methodText = loc.translate('method_visual_document');
           if (methodText == 'method_visual_document') {
-            methodText = 'Inspección visual y documental';
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual y documental' 
+                : 'Visual and documentary inspection';
           }
           break;
       }
@@ -1955,7 +1965,7 @@ Widget build(BuildContext context) {
                         color: BianTheme.darkGray,
                       ),
                     ),
-                    // Método de evaluación (solo ICA)
+                    // Método de evaluación (ICA y EBA)
                     if (methodText != null) ...[
                       SizedBox(height: 4),
                       Row(
@@ -1988,8 +1998,8 @@ Widget build(BuildContext context) {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Badge de puntaje máximo (solo ICA)
-                  if (isICAScale) ...[
+                  // Badge de puntaje máximo (ICA y EBA)
+                  if (isICAScale || isEBAScale) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
