@@ -1791,12 +1791,16 @@ Widget build(BuildContext context) {
                             color: BianTheme.mediumGray,
                           ),
                           SizedBox(width: 4),
-                          Text(
-                            methodText,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: BianTheme.mediumGray,
-                              fontStyle: FontStyle.italic,
+                          Flexible(
+                            child: Text(
+                              methodText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: BianTheme.mediumGray,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ],
