@@ -1884,6 +1884,20 @@ Widget build(BuildContext context) {
       }
     }
     
+    // Obtener rangos de calificación (para EBA)
+    String? rangesText;
+    if (isEBAScale) {
+      // El ID del campo tiene formato "eba_XX_something", necesitamos "eba_XX_ranges"
+      final fieldIdParts = field.id.split('_');
+      if (fieldIdParts.length >= 2) {
+        final rangesKey = '${fieldIdParts[0]}_${fieldIdParts[1]}_ranges';
+        rangesText = loc.translate(rangesKey);
+        if (rangesText == rangesKey) {
+          rangesText = null;
+        }
+      }
+    }
+    
     // Obtener método de evaluación (para ICA y EBA)
     String? methodText;
     if (showMethodologyInfo && field.evaluationMethod != null) {
@@ -2104,6 +2118,12 @@ Widget build(BuildContext context) {
                 ],
               ),
             ),
+          ],
+          
+          // Rangos de calificación (solo para EBA)
+          if (rangesText != null) ...[
+            SizedBox(height: 8),
+            _buildRangesCard(rangesText),
           ],
           
           SizedBox(height: 16),
@@ -2738,6 +2758,92 @@ Widget build(BuildContext context) {
                 fontWeight: FontWeight.bold,
                 color: isSelected ? color : BianTheme.mediumGray,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Construye la tarjeta expandible de rangos de calificación
+  Widget _buildRangesCard(String rangesText) {
+    // Colores para cada nivel de puntuación
+    final rangeColors = [
+      const Color(0xFFD32F2F),  // 0 - Crítico
+      const Color(0xFFFF5722),  // 1 - Deficiente
+      const Color(0xFFFF9800),  // 2 - Aceptable
+      const Color(0xFF4CAF50),  // 3 - Bueno
+      const Color(0xFF1B5E20),  // 4 - Excelente
+    ];
+
+    // Parsear las líneas de rangos
+    final lines = rangesText.split('\n');
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          initiallyExpanded: false,
+          leading: Icon(
+            Icons.format_list_numbered,
+            size: 20,
+            color: Color(int.parse(widget.species.gradientColors[0])),
+          ),
+          title: Text(
+            widget.currentLanguage == 'es' 
+                ? 'Ver rangos de calificación' 
+                : 'View scoring ranges',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: BianTheme.darkGray,
+            ),
+          ),
+          children: [
+            Column(
+              children: lines.asMap().entries.map((entry) {
+                final index = entry.key;
+                final line = entry.value;
+                final colorIndex = 4 - index; // 4 pts = index 0, 0 pts = index 4
+                final color = colorIndex >= 0 && colorIndex < 5 
+                    ? rangeColors[colorIndex] 
+                    : BianTheme.mediumGray;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(top: 5, right: 8),
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          line,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.darkGray.withOpacity(0.9),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
