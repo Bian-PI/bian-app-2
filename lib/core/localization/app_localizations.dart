@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ica_birds_translations.dart';
+import 'eba_pigs_translations.dart';
 
 class AppLocalizations {
   final Locale locale;
@@ -985,7 +986,12 @@ class AppLocalizations {
 
   String translate(String key, [List<String>? params]) {
     String? value = _localizedValues[locale.languageCode]?[key];
+    
+    // Buscar en traducciones ICA (Aves)
     value ??= icaBirdsTranslations[locale.languageCode]?[key];
+    
+    // Buscar en traducciones EBA (Porcinos)
+    value ??= EbaPigsTranslations.translations[key]?[locale.languageCode];
 
     if (value == null) {
       return key;
