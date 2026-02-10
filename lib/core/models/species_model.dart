@@ -450,7 +450,16 @@ class Species {
     );
   }
 
-  /// Cerdos - Mantener estructura anterior por ahora
+  /// Cerdos - Metodología EBA 3.0 (Evaluación de Bienestar Animal)
+  /// 43 indicadores organizados por grupos: Recurso, Animal, Gestión
+  /// Escala de calificación: 0-4
+  /// 
+  /// Categorías de libertad evaluadas:
+  /// - Buena alimentación
+  /// - Buena salud
+  /// - Comportamiento adecuado
+  /// - Confort adecuado
+  /// - Ausencia de miedo y estrés
   static Species pigs() {
     return Species(
       id: 'pigs',
@@ -459,233 +468,593 @@ class Species {
       iconPath: 'assets/icons/cerdo.svg',
       gradientColors: ['0xFFE85D75', '0xFFD84A64'],
       categories: [
+        // ═══════════════════════════════════════════════════════════════
+        // GRUPO 1: RECURSO - Indicadores basados en recursos
+        // ═══════════════════════════════════════════════════════════════
         EvaluationCategory(
-          id: 'feeding',
-          name: 'Alimentación',
-          nameKey: 'category_feeding',
-          icon: 'restaurant',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'water_access_pigs',
-              label: 'water_access_pigs',
-              question: 'water_access_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feed_quality_pigs',
-              label: 'feed_quality_pigs',
-              question: 'feed_quality_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feeders_sufficient_pigs',
-              label: 'feeders_sufficient_pigs',
-              question: 'feeders_sufficient_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feed_frequency',
-              label: 'feed_frequency',
-              question: 'feed_frequency',
-              type: FieldType.number,
-              unit: 'times_per_day',
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'health',
-          name: 'Sanidad',
-          nameKey: 'category_health',
-          icon: 'medical_services',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'general_health_pigs',
-              label: 'general_health_pigs',
-              question: 'general_health_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'mortality_rate',
-              label: 'mortality_rate',
-              question: 'mortality_rate',
-              type: FieldType.percentage,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'injuries_pigs',
-              label: 'injuries_pigs',
-              question: 'injuries_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'vaccination',
-              label: 'vaccination',
-              question: 'vaccination',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'diseases',
-              label: 'diseases',
-              question: 'diseases',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'tail_biting',
-              label: 'tail_biting',
-              question: 'tail_biting',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'behavior',
-          name: 'Comportamiento',
-          nameKey: 'category_behavior',
-          icon: 'psychology',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'natural_behavior_pigs',
-              label: 'natural_behavior_pigs',
-              question: 'natural_behavior_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'aggression_pigs',
-              label: 'aggression_pigs',
-              question: 'aggression_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'stress_signs_pigs',
-              label: 'stress_signs_pigs',
-              question: 'stress_signs_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'movement_pigs',
-              label: 'movement_pigs',
-              question: 'movement_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'enrichment',
-              label: 'enrichment',
-              question: 'enrichment',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'infrastructure',
-          name: 'Infraestructura',
-          nameKey: 'category_infrastructure',
+          id: 'resource',
+          name: 'Indicadores de Recurso',
+          nameKey: 'category_resource_pigs',
           icon: 'home_work',
-          weight: 0.20,
+          weight: 0.40, // 40%
           fields: [
+            // EBA-A1: Relación animales:bebedero
             EvaluationField(
-              id: 'space_per_pig',
-              label: 'space_per_pig',
-              question: 'space_per_pig',
-              type: FieldType.number,
-              unit: 'm2_per_pig',
+              id: 'eba_a1_animals_per_drinker',
+              label: 'eba_a1_label',
+              description: 'eba_a1_description',
+              question: 'eba_a1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-A2: Caudal de bebedero
             EvaluationField(
-              id: 'ventilation',
-              label: 'ventilation',
-              question: 'ventilation',
-              type: FieldType.yesNo,
+              id: 'eba_a2_drinker_flow',
+              label: 'eba_a2_label',
+              description: 'eba_a2_description',
+              question: 'eba_a2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
               required: true,
+              unit: 'L/min',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-A3: Calidad microbiológica del agua
             EvaluationField(
-              id: 'temperature_facility',
-              label: 'temperature_facility',
-              question: 'temperature_facility',
-              type: FieldType.number,
-              unit: 'celsius',
+              id: 'eba_a3_water_quality',
+              label: 'eba_a3_label',
+              description: 'eba_a3_description',
+              question: 'eba_a3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-F1: Espacios de comedero suficientes
             EvaluationField(
-              id: 'floor_quality',
-              label: 'floor_quality',
-              question: 'floor_quality',
-              type: FieldType.yesNo,
+              id: 'eba_f1_feeder_spaces',
+              label: 'eba_f1_label',
+              description: 'eba_f1_description',
+              question: 'eba_f1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-F2: Condición corporal
             EvaluationField(
-              id: 'lighting',
-              label: 'lighting',
-              question: 'lighting',
-              type: FieldType.yesNo,
+              id: 'eba_f2_body_condition',
+              label: 'eba_f2_label',
+              description: 'eba_f2_description',
+              question: 'eba_f2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-F3: Tiempo de acceso tras reparto
             EvaluationField(
-              id: 'resting_area',
-              label: 'resting_area',
-              question: 'resting_area',
-              type: FieldType.yesNo,
+              id: 'eba_f3_access_time',
+              label: 'eba_f3_label',
+              description: 'eba_f3_description',
+              question: 'eba_f3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
               required: true,
+              unit: 'min',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-E1: Índice THI (Temperatura-Humedad)
+            EvaluationField(
+              id: 'eba_e1_thi_index',
+              label: 'eba_e1_label',
+              description: 'eba_e1_description',
+              question: 'eba_e1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-E2: Amoníaco (NH3)
+            EvaluationField(
+              id: 'eba_e2_ammonia',
+              label: 'eba_e2_label',
+              description: 'eba_e2_description',
+              question: 'eba_e2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              unit: 'ppm',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-E3: CO₂
+            EvaluationField(
+              id: 'eba_e3_co2',
+              label: 'eba_e3_label',
+              description: 'eba_e3_description',
+              question: 'eba_e3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              unit: 'ppm',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-E4: Nivel de ruido
+            EvaluationField(
+              id: 'eba_e4_noise',
+              label: 'eba_e4_label',
+              description: 'eba_e4_description',
+              question: 'eba_e4_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              unit: 'dB(A)',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-E5: Iluminación mínima
+            EvaluationField(
+              id: 'eba_e5_lighting',
+              label: 'eba_e5_label',
+              description: 'eba_e5_description',
+              question: 'eba_e5_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              unit: 'lux',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-I1: Densidad de alojamiento
+            EvaluationField(
+              id: 'eba_i1_housing_density',
+              label: 'eba_i1_label',
+              description: 'eba_i1_description',
+              question: 'eba_i1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              unit: 'm²/animal',
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-I2: Estado de pisos
+            EvaluationField(
+              id: 'eba_i2_floor_condition',
+              label: 'eba_i2_label',
+              description: 'eba_i2_description',
+              question: 'eba_i2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-I3: Área de descanso seca
+            EvaluationField(
+              id: 'eba_i3_dry_resting_area',
+              label: 'eba_i3_label',
+              description: 'eba_i3_description',
+              question: 'eba_i3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-I4: Suciedad corporal
+            EvaluationField(
+              id: 'eba_i4_body_dirtiness',
+              label: 'eba_i4_label',
+              description: 'eba_i4_description',
+              question: 'eba_i4_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-I5: Material manipulable disponible
+            EvaluationField(
+              id: 'eba_i5_enrichment_material',
+              label: 'eba_i5_label',
+              description: 'eba_i5_description',
+              question: 'eba_i5_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-R1: GMD (Ganancia Media Diaria)
+            EvaluationField(
+              id: 'eba_r1_daily_gain',
+              label: 'eba_r1_label',
+              description: 'eba_r1_description',
+              question: 'eba_r1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
+              required: false,
+              unit: 'g/día',
+              applicableTo: ['ceba'],
+            ),
+            // EBA-L3: Temperatura nido/placa
+            EvaluationField(
+              id: 'eba_l3_nest_temperature',
+              label: 'eba_l3_label',
+              description: 'eba_l3_description',
+              question: 'eba_l3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              unit: '°C',
+              applicableTo: ['lactancia'],
             ),
           ],
         ),
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GRUPO 2: ANIMAL - Indicadores basados en el animal
+        // ═══════════════════════════════════════════════════════════════
+        EvaluationCategory(
+          id: 'animal',
+          name: 'Indicadores del Animal',
+          nameKey: 'category_animal_pigs',
+          icon: 'pets',
+          weight: 0.40, // 40%
+          fields: [
+            // EBA-H1: Cojeras
+            EvaluationField(
+              id: 'eba_h1_lameness',
+              label: 'eba_h1_label',
+              description: 'eba_h1_description',
+              question: 'eba_h1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H2: Lesiones tegumentarias
+            EvaluationField(
+              id: 'eba_h2_skin_lesions',
+              label: 'eba_h2_label',
+              description: 'eba_h2_description',
+              question: 'eba_h2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H3: Tos/estornudos
+            EvaluationField(
+              id: 'eba_h3_respiratory',
+              label: 'eba_h3_label',
+              description: 'eba_h3_description',
+              question: 'eba_h3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H4: Diarrea
+            EvaluationField(
+              id: 'eba_h4_diarrhea',
+              label: 'eba_h4_label',
+              description: 'eba_h4_description',
+              question: 'eba_h4_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H5: Mortalidad del lote
+            EvaluationField(
+              id: 'eba_h5_mortality',
+              label: 'eba_h5_label',
+              description: 'eba_h5_description',
+              question: 'eba_h5_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H6: Analgesia/anestesia en procedimientos
+            EvaluationField(
+              id: 'eba_h6_pain_management',
+              label: 'eba_h6_label',
+              description: 'eba_h6_description',
+              question: 'eba_h6_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-H8: Cicatrices de cola
+            EvaluationField(
+              id: 'eba_h8_tail_scars',
+              label: 'eba_h8_label',
+              description: 'eba_h8_description',
+              question: 'eba_h8_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-B1: Peleas (>3s)
+            EvaluationField(
+              id: 'eba_b1_fights',
+              label: 'eba_b1_label',
+              description: 'eba_b1_description',
+              question: 'eba_b1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-B2: Uso de enriquecimiento
+            EvaluationField(
+              id: 'eba_b2_enrichment_use',
+              label: 'eba_b2_label',
+              description: 'eba_b2_description',
+              question: 'eba_b2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-B3: Huida al acercamiento humano
+            EvaluationField(
+              id: 'eba_b3_human_approach',
+              label: 'eba_b3_label',
+              description: 'eba_b3_description',
+              question: 'eba_b3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
+            ),
+            // EBA-R2: Colas mordidas activas
+            EvaluationField(
+              id: 'eba_r2_tail_biting',
+              label: 'eba_r2_label',
+              description: 'eba_r2_description',
+              question: 'eba_r2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['ceba'],
+            ),
+            // EBA-L1: Mortalidad predestete
+            EvaluationField(
+              id: 'eba_l1_preweaning_mortality',
+              label: 'eba_l1_label',
+              description: 'eba_l1_description',
+              question: 'eba_l1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['lactancia'],
+            ),
+            // EBA-L2: Aplastamientos
+            EvaluationField(
+              id: 'eba_l2_crushing',
+              label: 'eba_l2_label',
+              description: 'eba_l2_description',
+              question: 'eba_l2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['lactancia'],
+            ),
+            // EBA-G1: Gestantes en grupo
+            EvaluationField(
+              id: 'eba_g1_group_housing',
+              label: 'eba_g1_label',
+              description: 'eba_g1_description',
+              question: 'eba_g1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['gestantes'],
+            ),
+          ],
+        ),
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GRUPO 3: GESTIÓN - Indicadores de gestión
+        // ═══════════════════════════════════════════════════════════════
         EvaluationCategory(
           id: 'management',
-          name: 'Manejo',
+          name: 'Indicadores de Gestión',
           nameKey: 'category_management_pigs',
-          icon: 'agriculture',
-          weight: 0.20,
+          icon: 'assignment',
+          weight: 0.20, // 20%
           fields: [
+            // EBA-P1: Capacitación en bienestar animal
             EvaluationField(
-              id: 'staff_training',
-              label: 'staff_training',
-              question: 'staff_training',
-              type: FieldType.yesNo,
+              id: 'eba_p1_staff_training',
+              label: 'eba_p1_label',
+              description: 'eba_p1_description',
+              question: 'eba_p1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-D1: Procedimientos escritos vigentes (SOPs)
             EvaluationField(
-              id: 'records',
-              label: 'records',
-              question: 'records',
-              type: FieldType.yesNo,
+              id: 'eba_d1_sops',
+              label: 'eba_d1_label',
+              description: 'eba_d1_description',
+              question: 'eba_d1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+            // EBA-D2: Plan de contingencia
             EvaluationField(
-              id: 'biosecurity',
-              label: 'biosecurity',
-              question: 'biosecurity',
-              type: FieldType.yesNo,
+              id: 'eba_d2_contingency_plan',
+              label: 'eba_d2_label',
+              description: 'eba_d2_description',
+              question: 'eba_d2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
               required: true,
+              applicableTo: ['lechones', 'ceba', 'gestantes'],
             ),
+          ],
+        ),
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GRUPO 4: TRANSPORTE (Opcional según aplique)
+        // ═══════════════════════════════════════════════════════════════
+        EvaluationCategory(
+          id: 'transport',
+          name: 'Indicadores de Transporte',
+          nameKey: 'category_transport_pigs',
+          icon: 'local_shipping',
+          weight: 0.0, // No ponderado - evaluación adicional
+          fields: [
+            // EBA-T1: Animales no ambulatorios
             EvaluationField(
-              id: 'handling_pigs',
-              label: 'handling_pigs',
-              question: 'handling_pigs',
-              type: FieldType.yesNo,
-              required: true,
+              id: 'eba_t1_non_ambulatory',
+              label: 'eba_t1_label',
+              description: 'eba_t1_description',
+              question: 'eba_t1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['transporte'],
             ),
+            // EBA-T2: Muertos a la llegada (DOA)
             EvaluationField(
-              id: 'castration',
-              label: 'castration',
-              question: 'castration',
-              type: FieldType.yesNo,
-              required: true,
+              id: 'eba_t2_doa',
+              label: 'eba_t2_label',
+              description: 'eba_t2_description',
+              question: 'eba_t2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['transporte'],
+            ),
+            // EBA-T3: Densidad de carga
+            EvaluationField(
+              id: 'eba_t3_load_density',
+              label: 'eba_t3_label',
+              description: 'eba_t3_description',
+              question: 'eba_t3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 4,
+              required: false,
+              unit: 'kg/m²',
+              applicableTo: ['transporte'],
+            ),
+            // EBA-T4: Ayuno pre-transporte y agua en espera
+            EvaluationField(
+              id: 'eba_t4_pre_transport',
+              label: 'eba_t4_label',
+              description: 'eba_t4_description',
+              question: 'eba_t4_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['transporte'],
+            ),
+          ],
+        ),
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GRUPO 5: SACRIFICIO (Opcional según aplique)
+        // ═══════════════════════════════════════════════════════════════
+        EvaluationCategory(
+          id: 'slaughter',
+          name: 'Indicadores de Sacrificio',
+          nameKey: 'category_slaughter_pigs',
+          icon: 'gavel',
+          weight: 0.0, // No ponderado - evaluación adicional
+          fields: [
+            // EBA-S1: Resbalones y caídas
+            EvaluationField(
+              id: 'eba_s1_slips_falls',
+              label: 'eba_s1_label',
+              description: 'eba_s1_description',
+              question: 'eba_s1_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['sacrificio'],
+            ),
+            // EBA-S2: Aturdimiento al primer intento
+            EvaluationField(
+              id: 'eba_s2_stunning_efficacy',
+              label: 'eba_s2_label',
+              description: 'eba_s2_description',
+              question: 'eba_s2_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['sacrificio'],
+            ),
+            // EBA-S3: Parámetros del equipo
+            EvaluationField(
+              id: 'eba_s3_equipment_params',
+              label: 'eba_s3_label',
+              description: 'eba_s3_description',
+              question: 'eba_s3_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['sacrificio'],
+            ),
+            // EBA-S4: Vocalizaciones
+            EvaluationField(
+              id: 'eba_s4_vocalizations',
+              label: 'eba_s4_label',
+              description: 'eba_s4_description',
+              question: 'eba_s4_question',
+              type: FieldType.scale0to4,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 4,
+              required: false,
+              applicableTo: ['sacrificio'],
             ),
           ],
         ),
@@ -752,7 +1121,8 @@ enum FieldType {
   percentage,      // Porcentaje
   text,            // Texto libre
   select,          // Selección de opciones
-  scale0to2,       // Escala ICA: 0, 1, 2
+  scale0to2,       // Escala ICA Aves: 0, 1, 2
+  scale0to4,       // Escala EBA Porcinos: 0, 1, 2, 3, 4
 }
 
 /// Métodos de evaluación según ICA
