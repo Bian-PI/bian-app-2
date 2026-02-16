@@ -1388,9 +1388,11 @@ class ResultsScreen extends StatelessWidget {
                         1: const pw.FlexColumnWidth(2),
                         2: const pw.FlexColumnWidth(1),
                       },
+                      tableWidth: pw.TableWidth.max,
                       children: [
-                        // Header de tabla
+                        // Header de tabla (se repetirá si la tabla se divide)
                         pw.TableRow(
+                          repeat: true, // Repetir header en cada página
                           decoration: pw.BoxDecoration(
                             color: PdfColor.fromInt(0xFFF5F5F5),
                           ),
@@ -2289,6 +2291,16 @@ class ResultsScreen extends StatelessWidget {
 
   Widget _buildCriticalPointCard(BuildContext context, AppLocalizations loc,
       String categoryId, String fieldId) {
+    
+    // Traducir nombre de categoría correctamente
+    String categoryName = loc.translate('category_${categoryId}_pigs');
+    if (categoryName == 'category_${categoryId}_pigs') {
+      categoryName = loc.translate('category_$categoryId');
+      if (categoryName == 'category_$categoryId') {
+        categoryName = loc.translate(categoryId);
+      }
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -2311,7 +2323,7 @@ class ResultsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc.translate(categoryId),
+                  categoryName,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -2338,6 +2350,40 @@ class ResultsScreen extends StatelessWidget {
     final language = evaluation.language;
 
     final labelsEs = {
+      // ICA - Aves - Recursos
+      'air_particles': 'Partículas suspendidas en el aire',
+      'bedding_quality': 'Calidad de la cama',
+      'drinker_quality': 'Calidad de los bebederos',
+      'water_supply': 'Suministro de agua',
+      'animals_per_drinker': 'Animales por bebedero',
+      'water_treatment': 'Tratamiento del agua',
+      'feeder_quality': 'Calidad de los comederos',
+      'animals_per_feeder': 'Animales por comedero',
+      'thermal_comfort': 'Confort térmico',
+      'nest_quality': 'Calidad del nidal',
+      'available_space': 'Espacio disponible',
+      // ICA - Aves - Animal
+      'panting': 'Jadeo',
+      'huddling': 'Amontonamiento',
+      'keel_bone_integrity': 'Integridad del hueso de la quilla',
+      'pododermatitis': 'Pododermatitis',
+      'toe_damage': 'Daño en los dedos',
+      'skin_lesions': 'Lesiones en piel',
+      'plumage_condition': 'Condición del plumaje',
+      'ocular_nasal_integrity': 'Integridad óculo-nasal',
+      'beak_condition': 'Condición del pico',
+      'mortality': 'Mortalidad',
+      // ICA - Aves - Manejo
+      'water_quality': 'Calidad del agua',
+      'balanced_feeding': 'Alimentación balanceada',
+      'health_surveillance': 'Vigilancia sanitaria',
+      'poe_animal_welfare': 'POE Bienestar Animal',
+      'thermal_emergency': 'Plan emergencia térmica',
+      'backup_systems': 'Sistemas de respaldo',
+      'biosecurity_records': 'Registros de bioseguridad',
+      'capacity_records': 'Registros de capacidad',
+      'responsible_medication': 'Medicación responsable',
+      // Legacy fields
       'water_access': 'Acceso al agua',
       'feed_quality': 'Calidad del alimento',
       'feeders_sufficient': 'Comederos suficientes',
@@ -2370,6 +2416,40 @@ class ResultsScreen extends StatelessWidget {
     };
 
     final labelsEn = {
+      // ICA - Birds - Resources
+      'air_particles': 'Airborne particles',
+      'bedding_quality': 'Bedding quality',
+      'drinker_quality': 'Drinker quality',
+      'water_supply': 'Water supply',
+      'animals_per_drinker': 'Animals per drinker',
+      'water_treatment': 'Water treatment',
+      'feeder_quality': 'Feeder quality',
+      'animals_per_feeder': 'Animals per feeder',
+      'thermal_comfort': 'Thermal comfort',
+      'nest_quality': 'Nest quality',
+      'available_space': 'Available space',
+      // ICA - Birds - Animal
+      'panting': 'Panting',
+      'huddling': 'Huddling',
+      'keel_bone_integrity': 'Keel bone integrity',
+      'pododermatitis': 'Pododermatitis',
+      'toe_damage': 'Toe damage',
+      'skin_lesions': 'Skin lesions',
+      'plumage_condition': 'Plumage condition',
+      'ocular_nasal_integrity': 'Ocular-nasal integrity',
+      'beak_condition': 'Beak condition',
+      'mortality': 'Mortality',
+      // ICA - Birds - Management
+      'water_quality': 'Water quality',
+      'balanced_feeding': 'Balanced feeding',
+      'health_surveillance': 'Health surveillance',
+      'poe_animal_welfare': 'Animal Welfare SOP',
+      'thermal_emergency': 'Thermal emergency plan',
+      'backup_systems': 'Backup systems',
+      'biosecurity_records': 'Biosecurity records',
+      'capacity_records': 'Capacity records',
+      'responsible_medication': 'Responsible medication',
+      // Legacy fields
       'water_access': 'Water access',
       'feed_quality': 'Feed quality',
       'feeders_sufficient': 'Sufficient feeders',
@@ -2402,7 +2482,27 @@ class ResultsScreen extends StatelessWidget {
     };
 
     final labels = language == 'en' ? labelsEn : labelsEs;
-    return labels[fieldId] ?? fieldId;
+    
+    // Primero buscar en el mapa local
+    if (labels.containsKey(fieldId)) {
+      return labels[fieldId]!;
+    }
+    
+    // Si no está, intentar traducir con loc.translate
+    String translated = loc.translate('${fieldId}_label');
+    if (translated != '${fieldId}_label') {
+      return translated;
+    }
+    
+    translated = loc.translate(fieldId);
+    if (translated != fieldId) {
+      return translated;
+    }
+    
+    // Fallback: devolver el fieldId formateado
+    return fieldId.replaceAll('_', ' ').split(' ').map((word) => 
+      word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : ''
+    ).join(' ');
   }
 
   Widget _buildStrongPointCard(BuildContext context, String text) {
