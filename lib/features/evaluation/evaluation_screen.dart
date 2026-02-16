@@ -1205,91 +1205,155 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
 
     if (confirm == true) {
-      final results = _calculateResults();
-      final translatedRecommendations = _translateRecommendations(results['recommendations']);
-      
-      final structuredJson = await _evaluation.generateStructuredJSON(
-        widget.species,
-        results,
-        translatedRecommendations,
-        isOfflineMode: widget.isOfflineMode,
-      );
-
-      _logEvaluationResults(structuredJson);
-
-      final completedEvaluation = _evaluation.copyWith(
-        status: 'completed',
-        overallScore: results['overall_score'],
-        categoryScores: Map<String, double>.from(results['category_scores']),
-        updatedAt: DateTime.now(),
-      );
-
-      // Eliminar borrador
-      await DraftsStorage.deleteDraft(_evaluation.id);
-
-      if (widget.isOfflineMode) {
-        // Modo offline: guardar como pendiente de sincronización
-        print('🔍 DEBUG: Guardando evaluación en modo offline...');
-        print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
-        print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
-
-        final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
-        print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
-
-        // Verificar que se guardó correctamente
-        final allReports = await LocalReportsStorage.getAllLocalReports();
-        print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
-        final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
-        print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
-      } else {
-        // Modo online: intentar sincronizar INMEDIATAMENTE
-        print('🌐 Modo online: Sincronizando evaluación al servidor...');
-        final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
-
-        if (syncSuccess) {
-          print('✅ Evaluación sincronizada exitosamente con el servidor');
-          // Guardar también localmente para acceso offline
-          await ReportsStorage.saveReport(completedEvaluation);
-
-          // Mostrar feedback de éxito
-          if (mounted) {
-            CustomSnackbar.showSuccess(
-              context,
-              AppLocalizations.of(context).translate('evaluation_synced_successfully'),
-            );
-          }
-        } else {
-          print('⚠️ Error al sincronizar, guardando como pendiente');
-          // Si falla, guardar como pendiente para reintento posterior
-          await LocalReportsStorage.saveLocalReport(completedEvaluation);
-
-          // Mostrar feedback de que se guardó localmente
-          if (mounted) {
-            CustomSnackbar.show(
-              context,
-              AppLocalizations.of(context).translate('saved_locally_will_sync_later'),
-              isWarning: true,
-              duration: const Duration(seconds: 4),
-            );
-          }
-        }
-      }
-
-      setState(() => _hasUnsavedChanges = false);
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultsScreen(
-              evaluation: completedEvaluation,
-              species: widget.species,
-              results: results,
-              structuredJson: structuredJson,
-              isLocal: widget.isOfflineMode, // Marcar como local si es modo offline
+      // Mostrar loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WillPopScope(
+          onWillPop: () async => false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animación de loading
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(int.parse(widget.species.gradientColors[0])),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    loc.translate('processing_evaluation'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: BianTheme.darkGray,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('please_wait'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: BianTheme.mediumGray,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      );
+
+      try {
+        final results = _calculateResults();
+        final translatedRecommendations = _translateRecommendations(results['recommendations']);
+        
+        final structuredJson = await _evaluation.generateStructuredJSON(
+          widget.species,
+          results,
+          translatedRecommendations,
+          isOfflineMode: widget.isOfflineMode,
         );
+
+        _logEvaluationResults(structuredJson);
+
+        final completedEvaluation = _evaluation.copyWith(
+          status: 'completed',
+          overallScore: results['overall_score'],
+          categoryScores: Map<String, double>.from(results['category_scores']),
+          updatedAt: DateTime.now(),
+        );
+
+        // Eliminar borrador
+        await DraftsStorage.deleteDraft(_evaluation.id);
+
+        if (widget.isOfflineMode) {
+          // Modo offline: guardar como pendiente de sincronización
+          print('🔍 DEBUG: Guardando evaluación en modo offline...');
+          print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
+          print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
+
+          final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
+          print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
+
+          // Verificar que se guardó correctamente
+          final allReports = await LocalReportsStorage.getAllLocalReports();
+          print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
+          final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
+          print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
+        } else {
+          // Modo online: intentar sincronizar INMEDIATAMENTE
+          print('🌐 Modo online: Sincronizando evaluación al servidor...');
+          final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
+
+          if (syncSuccess) {
+            print('✅ Evaluación sincronizada exitosamente con el servidor');
+            // Guardar también localmente para acceso offline
+            await ReportsStorage.saveReport(completedEvaluation);
+          } else {
+            print('⚠️ Error al sincronizar, guardando como pendiente');
+            // Si falla, guardar como pendiente para reintento posterior
+            await LocalReportsStorage.saveLocalReport(completedEvaluation);
+          }
+        }
+
+        setState(() => _hasUnsavedChanges = false);
+
+        // Cerrar loading dialog
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+
+        // Pequeña pausa para que se vea el cierre del dialog
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        if (mounted) {
+          // Mostrar feedback según el resultado
+          if (!widget.isOfflineMode) {
+            // Ya se mostró el feedback en el bloque anterior
+          }
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResultsScreen(
+                evaluation: completedEvaluation,
+                species: widget.species,
+                results: results,
+                structuredJson: structuredJson,
+                isLocal: widget.isOfflineMode,
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        // Cerrar loading dialog en caso de error
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        
+        print('❌ Error al completar evaluación: $e');
+        
+        if (mounted) {
+          CustomSnackbar.showError(
+            context,
+            loc.translate('error_completing_evaluation'),
+          );
+        }
       }
     }
   }
