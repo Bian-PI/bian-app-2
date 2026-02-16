@@ -2434,9 +2434,12 @@ class ResultsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
+        // Verificar si es EBA
+        final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
+        
         // Iterar por cada categoría
         ...species.categories.map((category) {
-          return _buildCategoryDetailTable(context, loc, category, isICAEvaluation);
+          return _buildCategoryDetailTable(context, loc, category, isICAEvaluation, isEBAEvaluation);
         }),
       ],
     );
@@ -2447,9 +2450,13 @@ class ResultsScreen extends StatelessWidget {
     AppLocalizations loc, 
     dynamic category,
     bool isICAEvaluation,
+    bool isEBAEvaluation,
   ) {
     final categoryDetails = results['category_details'] as Map<String, dynamic>?;
     final details = categoryDetails?[category.id] as Map<String, dynamic>?;
+    
+    // Determinar si mostrar columnas de puntuación
+    final bool showScoreColumns = isICAEvaluation || isEBAEvaluation;
     
     // Obtener peso de la categoría
     double weight = category.weight ?? 1.0;
@@ -2459,7 +2466,13 @@ class ResultsScreen extends StatelessWidget {
     
     // Color según resultado
     Color headerColor;
-    if (isICAEvaluation) {
+    if (isEBAEvaluation) {
+      if (percentage >= 90) headerColor = const Color(0xFF1B5E20);
+      else if (percentage >= 75) headerColor = const Color(0xFF4CAF50);
+      else if (percentage >= 50) headerColor = const Color(0xFFFF9800);
+      else if (percentage >= 25) headerColor = const Color(0xFFFF5722);
+      else headerColor = const Color(0xFFD32F2F);
+    } else if (isICAEvaluation) {
       if (percentage >= 90) headerColor = const Color(0xFF1B5E20);
       else if (percentage >= 76) headerColor = const Color(0xFF4CAF50);
       else if (percentage >= 50) headerColor = const Color(0xFFFF9800);
@@ -2548,7 +2561,7 @@ class ResultsScreen extends StatelessWidget {
               columns: [
                 DataColumn(label: Text('Indicador', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Respuesta', style: TextStyle(fontWeight: FontWeight.bold))),
-                if (isICAEvaluation) ...[
+                if (showScoreColumns) ...[
                   DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(label: Text('Max', style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
@@ -2561,9 +2574,6 @@ class ResultsScreen extends StatelessWidget {
                 String displayValue;
                 int? score;
                 Color valueColor = BianTheme.darkGray;
-                
-                // Verificar si es EBA
-                final bool isEBAEval = results['is_eba_evaluation'] == true;
                 
                 if (field.type.toString().contains('scale0to2')) {
                   // Escala ICA (Aves): 0-2
@@ -2643,7 +2653,7 @@ class ResultsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isICAEvaluation || isEBAEval) ...[
+                    if (showScoreColumns) ...[
                       DataCell(
                         Text(
                           score?.toString() ?? '-',
@@ -2655,7 +2665,7 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       DataCell(
                         Text(
-                          field.maxScore?.toString() ?? (isEBAEval ? '4' : '2'),
+                          field.maxScore?.toString() ?? (isEBAEvaluation ? '4' : '2'),
                           style: const TextStyle(color: BianTheme.mediumGray),
                         ),
                       ),
