@@ -2455,7 +2455,7 @@ class ResultsScreen extends StatelessWidget {
     final categoryDetails = results['category_details'] as Map<String, dynamic>?;
     final details = categoryDetails?[category.id] as Map<String, dynamic>?;
     
-    // Determinar si mostrar columnas de puntuación
+    // Variable para determinar si mostrar columnas de puntuación
     final bool showScoreColumns = isICAEvaluation || isEBAEvaluation;
     
     // Obtener peso de la categoría
