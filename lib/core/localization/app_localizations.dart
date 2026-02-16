@@ -54,6 +54,14 @@ class AppLocalizations {
       'login_subtitle': 'Inicia sesión para continuar',
       'register_subtitle': 'Únete a nuestra comunidad BIAN',
 
+      // Categorías ICA (Aves)
+      'category_resources': 'Medidas Basadas en los Recursos',
+      'category_animal': 'Indicadores del Animal',
+      'category_management': 'Indicadores de Gestión',
+      'resources': 'Medidas Basadas en los Recursos',
+      'animal': 'Indicadores del Animal',
+      'management': 'Indicadores de Gestión',
+
       'offline_mode': 'Modo sin conexión',
       'no_connection': 'Sin conexión',
       'connection_lost': 'Conexión Perdida',
@@ -541,6 +549,14 @@ class AppLocalizations {
       'registering': 'Registering...',
       'login_subtitle': 'Sign in to continue',
       'register_subtitle': 'Join our BIAN community',
+
+      // ICA Categories (Birds)
+      'category_resources': 'Resource-Based Measures',
+      'category_animal': 'Animal-Based Indicators',
+      'category_management': 'Management Indicators',
+      'resources': 'Resource-Based Measures',
+      'animal': 'Animal-Based Indicators',
+      'management': 'Management Indicators',
 
       'offline_mode': 'Offline Mode',
       'no_connection': 'No connection',
