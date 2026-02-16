@@ -1107,75 +1107,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 16),
 
-        // Cards en fila
-        Row(
-          children: [
-            // Reportes Locales (solo si hay pendientes)
-            if (_pendingSyncCount > 0) ...[
+        // Cards en fila - mismo tamaño usando IntrinsicHeight
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Reportes Locales (solo si hay pendientes)
+              if (_pendingSyncCount > 0) ...[
+                Expanded(
+                  flex: 1,
+                  child: _buildUnifiedCard(
+                    title: loc.translate('local_reports_action'),
+                    subtitle: '$_pendingSyncCount',
+                    icon: Icons.cloud_upload,
+                    color: BianTheme.warningYellow,
+                    isCountCard: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                      ).then((_) => _loadAllData());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+
+              // Mis Evaluaciones
               Expanded(
-                child: _buildSimpleCard(
-                  title: loc.translate('local_reports_action'),
-                  count: _pendingSyncCount,
-                  icon: Icons.cloud_upload,
-                  color: BianTheme.warningYellow,
+                flex: 1,
+                child: _buildUnifiedCard(
+                  title: loc.translate('my_evaluations_action'),
+                  subtitle: loc.translate('view_full_history'),
+                  icon: Icons.assessment_outlined,
+                  color: BianTheme.successGreen,
+                  isCountCard: false,
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
-                    ).then((_) => _loadAllData());
+                      MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
+                    );
                   },
                 ),
               ),
-              const SizedBox(width: 16),
             ],
-
-            // Mis Evaluaciones
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: BianTheme.successGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: BianTheme.successGreen.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.assessment_outlined, color: BianTheme.successGreen, size: 32),
-                      const SizedBox(height: 12),
-                      Text(
-                        loc.translate('my_evaluations_action'),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: BianTheme.successGreen,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        loc.translate('view_full_history'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: BianTheme.successGreen.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
 
         // Admin Card (solo para administradores)
@@ -1292,6 +1268,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 color: color,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Card unificado para Reportes Locales y Mis Evaluaciones
+  /// Garantiza mismo tamaño en ambos cards
+  Widget _buildUnifiedCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isCountCard,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            if (isCountCard) ...[
+              // Para Reportes Locales: mostrar número grande
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ] else ...[
+              // Para Mis Evaluaciones: mostrar título y subtítulo
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: color.withOpacity(0.8),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ],
         ),
       ),
