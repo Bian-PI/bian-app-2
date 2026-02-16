@@ -2416,6 +2416,7 @@ class ResultsScreen extends StatelessWidget {
   /// ═══════════════════════════════════════════════════════════════════════════
   Widget _buildDetailedAnalysisSection(BuildContext context, AppLocalizations loc) {
     final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2424,18 +2425,18 @@ class ResultsScreen extends StatelessWidget {
           children: [
             Icon(Icons.table_chart, color: BianTheme.primaryRed),
             const SizedBox(width: 8),
-            Text(
-              loc.translate('detailed_analysis') != 'detailed_analysis'
-                  ? loc.translate('detailed_analysis')
-                  : 'Análisis Detallado por Indicador',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Expanded(
+              child: Text(
+                loc.translate('detailed_analysis') != 'detailed_analysis'
+                    ? loc.translate('detailed_analysis')
+                    : 'Análisis Detallado por Indicador',
+                style: Theme.of(context).textTheme.headlineMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        
-        // Verificar si es EBA
-        final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
         
         // Iterar por cada categoría
         ...species.categories.map((category) {
