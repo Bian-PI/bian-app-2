@@ -45,6 +45,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _municipalityController = TextEditingController();
+  final _coordinatesController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
   final _evaluatorDocumentController = TextEditingController();
 
@@ -53,6 +56,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   bool _showInfoDialog = true;
   bool _hasUnsavedChanges = false;
   bool _isGettingLocation = false;
+  bool _hasCoordinates = false; // Para saber si tenemos coordenadas GPS
   User? _currentUser;
 
   @override
@@ -83,6 +87,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _scrollController.dispose();
     _farmNameController.dispose();
     _farmLocationController.dispose();
+    _departmentController.dispose();
+    _municipalityController.dispose();
+    _coordinatesController.dispose();
     _evaluatorNameController.dispose();
     _evaluatorDocumentController.dispose();
     _textControllers.values.forEach((controller) => controller.dispose());
@@ -336,19 +343,38 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
     setState(() => _isGettingLocation = true);
 
-    final location = await LocationService.getCurrentLocation();
+    final locationData = await LocationService.getCurrentLocationDetailed();
 
     setState(() => _isGettingLocation = false);
 
-    if (location != null) {
+    if (locationData != null) {
       setState(() {
-        _farmLocationController.text = location;
+        // Llenar departamento si está disponible
+        if (locationData.department != null && locationData.department!.isNotEmpty) {
+          _departmentController.text = locationData.department!;
+        }
+        
+        // Llenar municipio/ciudad si está disponible
+        if (locationData.municipality != null && locationData.municipality!.isNotEmpty) {
+          _municipalityController.text = locationData.municipality!;
+        } else if (locationData.subLocality != null && locationData.subLocality!.isNotEmpty) {
+          _municipalityController.text = locationData.subLocality!;
+        }
+        
+        // Siempre llenar coordenadas
+        _coordinatesController.text = locationData.coordinatesString;
+        _hasCoordinates = true;
+        
+        // Llenar ubicación formateada
+        _farmLocationController.text = locationData.formattedAddress;
       });
 
       if (mounted) {
         CustomSnackbar.showSuccess(
           context,
-          '${loc.translate('location')}: $location',
+          loc.translate('location_obtained') != 'location_obtained'
+              ? loc.translate('location_obtained')
+              : 'Ubicación obtenida correctamente',
         );
       }
     } else {
@@ -443,6 +469,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                
+                // Ubicación con botón GPS
                 TextField(
                   controller: _farmLocationController,
                   decoration: InputDecoration(
@@ -464,12 +492,14 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                             ),
                           )
                         : IconButton(
-                            icon: Icon(Icons.my_location),
+                            icon: Icon(Icons.my_location, color: BianTheme.primaryRed),
                             onPressed: () async {
                               setDialogState(() => _isGettingLocation = true);
                               setState(() => _isGettingLocation = true);
                               await _getCurrentLocation();
-                              setDialogState(() => _isGettingLocation = false);
+                              setDialogState(() {
+                                _isGettingLocation = false;
+                              });
                               setState(() => _isGettingLocation = false);
                             },
                             tooltip: loc.translate('get_current_location'),
@@ -477,6 +507,59 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                
+                // Departamento
+                TextField(
+                  controller: _departmentController,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('department') != 'department' 
+                        ? loc.translate('department') 
+                        : 'Departamento',
+                    hintText: 'Ej: Norte de Santander',
+                    prefixIcon: Icon(Icons.map_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Municipio / Ciudad / Vereda
+                TextField(
+                  controller: _municipalityController,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('municipality') != 'municipality' 
+                        ? loc.translate('municipality') 
+                        : 'Municipio / Vereda',
+                    hintText: 'Ej: Ocaña, Vereda El Carmen',
+                    prefixIcon: Icon(Icons.location_city),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Coordenadas (solo lectura)
+                TextField(
+                  controller: _coordinatesController,
+                  readOnly: true,
+                  enabled: _hasCoordinates || !widget.isOfflineMode,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('coordinates') != 'coordinates' 
+                        ? loc.translate('coordinates') 
+                        : 'Coordenadas GPS',
+                    hintText: widget.isOfflineMode 
+                        ? 'Opcional sin conexión' 
+                        : 'Presiona el icono de ubicación',
+                    prefixIcon: Icon(Icons.gps_fixed),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    suffixIcon: _hasCoordinates 
+                        ? Icon(Icons.check_circle, color: BianTheme.successGreen, size: 20)
+                        : null,
+                  ),
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 TextField(
                   controller: _evaluatorNameController,
                   decoration: InputDecoration(
