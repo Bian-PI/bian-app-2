@@ -506,6 +506,29 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                           ),
                   ),
                 ),
+                
+                // Mostrar coordenadas como label informativo si existen
+                if (_hasCoordinates && _coordinatesController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.gps_fixed, size: 14, color: BianTheme.successGreen),
+                        const SizedBox(width: 6),
+                        Text(
+                          'GPS: ${_coordinatesController.text}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.successGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.check_circle, size: 14, color: BianTheme.successGreen),
+                      ],
+                    ),
+                  ),
+                
                 const SizedBox(height: 16),
                 
                 // Departamento
@@ -530,32 +553,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                         : 'Municipio / Vereda',
                     hintText: 'Ej: Ocaña, Vereda El Carmen',
                     prefixIcon: Icon(Icons.location_city),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Coordenadas (solo lectura)
-                TextField(
-                  controller: _coordinatesController,
-                  readOnly: true,
-                  enabled: _hasCoordinates || !widget.isOfflineMode,
-                  decoration: InputDecoration(
-                    labelText: loc.translate('coordinates') != 'coordinates' 
-                        ? loc.translate('coordinates') 
-                        : 'Coordenadas GPS',
-                    hintText: widget.isOfflineMode 
-                        ? 'Opcional sin conexión' 
-                        : 'Presiona el icono de ubicación',
-                    prefixIcon: Icon(Icons.gps_fixed),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    suffixIcon: _hasCoordinates 
-                        ? Icon(Icons.check_circle, color: BianTheme.successGreen, size: 20)
-                        : null,
-                  ),
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 16),
