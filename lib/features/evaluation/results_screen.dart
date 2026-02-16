@@ -1461,9 +1461,19 @@ class ResultsScreen extends StatelessWidget {
                   BianTheme.mediumGray)
             else
               ...strongPoints.map((point) {
+                // Intentar traducir con category_POINT_pigs, luego category_POINT, luego el ID
+                final categoryKey = 'category_${point}_pigs';
+                final categoryKey2 = 'category_$point';
+                String translatedPoint = loc.translate(categoryKey);
+                if (translatedPoint == categoryKey) {
+                  translatedPoint = loc.translate(categoryKey2);
+                  if (translatedPoint == categoryKey2) {
+                    translatedPoint = loc.translate(point.toString());
+                  }
+                }
                 return _buildStrongPointCard(
                   context,
-                  loc.translate(point.toString()),
+                  translatedPoint,
                 );
               }),
             
@@ -2512,16 +2522,19 @@ class ResultsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        loc.translate('category_${category.id}') != 'category_${category.id}'
-                            ? loc.translate('category_${category.id}')
-                            : loc.translate(category.id),
+                        // Intentar traducir con nameKey primero, luego category_id, luego id
+                        loc.translate(category.nameKey ?? '') != (category.nameKey ?? '')
+                            ? loc.translate(category.nameKey ?? '')
+                            : (loc.translate('category_${category.id}') != 'category_${category.id}'
+                                ? loc.translate('category_${category.id}')
+                                : loc.translate(category.id)),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           color: headerColor,
                         ),
                       ),
-                      if (isICAEvaluation && weight < 1.0)
+                      if ((isICAEvaluation || isEBAEvaluation) && weight < 1.0 && weight > 0)
                         Text(
                           'Peso: ${(weight * 100).toInt()}% | Contribución: ${(percentage * weight).toStringAsFixed(1)}%',
                           style: TextStyle(
@@ -2635,9 +2648,12 @@ class ResultsScreen extends StatelessWidget {
                       Container(
                         constraints: BoxConstraints(maxWidth: 180),
                         child: Text(
-                          loc.translate('${field.id}_label') != '${field.id}_label'
-                              ? loc.translate('${field.id}_label')
-                              : loc.translate(field.id),
+                          // Intentar traducir con field.label primero, luego field.id
+                          loc.translate(field.label) != field.label
+                              ? loc.translate(field.label)
+                              : (loc.translate('${field.id}_label') != '${field.id}_label'
+                                  ? loc.translate('${field.id}_label')
+                                  : loc.translate(field.id)),
                           style: const TextStyle(fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 2,
