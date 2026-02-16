@@ -1296,9 +1296,9 @@ class ResultsScreen extends StatelessWidget {
             }),
             
             // ════════════════════════════════════════════════════════════════
-            // ANÁLISIS DETALLADO POR INDICADOR
+            // ANÁLISIS DETALLADO POR INDICADOR (Nueva página)
             // ════════════════════════════════════════════════════════════════
-            pw.SizedBox(height: 32),
+            pw.NewPage(), // Nueva página para el análisis detallado
             pw.Text(
               loc.translate('detailed_analysis') != 'detailed_analysis'
                   ? loc.translate('detailed_analysis')
@@ -1311,8 +1311,10 @@ class ResultsScreen extends StatelessWidget {
             ),
             pw.SizedBox(height: 16),
             
-            // Tablas por categoría
-            ...species.categories.map((category) {
+            // Tablas por categoría - página nueva a partir de la segunda
+            ...species.categories.asMap().entries.expand((entry) {
+              final index = entry.key;
+              final category = entry.value;
               final categoryDetails = results['category_details'] as Map<String, dynamic>?;
               final details = categoryDetails?[category.id] as Map<String, dynamic>?;
               final percentage = details?['percentage'] as double? ?? 0.0;
@@ -1334,141 +1336,154 @@ class ResultsScreen extends StatelessWidget {
               else if (percentage >= 25) catColor = PdfColor.fromInt(0xFFFF5722);
               else catColor = PdfColor.fromInt(0xFFD32F2F);
               
-              return pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 20),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    // Header de categoría
-                    pw.Container(
-                      padding: const pw.EdgeInsets.all(12),
-                      decoration: pw.BoxDecoration(
-                        color: catColor,
-                        borderRadius: const pw.BorderRadius.only(
-                          topLeft: pw.Radius.circular(8),
-                          topRight: pw.Radius.circular(8),
+              // Lista de widgets para esta categoría
+              final List<pw.Widget> widgets = [];
+              
+              // Agregar salto de página antes de cada categoría EXCEPTO la primera
+              if (index > 0) {
+                widgets.add(pw.NewPage());
+              }
+              
+              // Agregar la tabla de la categoría
+              widgets.add(
+                pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 20),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      // Header de categoría
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(12),
+                        decoration: pw.BoxDecoration(
+                          color: catColor,
+                          borderRadius: const pw.BorderRadius.only(
+                            topLeft: pw.Radius.circular(8),
+                            topRight: pw.Radius.circular(8),
+                          ),
                         ),
-                      ),
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Expanded(
-                            child: pw.Text(
-                              categoryName,
-                              style: pw.TextStyle(
-                                fontSize: 14,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.white,
-                              ),
-                            ),
-                          ),
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.white,
-                              borderRadius: pw.BorderRadius.circular(12),
-                            ),
-                            child: pw.Text(
-                              '${percentage.toStringAsFixed(1)}%',
-                              style: pw.TextStyle(
-                                fontSize: 12,
-                                fontWeight: pw.FontWeight.bold,
-                                color: catColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Tabla de indicadores
-                    pw.Table(
-                      border: pw.TableBorder.all(color: PdfColor.fromInt(0xFFE0E0E0)),
-                      columnWidths: {
-                        0: const pw.FlexColumnWidth(3),
-                        1: const pw.FlexColumnWidth(2),
-                        2: const pw.FlexColumnWidth(1),
-                      },
-                      tableWidth: pw.TableWidth.max,
-                      children: [
-                        // Header de tabla (se repetirá si la tabla se divide)
-                        pw.TableRow(
-                          repeat: true, // Repetir header en cada página
-                          decoration: pw.BoxDecoration(
-                            color: PdfColor.fromInt(0xFFF5F5F5),
-                          ),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('Indicador', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                            pw.Expanded(
+                              child: pw.Text(
+                                categoryName,
+                                style: pw.TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColors.white,
+                                ),
+                              ),
                             ),
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('Respuesta', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                            ),
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('Pts', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: pw.BoxDecoration(
+                                color: PdfColors.white,
+                                borderRadius: pw.BorderRadius.circular(12),
+                              ),
+                              child: pw.Text(
+                                '${percentage.toStringAsFixed(1)}%',
+                                style: pw.TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: catColor,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        // Filas de indicadores
-                        ...category.fields.map((field) {
-                          final key = '${category.id}_${field.id}';
-                          final value = evaluation.responses[key];
-                          
-                          // Traducir label del indicador
-                          String fieldLabel = loc.translate(field.label);
-                          if (fieldLabel == field.label) {
-                            fieldLabel = loc.translate('${field.id}_label');
-                            if (fieldLabel == '${field.id}_label') {
-                              fieldLabel = field.id;
-                            }
-                          }
-                          
-                          // Determinar respuesta y puntuación
-                          String displayValue = 'Sin respuesta';
-                          int? score;
-                          PdfColor valueColor = PdfColor.fromInt(0xFF757575);
-                          
-                          if (field.type.toString().contains('scale0to2')) {
-                            score = value is int ? value : (value is double ? value.toInt() : null);
-                            if (score == 0) { displayValue = 'No cumple'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
-                            else if (score == 1) { displayValue = 'Parcial'; valueColor = PdfColor.fromInt(0xFFFF9800); }
-                            else if (score == 2) { displayValue = 'Cumple'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
-                          } else if (field.type.toString().contains('scale0to4')) {
-                            score = value is int ? value : (value is double ? value.toInt() : null);
-                            if (score == 0) { displayValue = 'Crítico'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
-                            else if (score == 1) { displayValue = 'Deficiente'; valueColor = PdfColor.fromInt(0xFFFF5722); }
-                            else if (score == 2) { displayValue = 'Aceptable'; valueColor = PdfColor.fromInt(0xFFFF9800); }
-                            else if (score == 3) { displayValue = 'Bueno'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
-                            else if (score == 4) { displayValue = 'Excelente'; valueColor = PdfColor.fromInt(0xFF1B5E20); }
-                          } else if (field.type.toString().contains('yesNo')) {
-                            if (value == true) { displayValue = 'Sí'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
-                            else if (value == false) { displayValue = 'No'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
-                          }
-                          
-                          return pw.TableRow(
+                      ),
+                      // Tabla de indicadores
+                      pw.Table(
+                        border: pw.TableBorder.all(color: PdfColor.fromInt(0xFFE0E0E0)),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(3),
+                          1: const pw.FlexColumnWidth(2),
+                          2: const pw.FlexColumnWidth(1),
+                        },
+                        tableWidth: pw.TableWidth.max,
+                        children: [
+                          // Header de tabla
+                          pw.TableRow(
+                            repeat: true,
+                            decoration: pw.BoxDecoration(
+                              color: PdfColor.fromInt(0xFFF5F5F5),
+                            ),
                             children: [
                               pw.Padding(
-                                padding: const pw.EdgeInsets.all(6),
-                                child: pw.Text(fieldLabel, style: const pw.TextStyle(fontSize: 9)),
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Indicador', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                               ),
                               pw.Padding(
-                                padding: const pw.EdgeInsets.all(6),
-                                child: pw.Text(displayValue, style: pw.TextStyle(fontSize: 9, color: valueColor, fontWeight: pw.FontWeight.bold)),
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Respuesta', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                               ),
                               pw.Padding(
-                                padding: const pw.EdgeInsets.all(6),
-                                child: pw.Text(score?.toString() ?? '-', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Pts', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                               ),
                             ],
-                          );
-                        }),
-                      ],
-                    ),
-                  ],
+                          ),
+                          // Filas de indicadores
+                          ...category.fields.map((field) {
+                            final key = '${category.id}_${field.id}';
+                            final value = evaluation.responses[key];
+                            
+                            // Traducir label del indicador
+                            String fieldLabel = loc.translate(field.label);
+                            if (fieldLabel == field.label) {
+                              fieldLabel = loc.translate('${field.id}_label');
+                              if (fieldLabel == '${field.id}_label') {
+                                fieldLabel = field.id;
+                              }
+                            }
+                            
+                            // Determinar respuesta y puntuación
+                            String displayValue = 'Sin respuesta';
+                            int? score;
+                            PdfColor valueColor = PdfColor.fromInt(0xFF757575);
+                            
+                            if (field.type.toString().contains('scale0to2')) {
+                              score = value is int ? value : (value is double ? value.toInt() : null);
+                              if (score == 0) { displayValue = 'No cumple'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 1) { displayValue = 'Parcial'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 2) { displayValue = 'Cumple'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                            } else if (field.type.toString().contains('scale0to4')) {
+                              score = value is int ? value : (value is double ? value.toInt() : null);
+                              if (score == 0) { displayValue = 'Crítico'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 1) { displayValue = 'Deficiente'; valueColor = PdfColor.fromInt(0xFFFF5722); }
+                              else if (score == 2) { displayValue = 'Aceptable'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 3) { displayValue = 'Bueno'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 4) { displayValue = 'Excelente'; valueColor = PdfColor.fromInt(0xFF1B5E20); }
+                            } else if (field.type.toString().contains('yesNo')) {
+                              if (value == true) { displayValue = 'Sí'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (value == false) { displayValue = 'No'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                            }
+                            
+                            return pw.TableRow(
+                              children: [
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(fieldLabel, style: const pw.TextStyle(fontSize: 9)),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(displayValue, style: pw.TextStyle(fontSize: 9, color: valueColor, fontWeight: pw.FontWeight.bold)),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(score?.toString() ?? '-', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               );
+              
+              return widgets;
             }),
             
             pw.SizedBox(height: 32),
