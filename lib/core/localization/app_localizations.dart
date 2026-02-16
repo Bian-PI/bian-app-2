@@ -260,6 +260,9 @@ class AppLocalizations {
       'finish': 'Finalizar',
       'finish_evaluation': 'Finalizar Evaluación',
       'finish_evaluation_confirm':
+          '¿Estás seguro de que deseas finalizar esta evaluación?',
+      'processing_evaluation': 'Procesando evaluación...',
+      'error_completing_evaluation': 'Error al completar la evaluación',
           '¿Estás seguro de finalizar esta evaluación? Se generará un reporte completo.',
       'evaluation_completed': '¡Evaluación completada!',
       'complete_required_fields':
@@ -745,6 +748,9 @@ class AppLocalizations {
       'finish': 'Finish',
       'finish_evaluation': 'Finish Evaluation',
       'finish_evaluation_confirm':
+          'Are you sure you want to finish this evaluation?',
+      'processing_evaluation': 'Processing evaluation...',
+      'error_completing_evaluation': 'Error completing evaluation',
           'Are you sure you want to finish this evaluation? A complete report will be generated.',
       'evaluation_completed': 'Evaluation completed!',
       'complete_required_fields': 'Please complete all required fields',
