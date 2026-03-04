@@ -102,10 +102,10 @@ class _SpeciesPieChartState extends State<SpeciesPieChart> {
             swapAnimationCurve: Curves.easeOutCubic,
           ),
         ),
-        const SizedBox(height: 16),
-        // Leyenda
+        const SizedBox(height: 12),
+        // Leyenda - diseño compacto
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildLegendItem(
               color: const Color(0xFF2196F3),
@@ -113,7 +113,6 @@ class _SpeciesPieChartState extends State<SpeciesPieChart> {
               value: birds,
               percent: birdsPercent,
             ),
-            const SizedBox(width: 24),
             _buildLegendItem(
               color: const Color(0xFFE91E63),
               label: 'Cerdos',
@@ -136,32 +135,20 @@ class _SpeciesPieChartState extends State<SpeciesPieChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(3),
           ),
         ),
-        const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              '$value (${percent.toStringAsFixed(0)}%)',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
+        const SizedBox(width: 4),
+        Text(
+          '$label: $value',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
