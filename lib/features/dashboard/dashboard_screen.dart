@@ -18,7 +18,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
+class _DashboardScreenState extends State<DashboardScreen> {
   final _storage = SecureStorage();
   
   DashboardStats? _localStats;
@@ -28,7 +28,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   bool _isAdmin = false;
   User? _currentUser;
   
-  TabController? _tabController;
+  // 0 = Local, 1 = Server
+  int _selectedSection = 0;
 
   @override
   void initState() {
@@ -36,14 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     _loadUserAndStats();
   }
 
-  @override
-  void dispose() {
-    _tabController?.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadUserAndStats() async {
-    // Cargar usuario
     final user = await _storage.getUser();
     final isAdmin = user?.role?.toLowerCase() == 'admin';
     
@@ -51,16 +45,11 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       setState(() {
         _currentUser = user;
         _isAdmin = isAdmin;
-        if (isAdmin) {
-          _tabController = TabController(length: 2, vsync: this);
-        }
       });
     }
 
-    // Cargar stats locales (siempre)
     await _loadLocalStats();
     
-    // Cargar stats del servidor solo si es admin
     if (isAdmin) {
       await _loadServerStats();
     }
@@ -104,322 +93,572 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          loc.translate('dashboard') != 'dashboard' 
-              ? loc.translate('dashboard') 
-              : 'Dashboard',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: BianTheme.primaryRed,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _loadLocalStats();
-              if (_isAdmin) _loadServerStats();
-            },
-            tooltip: 'Actualizar',
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: CustomScrollView(
+        slivers: [
+          // App Bar con gradiente
+          SliverAppBar(
+            expandedHeight: _isAdmin ? 180 : 120,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: BianTheme.primaryRed,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: () {
+                  _loadLocalStats();
+                  if (_isAdmin) _loadServerStats();
+                },
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      BianTheme.primaryRed,
+                      BianTheme.primaryRed.withRed(180),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Panel de Control',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _isAdmin 
+                              ? 'Administrador • Acceso completo'
+                              : 'Mis estadísticas de evaluación',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.85),
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (_isAdmin) ...[
+                          const SizedBox(height: 16),
+                          _buildSectionSelector(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // Contenido
+          SliverToBoxAdapter(
+            child: _buildContent(),
           ),
         ],
-        bottom: _isAdmin && _tabController != null ? TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.phone_android, size: 20),
-              text: 'Mis Reportes',
-            ),
-            Tab(
-              icon: Icon(Icons.cloud, size: 20),
-              text: 'Servidor (Admin)',
-            ),
-          ],
-        ) : null,
       ),
-      body: _isAdmin && _tabController != null ? _buildAdminView(loc) : _buildUserView(loc),
     );
   }
 
-  /// Vista para ADMIN con tabs (Local + Servidor)
-  Widget _buildAdminView(AppLocalizations loc) {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        // Tab 1: Reportes Locales
-        _buildStatsView(
-          stats: _localStats,
-          isLoading: _isLoadingLocal,
-          onRefresh: _loadLocalStats,
-          emptyMessage: 'No hay reportes locales',
-          emptyIcon: Icons.phone_android,
-        ),
-        // Tab 2: Reportes del Servidor
-        _buildStatsView(
-          stats: _serverStats,
-          isLoading: _isLoadingServer,
-          onRefresh: _loadServerStats,
-          emptyMessage: 'No hay reportes en el servidor',
-          emptyIcon: Icons.cloud_off,
-          showConnectionWarning: true,
-        ),
-      ],
+  /// Selector de sección para Admin (Local / Servidor)
+  Widget _buildSectionSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildSectionTab(
+              index: 0,
+              icon: Icons.smartphone_rounded,
+              label: 'Mis Reportes',
+              isSelected: _selectedSection == 0,
+            ),
+          ),
+          Expanded(
+            child: _buildSectionTab(
+              index: 1,
+              icon: Icons.cloud_rounded,
+              label: 'Servidor',
+              isSelected: _selectedSection == 1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  /// Vista para USUARIO NORMAL (solo local)
-  Widget _buildUserView(AppLocalizations loc) {
-    return _buildStatsView(
-      stats: _localStats,
-      isLoading: _isLoadingLocal,
-      onRefresh: _loadLocalStats,
-      emptyMessage: 'No hay reportes locales',
-      emptyIcon: Icons.assessment_outlined,
-    );
-  }
-
-  Widget _buildStatsView({
-    required DashboardStats? stats,
-    required bool isLoading,
-    required Future<void> Function() onRefresh,
-    required String emptyMessage,
-    required IconData emptyIcon,
-    bool showConnectionWarning = false,
+  Widget _buildSectionTab({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isSelected,
   }) {
-    if (isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return GestureDetector(
+      onTap: () => setState(() => _selectedSection = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: BianTheme.primaryRed),
-            SizedBox(height: 16),
-            Text('Cargando estadísticas...'),
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? BianTheme.primaryRed : Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? BianTheme.primaryRed : Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final isServerSection = _isAdmin && _selectedSection == 1;
+    final stats = isServerSection ? _serverStats : _localStats;
+    final isLoading = isServerSection ? _isLoadingServer : _isLoadingLocal;
+    
+    if (isLoading) {
+      return _buildLoadingState();
     }
 
     final data = stats ?? DashboardStats.empty();
     final hasData = data.totalEvaluations > 0;
 
     if (!hasData) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(emptyIcon, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              emptyMessage,
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Realiza evaluaciones para ver estadísticas',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Actualizar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BianTheme.primaryRed,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState(isServerSection);
     }
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      color: BianTheme.primaryRed,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Advertencia de conexión para servidor
-            if (showConnectionWarning)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Datos del servidor - requiere conexión a internet',
-                        style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return _buildStatsContent(data, isServerSection);
+  }
 
-            // Fila 1: Score promedio + Stats
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildCard(
-                    title: 'Score Promedio',
-                    child: Center(
-                      child: ScoreGauge(
-                        score: data.averageScore,
-                        size: 130,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _buildStatCard(
-                        icon: Icons.assessment,
-                        value: data.totalEvaluations.toString(),
-                        label: 'Total',
-                        color: BianTheme.primaryRed,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildStatCard(
-                        icon: Icons.calendar_month,
-                        value: data.evaluationsThisMonth.toString(),
-                        label: 'Este Mes',
-                        color: const Color(0xFF2196F3),
-                      ),
-                    ],
-                  ),
+  Widget _buildLoadingState() {
+    return Container(
+      height: 400,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // Evaluaciones por Mes
-            _buildCard(
-              title: 'Evaluaciones por Mes',
-              subtitle: 'Últimos 6 meses',
-              child: MonthlyBarChart(
-                data: data.evaluationsByMonth,
-                height: 180,
-              ),
+            child: const CircularProgressIndicator(
+              color: BianTheme.primaryRed,
+              strokeWidth: 3,
             ),
-            const SizedBox(height: 16),
-
-            // Tendencia de Bienestar
-            _buildCard(
-              title: 'Tendencia de Bienestar',
-              subtitle: 'Evolución del score promedio',
-              child: TrendLineChart(
-                data: data.scoreTrend,
-                height: 180,
-              ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Cargando estadísticas...',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
-            const SizedBox(height: 16),
-
-            // Fila 3: Distribución por especie + Categorías
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildCard(
-                    title: 'Por Especie',
-                    child: SpeciesPieChart(
-                      data: data.evaluationsBySpecies,
-                      size: 110,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: _buildCard(
-                    title: 'Categorías',
-                    subtitle: 'Promedio por área',
-                    child: data.categoryAverages.isNotEmpty
-                        ? CategoryComparisonChart(
-                            data: data.categoryAverages,
-                            height: 150,
-                          )
-                        : SizedBox(
-                            height: 150,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.bar_chart, size: 40, color: Colors.grey.shade300),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Sin datos',
-                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Evaluaciones Recientes
-            _buildCard(
-              title: 'Evaluaciones Recientes',
-              child: data.recentEvaluations.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Icon(Icons.history, size: 48, color: Colors.grey.shade300),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Sin evaluaciones recientes',
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : Column(
-                      children: data.recentEvaluations.map((eval) {
-                        return _buildRecentEvaluationItem(eval);
-                      }).toList(),
-                    ),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCard({
-    required String title,
-    String? subtitle,
-    required Widget child,
-  }) {
+  Widget _buildEmptyState(bool isServerSection) {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(
+              isServerSection ? Icons.cloud_off_rounded : Icons.analytics_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            isServerSection 
+                ? 'Sin datos en el servidor'
+                : 'Sin reportes locales',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isServerSection
+                ? 'Los reportes sincronizados aparecerán aquí'
+                : 'Realiza evaluaciones para ver tus estadísticas',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey.shade500,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          OutlinedButton.icon(
+            onPressed: () {
+              if (isServerSection) {
+                _loadServerStats();
+              } else {
+                _loadLocalStats();
+              }
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Actualizar'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: BianTheme.primaryRed,
+              side: const BorderSide(color: BianTheme.primaryRed, width: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsContent(DashboardStats data, bool isServerSection) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Info banner para servidor
+          if (isServerSection)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF667eea).withOpacity(0.1),
+                    const Color(0xFF764ba2).withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF667eea).withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667eea).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.admin_panel_settings_rounded,
+                      color: Color(0xFF667eea),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Vista de Administrador',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF667eea),
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Mostrando todos los reportes del sistema',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Score y Stats principales
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildCard(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Score Promedio',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ScoreGauge(
+                        score: data.averageScore,
+                        size: 120,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildStatCard(
+                      icon: Icons.assignment_rounded,
+                      value: data.totalEvaluations.toString(),
+                      label: 'Total',
+                      gradient: [const Color(0xFFE53935), const Color(0xFFFF7043)],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatCard(
+                      icon: Icons.today_rounded,
+                      value: data.evaluationsThisMonth.toString(),
+                      label: 'Este Mes',
+                      gradient: [const Color(0xFF2196F3), const Color(0xFF64B5F6)],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Sección título
+          _buildSectionTitle('Actividad', Icons.show_chart_rounded),
+          const SizedBox(height: 12),
+
+          // Evaluaciones por Mes
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.bar_chart_rounded, size: 20, color: Colors.grey.shade700),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Evaluaciones por Mes',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Últimos 6 meses',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 16),
+                MonthlyBarChart(data: data.evaluationsByMonth, height: 180),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tendencia
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.trending_up_rounded, size: 20, color: Colors.grey.shade700),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Tendencia de Bienestar',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Evolución del score promedio',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 16),
+                TrendLineChart(data: data.scoreTrend, height: 180),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Sección título
+          _buildSectionTitle('Distribución', Icons.pie_chart_rounded),
+          const SizedBox(height: 12),
+
+          // Por Especie y Categorías
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Por Especie',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SpeciesPieChart(
+                        data: data.evaluationsBySpecies,
+                        size: 100,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Categorías',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      data.categoryAverages.isNotEmpty
+                          ? CategoryComparisonChart(
+                              data: data.categoryAverages,
+                              height: 140,
+                            )
+                          : _buildNoDataSmall(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Evaluaciones Recientes
+          _buildSectionTitle('Recientes', Icons.history_rounded),
+          const SizedBox(height: 12),
+          
+          _buildCard(
+            child: data.recentEvaluations.isEmpty
+                ? _buildNoDataSmall()
+                : Column(
+                    children: data.recentEvaluations.map((eval) {
+                      return _buildRecentItem(eval);
+                    }).toList(),
+                  ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: BianTheme.primaryRed.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: BianTheme.primaryRed),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D2D2D),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -428,46 +667,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D2D2D),
-                      ),
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+      child: child,
     );
   }
 
@@ -475,17 +681,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     required IconData icon,
     required String value,
     required String label,
-    required Color color,
+    required List<Color> gradient,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: gradient[0].withOpacity(0.3),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -493,34 +703,33 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 22,
+                  style: const TextStyle(
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: color,
+                    color: Colors.white,
                   ),
                 ),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -530,28 +739,64 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildRecentEvaluationItem(RecentEvaluation eval) {
-    final color = eval.score >= 90 ? const Color(0xFF1B5E20)
-        : eval.score >= 75 ? const Color(0xFF4CAF50)
-        : eval.score >= 50 ? const Color(0xFFFFB300)
-        : const Color(0xFFE53935);
+  Widget _buildNoDataSmall() {
+    return SizedBox(
+      height: 100,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_rounded, size: 32, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text(
+              'Sin datos',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentItem(RecentEvaluation eval) {
+    final color = eval.score >= 90
+        ? const Color(0xFF1B5E20)
+        : eval.score >= 75
+            ? const Color(0xFF4CAF50)
+            : eval.score >= 50
+                ? const Color(0xFFFF9800)
+                : const Color(0xFFE53935);
 
     final speciesIcon = eval.species.contains('bird') || eval.species.contains('ave')
         ? '🐔'
         : '🐷';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Text(speciesIcon, style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 10),
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                ),
+              ],
+            ),
+            child: Text(speciesIcon, style: const TextStyle(fontSize: 22)),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,15 +805,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   eval.farmName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                    fontSize: 14,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   _formatDate(eval.date),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     color: Colors.grey.shade500,
                   ),
                 ),
@@ -576,17 +822,17 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '${eval.score.toStringAsFixed(0)}%',
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
           ),
@@ -598,11 +844,11 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
-    
+
     if (diff.inDays == 0) return 'Hoy';
     if (diff.inDays == 1) return 'Ayer';
     if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
-    
+
     return '${date.day}/${date.month}/${date.year}';
   }
 }
