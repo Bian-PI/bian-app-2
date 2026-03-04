@@ -44,8 +44,8 @@ class _SpeciesPieChartState extends State<SpeciesPieChart> {
 
     final birds = widget.data['birds'] ?? 0;
     final pigs = widget.data['pigs'] ?? 0;
-    final birdsPercent = total > 0 ? (birds / total * 100) : 0;
-    final pigsPercent = total > 0 ? (pigs / total * 100) : 0;
+    final double birdsPercent = total > 0 ? (birds / total * 100).toDouble() : 0.0;
+    final double pigsPercent = total > 0 ? (pigs / total * 100).toDouble() : 0.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
