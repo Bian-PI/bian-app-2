@@ -5,6 +5,7 @@ import '../storage/secure_storage.dart';
 
 class DashboardService {
   static final _storage = SecureStorage();
+  static final _apiService = ApiService();
   static final _months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
   /// Obtiene estadísticas del dashboard desde el servidor
@@ -13,8 +14,15 @@ class DashboardService {
       final user = await _storage.getUser();
       if (user == null) return DashboardStats.empty();
 
-      // Intentar obtener del servidor
-      final evaluations = await ApiService.getMyEvaluations();
+      // Obtener evaluaciones del usuario
+      final result = await _apiService.getUserEvaluations(limit: 100, offset: 0);
+      
+      if (result['success'] != true) {
+        print('Error getting evaluations: ${result['message']}');
+        return DashboardStats.empty();
+      }
+      
+      final evaluations = (result['evaluations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       
       if (evaluations.isEmpty) {
         return DashboardStats.empty();
