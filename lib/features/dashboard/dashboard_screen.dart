@@ -93,13 +93,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
         slivers: [
           // App Bar con gradiente
           SliverAppBar(
-            expandedHeight: _isAdmin ? 180 : 120,
+            expandedHeight: _isAdmin ? 200 : 130,
             floating: false,
             pinned: true,
             elevation: 0,
@@ -129,36 +131,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Panel de Control',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, topPadding + 56, 20, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Panel de Control',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _isAdmin 
-                              ? 'Administrador • Acceso completo'
-                              : 'Mis estadísticas de evaluación',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
-                            fontSize: 14,
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isAdmin 
+                            ? 'Administrador • Acceso completo'
+                            : 'Mis estadísticas de evaluación',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 13,
                         ),
-                        if (_isAdmin) ...[
-                          const SizedBox(height: 16),
-                          _buildSectionSelector(),
-                        ],
+                      ),
+                      if (_isAdmin) ...[
+                        const SizedBox(height: 12),
+                        _buildSectionSelector(),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
