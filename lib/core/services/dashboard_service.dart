@@ -17,7 +17,7 @@ class DashboardService {
       final localReports = await ReportsStorage.getAllReports();
       
       // Obtener reportes pendientes de sincronización
-      final pendingReports = await LocalReportsStorage.getAllReports();
+      final pendingReports = await LocalReportsStorage.getAllLocalReports();
       
       // Convertir evaluaciones a mapas para procesar
       final List<Map<String, dynamic>> allReports = [];
@@ -26,8 +26,8 @@ class DashboardService {
         allReports.add(_evaluationToMap(eval));
       }
       
-      for (var report in pendingReports) {
-        allReports.add(report);
+      for (var eval in pendingReports) {
+        allReports.add(_evaluationToMap(eval));
       }
       
       if (allReports.isEmpty) {
@@ -80,6 +80,18 @@ class DashboardService {
 
   /// Convierte Evaluation a Map para procesamiento uniforme
   static Map<String, dynamic> _evaluationToMap(Evaluation eval) {
+    // Construir category_details desde categoryScores
+    Map<String, dynamic>? categoryDetails;
+    if (eval.categoryScores != null && eval.categoryScores!.isNotEmpty) {
+      categoryDetails = {};
+      eval.categoryScores!.forEach((catId, score) {
+        categoryDetails![catId] = {
+          'percentage': score,
+          'score': score,
+        };
+      });
+    }
+    
     return {
       'id': eval.id,
       'farm_name': eval.farmName,
@@ -87,7 +99,7 @@ class DashboardService {
       'overall_score': eval.overallScore,
       'created_at': eval.evaluationDate.toIso8601String(),
       'date': eval.evaluationDate.toIso8601String(),
-      'category_details': eval.results?['category_details'],
+      'category_details': categoryDetails,
     };
   }
 
