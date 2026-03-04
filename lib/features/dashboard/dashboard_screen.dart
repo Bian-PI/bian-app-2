@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/dashboard_stats.dart';
+import '../../core/models/user_model.dart';
 import '../../core/services/dashboard_service.dart';
+import '../../core/storage/secure_storage.dart';
 import '../../core/theme/bian_theme.dart';
 import 'widgets/score_gauge.dart';
 import 'widgets/monthly_bar_chart.dart';
@@ -16,37 +18,86 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  DashboardStats? _stats;
-  bool _isLoading = true;
-  String? _error;
+class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
+  final _storage = SecureStorage();
+  
+  DashboardStats? _localStats;
+  DashboardStats? _serverStats;
+  bool _isLoadingLocal = true;
+  bool _isLoadingServer = false;
+  bool _isAdmin = false;
+  User? _currentUser;
+  
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    _loadUserAndStats();
   }
 
-  Future<void> _loadStats() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserAndStats() async {
+    // Cargar usuario
+    final user = await _storage.getUser();
+    final isAdmin = user?.role?.toLowerCase() == 'admin';
+    
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+        _isAdmin = isAdmin;
+        if (isAdmin) {
+          _tabController = TabController(length: 2, vsync: this);
+        }
+      });
+    }
+
+    // Cargar stats locales (siempre)
+    await _loadLocalStats();
+    
+    // Cargar stats del servidor solo si es admin
+    if (isAdmin) {
+      await _loadServerStats();
+    }
+  }
+
+  Future<void> _loadLocalStats() async {
+    setState(() => _isLoadingLocal = true);
 
     try {
-      final stats = await DashboardService.getStats();
+      final stats = await DashboardService.getLocalStats();
       if (mounted) {
         setState(() {
-          _stats = stats;
-          _isLoading = false;
+          _localStats = stats;
+          _isLoadingLocal = false;
         });
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoadingLocal = false);
+      }
+    }
+  }
+
+  Future<void> _loadServerStats() async {
+    setState(() => _isLoadingServer = true);
+
+    try {
+      final stats = await DashboardService.getServerStats();
+      if (mounted) {
         setState(() {
-          _error = e.toString();
-          _isLoading = false;
+          _serverStats = stats;
+          _isLoadingServer = false;
         });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingServer = false);
       }
     }
   }
@@ -70,17 +121,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadStats,
+            onPressed: () {
+              _loadLocalStats();
+              if (_isAdmin) _loadServerStats();
+            },
             tooltip: 'Actualizar',
           ),
         ],
+        bottom: _isAdmin && _tabController != null ? TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.phone_android, size: 20),
+              text: 'Mis Reportes',
+            ),
+            Tab(
+              icon: Icon(Icons.cloud, size: 20),
+              text: 'Servidor (Admin)',
+            ),
+          ],
+        ) : null,
       ),
-      body: _buildBody(loc),
+      body: _isAdmin && _tabController != null ? _buildAdminView(loc) : _buildUserView(loc),
     );
   }
 
-  Widget _buildBody(AppLocalizations loc) {
-    if (_isLoading) {
+  /// Vista para ADMIN con tabs (Local + Servidor)
+  Widget _buildAdminView(AppLocalizations loc) {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        // Tab 1: Reportes Locales
+        _buildStatsView(
+          stats: _localStats,
+          isLoading: _isLoadingLocal,
+          onRefresh: _loadLocalStats,
+          emptyMessage: 'No hay reportes locales',
+          emptyIcon: Icons.phone_android,
+        ),
+        // Tab 2: Reportes del Servidor
+        _buildStatsView(
+          stats: _serverStats,
+          isLoading: _isLoadingServer,
+          onRefresh: _loadServerStats,
+          emptyMessage: 'No hay reportes en el servidor',
+          emptyIcon: Icons.cloud_off,
+          showConnectionWarning: true,
+        ),
+      ],
+    );
+  }
+
+  /// Vista para USUARIO NORMAL (solo local)
+  Widget _buildUserView(AppLocalizations loc) {
+    return _buildStatsView(
+      stats: _localStats,
+      isLoading: _isLoadingLocal,
+      onRefresh: _loadLocalStats,
+      emptyMessage: 'No hay reportes locales',
+      emptyIcon: Icons.assessment_outlined,
+    );
+  }
+
+  Widget _buildStatsView({
+    required DashboardStats? stats,
+    required bool isLoading,
+    required Future<void> Function() onRefresh,
+    required String emptyMessage,
+    required IconData emptyIcon,
+    bool showConnectionWarning = false,
+  }) {
+    if (isLoading) {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -93,22 +208,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    if (_error != null) {
+    final data = stats ?? DashboardStats.empty();
+    final hasData = data.totalEvaluations > 0;
+
+    if (!hasData) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+            Icon(emptyIcon, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
-              'Error al cargar datos',
+              emptyMessage,
               style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
+            Text(
+              'Realiza evaluaciones para ver estadísticas',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _loadStats,
+              onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              label: const Text('Actualizar'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: BianTheme.primaryRed,
                 foregroundColor: Colors.white,
@@ -119,10 +242,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    final stats = _stats ?? DashboardStats.empty();
-
     return RefreshIndicator(
-      onRefresh: _loadStats,
+      onRefresh: onRefresh,
       color: BianTheme.primaryRed,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -130,37 +251,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fila 1: Score promedio + Evaluaciones del mes
+            // Advertencia de conexión para servidor
+            if (showConnectionWarning)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Datos del servidor - requiere conexión a internet',
+                        style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Fila 1: Score promedio + Stats
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Score Gauge
                 Expanded(
                   child: _buildCard(
                     title: 'Score Promedio',
                     child: Center(
                       child: ScoreGauge(
-                        score: stats.averageScore,
-                        size: 140,
+                        score: data.averageScore,
+                        size: 130,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Stats rápidas
                 Expanded(
                   child: Column(
                     children: [
                       _buildStatCard(
                         icon: Icons.assessment,
-                        value: stats.totalEvaluations.toString(),
-                        label: 'Total Evaluaciones',
+                        value: data.totalEvaluations.toString(),
+                        label: 'Total',
                         color: BianTheme.primaryRed,
                       ),
                       const SizedBox(height: 12),
                       _buildStatCard(
                         icon: Icons.calendar_month,
-                        value: stats.evaluationsThisMonth.toString(),
+                        value: data.evaluationsThisMonth.toString(),
                         label: 'Este Mes',
                         color: const Color(0xFF2196F3),
                       ),
@@ -176,7 +319,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Evaluaciones por Mes',
               subtitle: 'Últimos 6 meses',
               child: MonthlyBarChart(
-                data: stats.evaluationsByMonth,
+                data: data.evaluationsByMonth,
                 height: 180,
               ),
             ),
@@ -187,7 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Tendencia de Bienestar',
               subtitle: 'Evolución del score promedio',
               child: TrendLineChart(
-                data: stats.scoreTrend,
+                data: data.scoreTrend,
                 height: 180,
               ),
             ),
@@ -197,35 +340,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Distribución por Especie
                 Expanded(
                   flex: 1,
                   child: _buildCard(
                     title: 'Por Especie',
                     child: SpeciesPieChart(
-                      data: stats.evaluationsBySpecies,
-                      size: 120,
+                      data: data.evaluationsBySpecies,
+                      size: 110,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Comparativa Categorías
                 Expanded(
                   flex: 1,
                   child: _buildCard(
                     title: 'Categorías',
                     subtitle: 'Promedio por área',
-                    child: stats.categoryAverages.isNotEmpty
+                    child: data.categoryAverages.isNotEmpty
                         ? CategoryComparisonChart(
-                            data: stats.categoryAverages,
-                            height: 160,
+                            data: data.categoryAverages,
+                            height: 150,
                           )
                         : SizedBox(
-                            height: 160,
+                            height: 150,
                             child: Center(
-                              child: Text(
-                                'Sin datos',
-                                style: TextStyle(color: Colors.grey.shade500),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bar_chart, size: 40, color: Colors.grey.shade300),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Sin datos',
+                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -238,7 +386,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Evaluaciones Recientes
             _buildCard(
               title: 'Evaluaciones Recientes',
-              child: stats.recentEvaluations.isEmpty
+              child: data.recentEvaluations.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(24),
                       child: Center(
@@ -255,7 +403,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     )
                   : Column(
-                      children: stats.recentEvaluations.map((eval) {
+                      children: data.recentEvaluations.map((eval) {
                         return _buildRecentEvaluationItem(eval);
                       }).toList(),
                     ),
@@ -298,7 +446,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2D2D2D),
                       ),
@@ -307,7 +455,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: Colors.grey.shade500,
                         ),
                       ),
@@ -316,7 +464,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           child,
         ],
       ),
@@ -330,7 +478,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -345,14 +493,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +508,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -383,7 +531,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentEvaluationItem(RecentEvaluation eval) {
-    final isGood = eval.score >= 75;
     final color = eval.score >= 90 ? const Color(0xFF1B5E20)
         : eval.score >= 75 ? const Color(0xFF4CAF50)
         : eval.score >= 50 ? const Color(0xFFFFB300)
@@ -403,8 +550,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Row(
         children: [
-          Text(speciesIcon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 12),
+          Text(speciesIcon, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   eval.farmName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -421,7 +568,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   _formatDate(eval.date),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Colors.grey.shade500,
                   ),
                 ),
@@ -429,17 +576,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               '${eval.score.toStringAsFixed(0)}%',
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ),
