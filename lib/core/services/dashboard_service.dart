@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 import '../models/dashboard_stats.dart';
-import '../services/api_service.dart';
+import '../api/api_service.dart';
 import '../storage/secure_storage.dart';
 
 class DashboardService {
