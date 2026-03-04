@@ -20,6 +20,7 @@ import '../evaluation/results_screen.dart';
 import 'local_reports_screen.dart';
 import 'my_evaluations_screen.dart';
 import 'admin_reports_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -1100,6 +1101,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 22),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Botón Dashboard - Estadísticas
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF667eea),
+                  const Color(0xFF764ba2),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF667eea).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.dashboard_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.translate('dashboard') != 'dashboard' 
+                            ? loc.translate('dashboard') 
+                            : 'Dashboard',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        loc.translate('view_statistics') != 'view_statistics'
+                            ? loc.translate('view_statistics')
+                            : 'Ver estadísticas y gráficas',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 18),
               ],
             ),
           ),
