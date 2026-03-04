@@ -2395,6 +2395,64 @@ class ResultsScreen extends StatelessWidget {
       'biosecurity_records': 'Registros de bioseguridad',
       'capacity_records': 'Registros de capacidad',
       'responsible_medication': 'Medicación responsable',
+      'lighting_program': 'Programa de iluminación',
+      'welfare_training': 'Capacitación en bienestar',
+      'euthanasia_protocol': 'Protocolo de eutanasia',
+      'euthanasia_training': 'Capacitación en eutanasia',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EBA 3.0 - Cerdos - INDICADORES DE RECURSO
+      // ═══════════════════════════════════════════════════════════════
+      'eba_a1_water_per_animal': 'Relación animales por bebedero',
+      'eba_a2_drinker_flow': 'Caudal del bebedero',
+      'eba_a3_water_quality': 'Calidad microbiológica del agua',
+      'eba_f1_feeder_spaces': 'Espacios de comedero suficientes',
+      'eba_f2_body_condition': 'Condición corporal',
+      'eba_f3_access_time': 'Tiempo de acceso tras reparto',
+      'eba_e1_thi': 'Índice temperatura-humedad (THI)',
+      'eba_e2_ammonia': 'Nivel de amoníaco (NH₃)',
+      'eba_e3_co2': 'Nivel de CO₂',
+      'eba_e4_light_intensity': 'Intensidad lumínica',
+      'eba_e5_noise': 'Nivel de ruido',
+      'eba_e6_space_allowance': 'Espacio disponible por animal',
+      'eba_e7_floor_condition': 'Condición del piso',
+      'eba_e8_enrichment': 'Material de enriquecimiento',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DEL ANIMAL
+      'eba_h1_lameness': 'Cojeras',
+      'eba_h2_body_lesions': 'Lesiones corporales',
+      'eba_h3_tail_lesions': 'Lesiones en cola',
+      'eba_h4_respiratory': 'Signos respiratorios',
+      'eba_h5_diarrhea': 'Diarrea',
+      'eba_h6_pain_management': 'Analgesia en procedimientos',
+      'eba_h7_mortality': 'Mortalidad',
+      'eba_h8_tail_scars': 'Cicatrices de cola',
+      'eba_b1_social_behavior': 'Comportamiento social',
+      'eba_b2_exploratory': 'Comportamiento exploratorio',
+      'eba_b3_stereotypies': 'Estereotipias',
+      'eba_b4_human_approach': 'Respuesta al acercamiento humano',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE GESTIÓN
+      'eba_m1_welfare_plan': 'Plan de bienestar documentado',
+      'eba_m2_staff_training': 'Capacitación del personal',
+      'eba_m3_health_records': 'Registros sanitarios',
+      'eba_m4_emergency_plan': 'Plan de emergencias',
+      'eba_m5_euthanasia': 'Protocolo de eutanasia',
+      'eba_m6_castration': 'Procedimiento de castración',
+      'eba_m7_tail_docking': 'Corte de cola',
+      'eba_m8_teeth_reduction': 'Reducción de colmillos',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE TRANSPORTE
+      'eba_t1_fitness': 'Aptitud para transporte',
+      'eba_t2_loading': 'Procedimiento de carga',
+      'eba_t3_transport_conditions': 'Condiciones del vehículo',
+      'eba_t4_pre_transport': 'Ayuno pre-transporte',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE SACRIFICIO
+      'eba_s1_lairage': 'Condiciones de espera',
+      'eba_s2_stunning_efficacy': 'Aturdimiento efectivo',
+      'eba_s3_bleed_time': 'Tiempo de sangrado',
+      'eba_s4_consciousness': 'Verificación de inconsciencia',
       // Legacy fields
       'water_access': 'Acceso al agua',
       'feed_quality': 'Calidad del alimento',
@@ -2461,6 +2519,64 @@ class ResultsScreen extends StatelessWidget {
       'biosecurity_records': 'Biosecurity records',
       'capacity_records': 'Capacity records',
       'responsible_medication': 'Responsible medication',
+      'lighting_program': 'Lighting program',
+      'welfare_training': 'Welfare training',
+      'euthanasia_protocol': 'Euthanasia protocol',
+      'euthanasia_training': 'Euthanasia training',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EBA 3.0 - Pigs - RESOURCE INDICATORS
+      // ═══════════════════════════════════════════════════════════════
+      'eba_a1_water_per_animal': 'Animals per drinker ratio',
+      'eba_a2_drinker_flow': 'Drinker flow rate',
+      'eba_a3_water_quality': 'Water microbiological quality',
+      'eba_f1_feeder_spaces': 'Sufficient feeder spaces',
+      'eba_f2_body_condition': 'Body condition score',
+      'eba_f3_access_time': 'Access time after feeding',
+      'eba_e1_thi': 'Temperature-Humidity Index (THI)',
+      'eba_e2_ammonia': 'Ammonia level (NH₃)',
+      'eba_e3_co2': 'CO₂ level',
+      'eba_e4_light_intensity': 'Light intensity',
+      'eba_e5_noise': 'Noise level',
+      'eba_e6_space_allowance': 'Space allowance per animal',
+      'eba_e7_floor_condition': 'Floor condition',
+      'eba_e8_enrichment': 'Enrichment material',
+      
+      // EBA 3.0 - Pigs - ANIMAL INDICATORS
+      'eba_h1_lameness': 'Lameness',
+      'eba_h2_body_lesions': 'Body lesions',
+      'eba_h3_tail_lesions': 'Tail lesions',
+      'eba_h4_respiratory': 'Respiratory signs',
+      'eba_h5_diarrhea': 'Diarrhea',
+      'eba_h6_pain_management': 'Analgesia in procedures',
+      'eba_h7_mortality': 'Mortality',
+      'eba_h8_tail_scars': 'Tail scars',
+      'eba_b1_social_behavior': 'Social behavior',
+      'eba_b2_exploratory': 'Exploratory behavior',
+      'eba_b3_stereotypies': 'Stereotypies',
+      'eba_b4_human_approach': 'Human approach response',
+      
+      // EBA 3.0 - Pigs - MANAGEMENT INDICATORS
+      'eba_m1_welfare_plan': 'Documented welfare plan',
+      'eba_m2_staff_training': 'Staff training',
+      'eba_m3_health_records': 'Health records',
+      'eba_m4_emergency_plan': 'Emergency plan',
+      'eba_m5_euthanasia': 'Euthanasia protocol',
+      'eba_m6_castration': 'Castration procedure',
+      'eba_m7_tail_docking': 'Tail docking',
+      'eba_m8_teeth_reduction': 'Teeth reduction',
+      
+      // EBA 3.0 - Pigs - TRANSPORT INDICATORS
+      'eba_t1_fitness': 'Fitness for transport',
+      'eba_t2_loading': 'Loading procedure',
+      'eba_t3_transport_conditions': 'Vehicle conditions',
+      'eba_t4_pre_transport': 'Pre-transport fasting',
+      
+      // EBA 3.0 - Pigs - SLAUGHTER INDICATORS
+      'eba_s1_lairage': 'Lairage conditions',
+      'eba_s2_stunning_efficacy': 'Stunning efficacy',
+      'eba_s3_bleed_time': 'Bleeding time',
+      'eba_s4_consciousness': 'Consciousness check',
       // Legacy fields
       'water_access': 'Water access',
       'feed_quality': 'Feed quality',
