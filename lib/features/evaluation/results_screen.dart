@@ -2987,9 +2987,7 @@ class ResultsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isICAEvaluation 
-                        ? '$obtained/$maxPossible (${percentage.toStringAsFixed(1)}%)'
-                        : '${percentage.toStringAsFixed(1)}%',
+                    '${percentage.toStringAsFixed(1)}%',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
