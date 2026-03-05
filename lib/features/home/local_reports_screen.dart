@@ -181,9 +181,30 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
 
   void _viewReport(Evaluation report) async {
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
-    final results = _recalculateResults(report, species);
+    
+    // Primero intentar usar los datos ya calculados de la evaluación
+    Map<String, dynamic> results;
+    
+    if (report.overallScore != null && report.overallScore! > 0 && 
+        report.categoryScores != null && report.categoryScores!.isNotEmpty) {
+      // Usar datos guardados
+      results = {
+        'overall_score': report.overallScore,
+        'category_scores': report.categoryScores,
+        'compliance_level': _getComplianceLevel(report.overallScore!, report.speciesId == 'pigs'),
+        'recommendations': [],
+        'critical_points': _extractCriticalPoints(report, species),
+        'strong_points': _extractStrongPoints(report, species),
+        'is_ica_evaluation': report.speciesId == 'birds',
+        'is_eba_evaluation': report.speciesId == 'pigs',
+      };
+    } else {
+      // Recalcular si no hay datos
+      results = _recalculateResults(report, species);
+    }
+    
     final translatedRecommendations = _translateRecommendations(
-      results['recommendations'],
+      results['recommendations'] ?? [],
       report.language,
     );
 
@@ -201,13 +222,147 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
           species: species,
           results: results,
           structuredJson: structuredJson,
-          isLocal: true, // Este es un reporte local, mostrar botón de sincronizar
+          isLocal: true,
         ),
       ),
     );
   }
+  
+  String _getComplianceLevel(double score, bool isEBA) {
+    if (isEBA) {
+      // EBA 5 niveles
+      if (score >= 90) return 'excellent';
+      if (score >= 75) return 'good';
+      if (score >= 50) return 'acceptable';
+      if (score >= 25) return 'needs_improvement';
+      return 'critical';
+    } else {
+      // ICA 4 niveles
+      if (score >= 90) return 'excellent';
+      if (score >= 76) return 'good';
+      if (score >= 50) return 'acceptable';
+      return 'critical';
+    }
+  }
+  
+  List<String> _extractCriticalPoints(Evaluation evaluation, Species species) {
+    final criticalPoints = <String>[];
+    final isEBA = species.id == 'pigs';
+    
+    for (var category in species.categories) {
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        if (value != null) {
+          if (isEBA) {
+            // EBA: 0-1 es crítico (escala 0-4)
+            if (value is int && value <= 1) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          } else {
+            // ICA: respuesta negativa en campos de "buena práctica" es crítico
+            if (field.type == FieldType.yesNo) {
+              bool isCritical = false;
+              if (field.id.contains('access') || field.id.contains('quality') ||
+                  field.id.contains('sufficient') || field.id.contains('health')) {
+                isCritical = value == false;
+              } else {
+                isCritical = value == true;
+              }
+              if (isCritical) {
+                criticalPoints.add('${category.id}_${field.id}');
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return criticalPoints.take(10).toList();
+  }
+  
+  List<String> _extractStrongPoints(Evaluation evaluation, Species species) {
+    final strongPoints = <String>[];
+    final isEBA = species.id == 'pigs';
+    final categoryScores = evaluation.categoryScores ?? {};
+    
+    for (var category in species.categories) {
+      final score = categoryScores[category.id] ?? 0.0;
+      if (score >= 80) {
+        strongPoints.add(category.id);
+      }
+    }
+    
+    return strongPoints;
+  }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
+    final isEBA = species.id == 'pigs';
+    
+    if (isEBA) {
+      return _recalculateEBAResults(evaluation, species);
+    } else {
+      return _recalculateICAResults(evaluation, species);
+    }
+  }
+  
+  Map<String, dynamic> _recalculateEBAResults(Evaluation evaluation, Species species) {
+    final categoryScores = <String, double>{};
+    final criticalPoints = <String>[];
+    final strongPoints = <String>[];
+    double totalWeightedScore = 0;
+    double totalWeight = 0;
+    
+    for (var category in species.categories) {
+      int categoryObtained = 0;
+      int categoryMax = 0;
+      
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        if (value != null && value is int) {
+          categoryObtained += value;
+          categoryMax += field.maxScore;
+          
+          // Punto crítico si score <= 1 (de 4)
+          if (value <= 1) {
+            criticalPoints.add('${category.id}_${field.id}');
+          }
+        }
+      }
+      
+      if (categoryMax > 0) {
+        final score = (categoryObtained / categoryMax) * 100;
+        categoryScores[category.id] = score;
+        
+        // Calcular score ponderado
+        totalWeightedScore += score * category.weight;
+        totalWeight += category.weight;
+        
+        // Punto fuerte si >= 80%
+        if (score >= 80) {
+          strongPoints.add(category.id);
+        }
+      }
+    }
+    
+    final overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0.0;
+    
+    return {
+      'overall_score': overallScore,
+      'category_scores': categoryScores,
+      'compliance_level': _getComplianceLevel(overallScore, true),
+      'recommendations': [],
+      'critical_points': criticalPoints.take(10).toList(),
+      'strong_points': strongPoints,
+      'is_eba_evaluation': true,
+      'is_ica_evaluation': false,
+    };
+  }
+  
+  Map<String, dynamic> _recalculateICAResults(Evaluation evaluation, Species species) {
     int totalQuestions = 0;
     int positiveResponses = 0;
     final categoryScores = <String, double>{};
@@ -298,6 +453,8 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       'recommendations': recommendationKeys,
       'critical_points': [],
       'strong_points': [],
+      'is_ica_evaluation': true,
+      'is_eba_evaluation': false,
     };
   }
 
