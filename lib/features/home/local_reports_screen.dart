@@ -182,15 +182,31 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   void _viewReport(Evaluation report) async {
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     
+    // Debug
+    print('📊 _viewReport - overallScore: ${report.overallScore}');
+    print('📊 _viewReport - categoryScores: ${report.categoryScores}');
+    
     // Primero intentar usar los datos ya calculados de la evaluación
     Map<String, dynamic> results;
     
     if (report.overallScore != null && report.overallScore! > 0 && 
         report.categoryScores != null && report.categoryScores!.isNotEmpty) {
       // Usar datos guardados
+      print('✅ Usando datos guardados de la evaluación');
+      
+      // Construir category_details desde categoryScores
+      final categoryDetails = <String, dynamic>{};
+      report.categoryScores!.forEach((catId, score) {
+        categoryDetails[catId] = {
+          'percentage': score,
+          'score': score,
+        };
+      });
+      
       results = {
         'overall_score': report.overallScore,
         'category_scores': report.categoryScores,
+        'category_details': categoryDetails,
         'compliance_level': _getComplianceLevel(report.overallScore!, report.speciesId == 'pigs'),
         'recommendations': [],
         'critical_points': _extractCriticalPoints(report, species),
@@ -200,8 +216,12 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       };
     } else {
       // Recalcular si no hay datos
+      print('⚠️ Recalculando resultados...');
       results = _recalculateResults(report, species);
     }
+    
+    print('📊 Results finales - overall_score: ${results['overall_score']}');
+    print('📊 Results finales - category_scores: ${results['category_scores']}');
     
     final translatedRecommendations = _translateRecommendations(
       results['recommendations'] ?? [],
@@ -309,10 +329,13 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   
   Map<String, dynamic> _recalculateEBAResults(Evaluation evaluation, Species species) {
     final categoryScores = <String, double>{};
+    final categoryDetails = <String, dynamic>{};
     final criticalPoints = <String>[];
     final strongPoints = <String>[];
     double totalWeightedScore = 0;
     double totalWeight = 0;
+    
+    print('🔄 Recalculando EBA para ${species.categories.length} categorías');
     
     for (var category in species.categories) {
       int categoryObtained = 0;
@@ -322,12 +345,21 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
         final key = '${category.id}_${field.id}';
         final value = evaluation.responses[key];
         
-        if (value != null && value is int) {
-          categoryObtained += value;
+        if (value != null) {
+          int score = 0;
+          if (value is int) {
+            score = value;
+          } else if (value is double) {
+            score = value.toInt();
+          } else if (value is String) {
+            score = int.tryParse(value) ?? 0;
+          }
+          
+          categoryObtained += score;
           categoryMax += field.maxScore;
           
           // Punto crítico si score <= 1 (de 4)
-          if (value <= 1) {
+          if (score <= 1) {
             criticalPoints.add('${category.id}_${field.id}');
           }
         }
@@ -337,6 +369,14 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
         final score = (categoryObtained / categoryMax) * 100;
         categoryScores[category.id] = score;
         
+        // Guardar detalles de categoría
+        categoryDetails[category.id] = {
+          'percentage': score,
+          'obtained': categoryObtained,
+          'max_possible': categoryMax,
+          'weight': category.weight,
+        };
+        
         // Calcular score ponderado
         totalWeightedScore += score * category.weight;
         totalWeight += category.weight;
@@ -345,14 +385,19 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
         if (score >= 80) {
           strongPoints.add(category.id);
         }
+        
+        print('  📊 ${category.id}: $categoryObtained/$categoryMax = ${score.toStringAsFixed(1)}%');
       }
     }
     
     final overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0.0;
     
+    print('📊 EBA Overall Score: ${overallScore.toStringAsFixed(1)}%');
+    
     return {
       'overall_score': overallScore,
       'category_scores': categoryScores,
+      'category_details': categoryDetails,
       'compliance_level': _getComplianceLevel(overallScore, true),
       'recommendations': [],
       'critical_points': criticalPoints.take(10).toList(),
@@ -366,6 +411,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
     int totalQuestions = 0;
     int positiveResponses = 0;
     final categoryScores = <String, double>{};
+    final categoryDetails = <String, dynamic>{};
 
     for (var category in species.categories) {
       int categoryTotal = 0;
@@ -411,11 +457,20 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       }
 
       if (categoryTotal > 0) {
-        categoryScores[category.id] = (categoryPositive / categoryTotal) * 100;
+        final score = (categoryPositive / categoryTotal) * 100;
+        categoryScores[category.id] = score;
+        
+        // Guardar detalles
+        categoryDetails[category.id] = {
+          'percentage': score,
+          'obtained': categoryPositive * 2, // ICA usa escala 0-2
+          'max_possible': categoryTotal * 2,
+          'weight': category.weight,
+        };
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0.0;
 
     String complianceLevel;
     if (overallScore >= 90) {
@@ -450,6 +505,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       'overall_score': overallScore,
       'compliance_level': complianceLevel,
       'category_scores': categoryScores,
+      'category_details': categoryDetails,
       'recommendations': recommendationKeys,
       'critical_points': [],
       'strong_points': [],
