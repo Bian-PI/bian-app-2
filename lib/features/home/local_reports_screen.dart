@@ -408,69 +408,70 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   }
   
   Map<String, dynamic> _recalculateICAResults(Evaluation evaluation, Species species) {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
     final categoryScores = <String, double>{};
     final categoryDetails = <String, dynamic>{};
+    final criticalPoints = <String>[];
+    final strongPoints = <String>[];
+    double weightedTotalScore = 0.0;
+    double totalWeight = 0.0;
 
     for (var category in species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
+      int categoryObtained = 0;
+      int categoryMaxPossible = 0;
 
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = evaluation.responses[key];
-
-          if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
-
-            bool isPositive = false;
-            if (field.id.contains('access') ||
-                field.id.contains('quality') ||
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
-            }
-
-            if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
-            }
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        // ICA usa scale0to2 (maxScore = 2 por campo)
+        categoryMaxPossible += field.maxScore;
+        
+        if (value != null) {
+          int score = 0;
+          if (value is int) {
+            score = value;
+          } else if (value is double) {
+            score = value.toInt();
+          } else if (value is bool) {
+            // Compatibilidad con respuestas yesNo antiguas
+            score = value ? 2 : 0;
+          }
+          
+          categoryObtained += score;
+          
+          // Punto crítico si score = 0
+          if (score == 0) {
+            criticalPoints.add('${category.id}_${field.id}');
           }
         }
       }
 
-      if (categoryTotal > 0) {
-        final score = (categoryPositive / categoryTotal) * 100;
+      if (categoryMaxPossible > 0) {
+        final score = (categoryObtained / categoryMaxPossible) * 100;
         categoryScores[category.id] = score;
         
-        // Guardar detalles
+        // Guardar detalles con puntos reales
         categoryDetails[category.id] = {
           'percentage': score,
-          'obtained': categoryPositive * 2, // ICA usa escala 0-2
-          'max_possible': categoryTotal * 2,
+          'obtained': categoryObtained,
+          'max_possible': categoryMaxPossible,
           'weight': category.weight,
         };
+        
+        // Calcular score ponderado
+        if (category.weight > 0) {
+          weightedTotalScore += score * category.weight;
+          totalWeight += category.weight;
+        }
+        
+        // Punto fuerte si >= 80%
+        if (score >= 80) {
+          strongPoints.add(category.id);
+        }
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0.0;
+    final overallScore = totalWeight > 0 ? weightedTotalScore / totalWeight : 0.0;
 
     String complianceLevel;
     if (overallScore >= 90) {
