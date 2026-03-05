@@ -75,6 +75,7 @@ class AppLocalizations {
 
       // Categorías ICA (Aves)
       'category_resources': 'Medidas Basadas en los Recursos',
+      'category_resource': 'Indicadores de Recurso',
       'category_animal': 'Indicadores del Animal',
       'category_management': 'Indicadores de Gestión',
       'category_transport': 'Indicadores de Transporte',
@@ -85,6 +86,7 @@ class AppLocalizations {
       'category_transport_pigs': 'Indicadores de Transporte',
       'category_slaughter_pigs': 'Indicadores de Sacrificio',
       'resources': 'Medidas Basadas en los Recursos',
+      'resource': 'Indicadores de Recurso',
       'animal': 'Indicadores del Animal',
       'management': 'Indicadores de Gestión',
       'transport': 'Indicadores de Transporte',
@@ -603,6 +605,7 @@ class AppLocalizations {
 
       // ICA Categories (Birds)
       'category_resources': 'Resource-Based Measures',
+      'category_resource': 'Resource Indicators',
       'category_animal': 'Animal-Based Indicators',
       'category_management': 'Management Indicators',
       'category_transport': 'Transport Indicators',
@@ -613,6 +616,7 @@ class AppLocalizations {
       'category_transport_pigs': 'Transport Indicators',
       'category_slaughter_pigs': 'Slaughter Indicators',
       'resources': 'Resource-Based Measures',
+      'resource': 'Resource Indicators',
       'animal': 'Animal-Based Indicators',
       'management': 'Management Indicators',
       'transport': 'Transport Indicators',
