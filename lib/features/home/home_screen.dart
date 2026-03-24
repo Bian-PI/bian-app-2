@@ -214,17 +214,186 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _navigateToEvaluation(Species species) async {
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EvaluationScreen(
-          species: species,
-          currentLanguage: languageProvider.locale.languageCode,
+    // Si es aves, mostrar selector de tipo de producción
+    if (species.id == 'birds') {
+      final productionType = await _showProductionTypeSelector();
+      if (productionType == null) return; // Usuario canceló
+      
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EvaluationScreen(
+            species: species,
+            currentLanguage: languageProvider.locale.languageCode,
+            productionType: productionType,
+          ),
+        ),
+      );
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EvaluationScreen(
+            species: species,
+            currentLanguage: languageProvider.locale.languageCode,
+          ),
+        ),
+      );
+    }
+    
+    _loadAllData();
+  }
+
+  /// Muestra el selector de tipo de producción avícola
+  Future<String?> _showProductionTypeSelector() async {
+    final loc = AppLocalizations.of(context);
+    
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Título
+            Text(
+              loc.translate('select_production_type'),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              loc.translate('production_type_description'),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Opciones
+            _buildProductionTypeOption(
+              context,
+              'pollo_engorde',
+              loc.translate('pollo_engorde'),
+              loc.translate('pollo_engorde_desc'),
+              Icons.egg_outlined,
+              const Color(0xFFFF9800),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'ponedoras_piso',
+              loc.translate('ponedoras_piso'),
+              loc.translate('ponedoras_piso_desc'),
+              Icons.home_outlined,
+              const Color(0xFF4CAF50),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'ponedoras_jaula',
+              loc.translate('ponedoras_jaula'),
+              loc.translate('ponedoras_jaula_desc'),
+              Icons.grid_view_outlined,
+              const Color(0xFF2196F3),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'pastoreo',
+              loc.translate('pastoreo'),
+              loc.translate('pastoreo_desc'),
+              Icons.grass_outlined,
+              const Color(0xFF8BC34A),
+            ),
+            
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+          ],
         ),
       ),
     );
-    
-    _loadAllData();
+  }
+
+  Widget _buildProductionTypeOption(
+    BuildContext context,
+    String value,
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(12),
+          color: color.withOpacity(0.05),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: color),
+          ],
+        ),
+      ),
+    );
   }
 
   void _continueDraft(Evaluation draft) async {
