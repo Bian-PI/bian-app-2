@@ -1739,7 +1739,7 @@ Widget build(BuildContext context) {
         body: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: Colors.white,
               child: Column(
                 children: [
@@ -1747,10 +1747,10 @@ Widget build(BuildContext context) {
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: progress,
-                            minHeight: 8,
+                            minHeight: 5,
                             backgroundColor: BianTheme.lightGray,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               Color(int.parse(widget.species.gradientColors[0])),
@@ -1758,43 +1758,44 @@ Widget build(BuildContext context) {
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
+                      SizedBox(width: 10),
                       Text(
                         '${(progress * 100).toInt()}%',
                         style: TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: Color(int.parse(widget.species.gradientColors[0])),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: BianTheme.mediumGray,
                         ),
                       ),
                       if (widget.draftToEdit != null)
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: BianTheme.infoBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_note, size: 14, color: BianTheme.infoBlue),
-                              SizedBox(width: 4),
+                              Icon(Icons.edit_note, size: 12, color: BianTheme.infoBlue),
+                              SizedBox(width: 3),
                               Text(
                                 'Borrador',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   color: BianTheme.infoBlue,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1809,7 +1810,7 @@ Widget build(BuildContext context) {
             ),
 
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -1822,18 +1823,18 @@ Widget build(BuildContext context) {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       _getCategoryIcon(currentCategory.id),
                       color: Colors.white,
-                      size: 28,
+                      size: 22,
                     ),
                   ),
-                  SizedBox(width: 16),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1842,7 +1843,7 @@ Widget build(BuildContext context) {
                           _getCategoryName(currentCategory, loc),
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1852,23 +1853,23 @@ Widget build(BuildContext context) {
                               '${currentCategory.fields.length} ${loc.translate('indicators')}',
                               style: TextStyle(
                                 color: Colors.white70,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                             // Mostrar peso si existe (metodología ICA)
                             if (currentCategory.weight < 1.0) ...[
                               SizedBox(width: 8),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'Peso: ${(currentCategory.weight * 100).toInt()}%',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
