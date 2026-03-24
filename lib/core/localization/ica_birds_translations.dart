@@ -179,13 +179,13 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_1': 'Corrección moderada o daños leves',
     'beak_condition_2': 'Sin corrección o corrección mínima adecuada',
 
-    // 8.11. Mortalidad
-    'mortality_label': 'Mortalidad',
-    'mortality_question': '¿Cuál es la tasa de mortalidad acumulada?',
-    'mortality_description': 'Se verifica el registro de mortalidad acumulada de los últimos 5 ciclos de la granja.',
-    'mortality_0': 'Tasa de mortalidad alta (superior al estándar)',
-    'mortality_1': 'Tasa de mortalidad moderada',
-    'mortality_2': 'Tasa de mortalidad baja (dentro del estándar)',
+    // 8.11. Ablación de la cresta, corte de la primera falange y cualquier otra mutilación
+    'crest_mutilation_label': 'Ablación de cresta, corte de falange y mutilaciones',
+    'crest_mutilation_question': '¿Se realizan prácticas como la ablación de la cresta, el corte de la primera falange u otras formas de mutilación en las aves? ¿Cuál es el nivel de afectación o daño físico asociado?',
+    'crest_mutilation_description': 'La ablación de la cresta, el corte de la primera falange y cualquier otra forma de mutilación deben ser consideradas prácticas de alto impacto sobre el bienestar animal. Se verifica si estos procedimientos se llevan a cabo y el nivel de daño asociado.',
+    'crest_mutilation_0': 'Mutilaciones severas o prácticas arbitrarias sin justificación técnica',
+    'crest_mutilation_1': 'Mutilaciones moderadas con justificación parcial',
+    'crest_mutilation_2': 'Sin mutilaciones o procedimientos mínimos técnicamente justificados',
 
     // ═══════════════════════════════════════════════════════════════
     // MEDIDAS BASADAS EN LA GESTIÓN (30%)
@@ -247,29 +247,21 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'welfare_training_1': 'Capacitación parcial del personal',
     'welfare_training_2': 'Todo el personal capacitado y certificado',
 
-    // 9.8. Protocolo de sacrificio humanitario o eutanasia
-    'euthanasia_protocol_label': 'Protocolo de eutanasia',
-    'euthanasia_protocol_question': '¿Existe protocolo de sacrificio humanitario o eutanasia?',
-    'euthanasia_protocol_description': 'Se verifica existencia de protocolo documentado para sacrificio humanitario o eutanasia.',
-    'euthanasia_protocol_0': 'No existe protocolo de eutanasia',
-    'euthanasia_protocol_1': 'Protocolo existe pero incompleto',
-    'euthanasia_protocol_2': 'Protocolo completo e implementado',
-
-    // 9.9. Capacitación en técnicas de sacrificio humanitario
-    'euthanasia_training_label': 'Capacitación en eutanasia',
-    'euthanasia_training_question': '¿El personal cuenta con capacitación en técnicas de sacrificio humanitario o eutanasia?',
-    'euthanasia_training_description': 'Se verifica que el personal esté capacitado en técnicas de sacrificio humanitario.',
-    'euthanasia_training_0': 'Personal sin capacitación en eutanasia',
-    'euthanasia_training_1': 'Capacitación parcial',
-    'euthanasia_training_2': 'Personal completamente capacitado',
-
-    // 9.10. Uso responsable de medicamentos e insumos veterinarios
+    // 9.8. Uso responsable de medicamentos e insumos veterinarios
     'responsible_medication_label': 'Uso responsable de medicamentos',
-    'responsible_medication_question': '¿Se realiza uso responsable de medicamentos e insumos veterinarios?',
-    'responsible_medication_description': 'Se verifica el uso adecuado y documentado de medicamentos e insumos veterinarios.',
-    'responsible_medication_0': 'No hay control de medicamentos',
-    'responsible_medication_1': 'Control parcial documentado',
-    'responsible_medication_2': 'Control completo y uso responsable documentado',
+    'responsible_medication_question': '¿El personal responsable del manejo y aplicación de medicamentos e insumos veterinarios cuenta con certificación que respalde su formación en el uso adecuado y responsable de estos productos?',
+    'responsible_medication_description': 'El uso responsable de medicamentos e insumos veterinarios constituye un componente esencial en la gestión sanitaria de las aves. Se verifica que el personal cuente con formación y soportes que acrediten conocimientos actualizados.',
+    'responsible_medication_0': 'No hay control de medicamentos ni certificación del personal',
+    'responsible_medication_1': 'Control parcial o certificación incompleta',
+    'responsible_medication_2': 'Control completo y personal certificado',
+
+    // 9.9. Mortalidad
+    'mortality_label': 'Mortalidad',
+    'mortality_question': '¿Cuál es la tasa de mortalidad acumulada?',
+    'mortality_description': 'La tasa de mortalidad permite identificar el impacto del ambiente productivo en la capacidad adaptativa de la parvada. Se verifica el registro de mortalidad acumulada de los últimos 5 ciclos de la granja.',
+    'mortality_0': 'Tasa de mortalidad alta (superior al estándar)',
+    'mortality_1': 'Tasa de mortalidad moderada',
+    'mortality_2': 'Tasa de mortalidad baja (dentro del estándar)',
 
     // ═══════════════════════════════════════════════════════════════
     // ESCALA GENERAL
@@ -477,13 +469,13 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_1': 'Moderate trimming or mild damage',
     'beak_condition_2': 'No trimming or minimal adequate trimming',
 
-    // 8.11. Mortality
-    'mortality_label': 'Mortality',
-    'mortality_question': 'What is the accumulated mortality rate?',
-    'mortality_description': 'Verify accumulated mortality records from the last 5 farm cycles.',
-    'mortality_0': 'High mortality rate (above standard)',
-    'mortality_1': 'Moderate mortality rate',
-    'mortality_2': 'Low mortality rate (within standard)',
+    // 8.11. Crest ablation, first phalanx cutting and other mutilations
+    'crest_mutilation_label': 'Crest ablation, phalanx cutting and mutilations',
+    'crest_mutilation_question': 'Are practices such as crest ablation, first phalanx cutting or other forms of mutilation performed on birds? What is the level of physical damage associated?',
+    'crest_mutilation_description': 'Crest ablation, first phalanx cutting and any other form of mutilation should be considered high-impact practices on animal welfare. Verify if these procedures are performed and the associated damage level.',
+    'crest_mutilation_0': 'Severe mutilations or arbitrary practices without technical justification',
+    'crest_mutilation_1': 'Moderate mutilations with partial justification',
+    'crest_mutilation_2': 'No mutilations or minimal technically justified procedures',
 
     // ═══════════════════════════════════════════════════════════════
     // MANAGEMENT-BASED MEASURES (30%)
@@ -545,29 +537,21 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'welfare_training_1': 'Partial personnel training',
     'welfare_training_2': 'All personnel trained and certified',
 
-    // 9.8. Humane slaughter or euthanasia protocol
-    'euthanasia_protocol_label': 'Euthanasia protocol',
-    'euthanasia_protocol_question': 'Is there a humane slaughter or euthanasia protocol?',
-    'euthanasia_protocol_description': 'Verify existence of documented protocol for humane slaughter or euthanasia.',
-    'euthanasia_protocol_0': 'No euthanasia protocol exists',
-    'euthanasia_protocol_1': 'Protocol exists but incomplete',
-    'euthanasia_protocol_2': 'Complete and implemented protocol',
-
-    // 9.9. Humane slaughter training
-    'euthanasia_training_label': 'Euthanasia training',
-    'euthanasia_training_question': 'Does personnel have training in humane slaughter or euthanasia techniques?',
-    'euthanasia_training_description': 'Verify that personnel is trained in humane slaughter techniques.',
-    'euthanasia_training_0': 'Personnel without euthanasia training',
-    'euthanasia_training_1': 'Partial training',
-    'euthanasia_training_2': 'Fully trained personnel',
-
-    // 9.10. Responsible use of medications and veterinary supplies
+    // 9.8. Responsible use of medications and veterinary supplies
     'responsible_medication_label': 'Responsible medication use',
-    'responsible_medication_question': 'Is there responsible use of medications and veterinary supplies?',
-    'responsible_medication_description': 'Verify adequate and documented use of medications and veterinary supplies.',
-    'responsible_medication_0': 'No medication control',
-    'responsible_medication_1': 'Partial documented control',
-    'responsible_medication_2': 'Complete control and documented responsible use',
+    'responsible_medication_question': 'Does personnel responsible for handling and applying medications and veterinary supplies have certification supporting their training in the proper and responsible use of these products?',
+    'responsible_medication_description': 'Responsible use of medications and veterinary supplies is an essential component in poultry health management. Verify that personnel has training and documentation supporting updated knowledge.',
+    'responsible_medication_0': 'No medication control or personnel certification',
+    'responsible_medication_1': 'Partial control or incomplete certification',
+    'responsible_medication_2': 'Complete control and certified personnel',
+
+    // 9.9. Mortality
+    'mortality_label': 'Mortality',
+    'mortality_question': 'What is the accumulated mortality rate?',
+    'mortality_description': 'Mortality rate identifies the impact of the productive environment on the flock adaptive capacity. Verify accumulated mortality records from the last 5 farm cycles.',
+    'mortality_0': 'High mortality rate (above standard)',
+    'mortality_1': 'Moderate mortality rate',
+    'mortality_2': 'Low mortality rate (within standard)',
 
     // ═══════════════════════════════════════════════════════════════
     // GENERAL SCALE
