@@ -2001,39 +2001,40 @@ Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         collapsedBackgroundColor: BianTheme.backgroundGray,
         backgroundColor: BianTheme.backgroundGray,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
         collapsedShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
+        visualDensity: VisualDensity.compact,
+        minTileHeight: 32,
         leading: Icon(
           Icons.info_outline,
-          size: 16,
+          size: 14,
           color: BianTheme.mediumGray,
         ),
         title: Text(
           'Ver indicaciones',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             color: BianTheme.mediumGray,
-            fontWeight: FontWeight.w500,
           ),
         ),
         trailing: Icon(
           Icons.keyboard_arrow_down,
-          size: 20,
+          size: 18,
           color: BianTheme.mediumGray,
         ),
         children: [
           Text(
             descriptionText,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: BianTheme.darkGray.withOpacity(0.8),
             ),
           ),
