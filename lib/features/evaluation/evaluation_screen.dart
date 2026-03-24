@@ -1996,6 +1996,52 @@ Widget build(BuildContext context) {
     );
   }
 
+  /// Widget colapsable para la descripción del indicador
+  Widget _buildCollapsibleDescription(String descriptionText) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        collapsedBackgroundColor: BianTheme.backgroundGray,
+        backgroundColor: BianTheme.backgroundGray,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        collapsedShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        leading: Icon(
+          Icons.info_outline,
+          size: 16,
+          color: BianTheme.mediumGray,
+        ),
+        title: Text(
+          'Ver indicaciones',
+          style: TextStyle(
+            fontSize: 12,
+            color: BianTheme.mediumGray,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Icon(
+          Icons.keyboard_arrow_down,
+          size: 20,
+          color: BianTheme.mediumGray,
+        ),
+        children: [
+          Text(
+            descriptionText,
+            style: TextStyle(
+              fontSize: 12,
+              color: BianTheme.darkGray.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFieldWidget(
     EvaluationField field,
     String key,
@@ -2127,6 +2173,7 @@ Widget build(BuildContext context) {
                     if (methodText != null) ...[
                       SizedBox(height: 4),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             Icons.visibility_outlined,
@@ -2142,8 +2189,6 @@ Widget build(BuildContext context) {
                                 color: BianTheme.mediumGray,
                                 fontStyle: FontStyle.italic,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
                           ),
                         ],
@@ -2196,36 +2241,10 @@ Widget build(BuildContext context) {
             ],
           ),
           
-          // Descripción del indicador (solo si existe y es ICA)
+          // Descripción del indicador (colapsable)
           if (descriptionText != null) ...[
             SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: BianTheme.backgroundGray,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: BianTheme.mediumGray,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      descriptionText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: BianTheme.darkGray.withOpacity(0.8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildCollapsibleDescription(descriptionText),
           ],
           
           // Pregunta de evaluación
