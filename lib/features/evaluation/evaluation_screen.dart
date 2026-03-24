@@ -22,6 +22,7 @@ class EvaluationScreen extends StatefulWidget {
   final Evaluation? draftToEdit;
   final String currentLanguage;
   final bool isOfflineMode;
+  final String? productionType; // Tipo de producción: pollo_engorde, ponedoras_piso, ponedoras_jaula, pastoreo
 
   const EvaluationScreen({
     super.key,
@@ -29,6 +30,7 @@ class EvaluationScreen extends StatefulWidget {
     this.draftToEdit,
     required this.currentLanguage,
     this.isOfflineMode = false,
+    this.productionType,
   });
 
   @override
@@ -42,6 +44,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   int _currentCategoryIndex = 0;
   late Evaluation _evaluation;
+  late Species _filteredSpecies; // Species con campos filtrados según tipo de producción
 
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
@@ -62,6 +65,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   @override
   void initState() {
     super.initState();
+    _filteredSpecies = _filterSpeciesByProductionType();
     _initializeEvaluation();
     _loadCurrentUser();
 
@@ -70,6 +74,43 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         _showWelcomeDialog();
       }
     });
+  }
+
+  /// Filtra los campos del Species según el tipo de producción seleccionado
+  Species _filterSpeciesByProductionType() {
+    // Si no hay tipo de producción o no es aves, retornar sin filtrar
+    if (widget.productionType == null || widget.species.id != 'birds') {
+      return widget.species;
+    }
+
+    final filteredCategories = _filteredSpecies.categories.map((category) {
+      final filteredFields = category.fields.where((field) {
+        // Si el campo no tiene applicableTo, incluirlo
+        if (field.applicableTo == null || field.applicableTo!.isEmpty) {
+          return true;
+        }
+        // Incluir si el tipo de producción está en la lista
+        return field.applicableTo!.contains(widget.productionType);
+      }).toList();
+
+      return EvaluationCategory(
+        id: category.id,
+        name: category.name,
+        nameKey: category.nameKey,
+        icon: category.icon,
+        weight: category.weight,
+        fields: filteredFields,
+      );
+    }).where((category) => category.fields.isNotEmpty).toList();
+
+    return Species(
+      id: widget.species.id,
+      name: widget.species.name,
+      namePlural: widget.species.namePlural,
+      iconPath: widget.species.iconPath,
+      gradientColors: widget.species.gradientColors,
+      categories: filteredCategories,
+    );
   }
 
   Future<void> _loadCurrentUser() async {
@@ -104,7 +145,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       _evaluatorNameController.text = _evaluation.evaluatorName;
       _showInfoDialog = false;
       
-      for (var category in widget.species.categories) {
+      for (var category in _filteredSpecies.categories) {
         for (var field in category.fields) {
           final key = '${category.id}_${field.id}';
           final value = _evaluation.responses[key];
@@ -181,11 +222,11 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                loc.translate('categories_to_evaluate', [widget.species.categories.length.toString()]),
+                loc.translate('categories_to_evaluate', [_filteredSpecies.categories.length.toString()]),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 12),
-              ...widget.species.categories.map((cat) => Padding(
+              ..._filteredSpecies.categories.map((cat) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
@@ -699,7 +740,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   bool _validateCurrentCategory() {
     final loc = AppLocalizations.of(context);
-    final currentCategory = widget.species.categories[_currentCategoryIndex];
+    final currentCategory = _filteredSpecies.categories[_currentCategoryIndex];
     
     for (var field in currentCategory.fields) {
       if (field.required) {
@@ -811,13 +852,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     double totalWeight = 0.0;
     
     // Verificar tipo de evaluación
-    bool isICAEvaluation = widget.species.categories.any((cat) => 
+    bool isICAEvaluation = _filteredSpecies.categories.any((cat) => 
       cat.fields.any((f) => f.type == FieldType.scale0to2));
     
-    bool isEBAEvaluation = widget.species.categories.any((cat) => 
+    bool isEBAEvaluation = _filteredSpecies.categories.any((cat) => 
       cat.fields.any((f) => f.type == FieldType.scale0to4));
 
-    for (var category in widget.species.categories) {
+    for (var category in _filteredSpecies.categories) {
       int categoryObtained = 0;
       int categoryMaxPossible = 0;
       int answeredFields = 0;
@@ -1578,7 +1619,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   @override
 Widget build(BuildContext context) {
   final loc = AppLocalizations.of(context);
-  final currentCategory = widget.species.categories[_currentCategoryIndex];
+  final currentCategory = _filteredSpecies.categories[_currentCategoryIndex];
   final progress = _evaluation.getProgress(widget.species);
 
   return WillPopScope(
@@ -1774,7 +1815,7 @@ Widget build(BuildContext context) {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
+                        '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${_filteredSpecies.categories.length}',
                         style: TextStyle(
                           fontSize: 11,
                           color: BianTheme.mediumGray,
@@ -1953,7 +1994,7 @@ Widget build(BuildContext context) {
                     flex: _currentCategoryIndex == 0 ? 1 : 1,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (_currentCategoryIndex < widget.species.categories.length - 1) {
+                        if (_currentCategoryIndex < _filteredSpecies.categories.length - 1) {
                           if (_validateCurrentCategory()) {
                             setState(() {
                               _currentCategoryIndex++;
@@ -1969,12 +2010,12 @@ Widget build(BuildContext context) {
                         }
                       },
                       icon: Icon(
-                        _currentCategoryIndex < widget.species.categories.length - 1
+                        _currentCategoryIndex < _filteredSpecies.categories.length - 1
                             ? Icons.arrow_forward
                             : Icons.check_circle,
                       ),
                       label: Text(
-                        _currentCategoryIndex < widget.species.categories.length - 1
+                        _currentCategoryIndex < _filteredSpecies.categories.length - 1
                             ? loc.translate('next')
                             : loc.translate('finish'),
                       ),
