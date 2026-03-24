@@ -275,6 +275,19 @@ class AppLocalizations {
 
       'evaluation': 'Evaluación',
       'evaluation_of': 'Evaluación de',
+      
+      // Tipos de producción avícola
+      'select_production_type': 'Selecciona el tipo de producción',
+      'production_type_description': 'Los indicadores se ajustarán según el sistema productivo seleccionado',
+      'pollo_engorde': 'Pollo de Engorde',
+      'pollo_engorde_desc': 'Producción de pollos para carne',
+      'ponedoras_piso': 'Ponedoras en Piso',
+      'ponedoras_piso_desc': 'Gallinas ponedoras en sistemas de piso',
+      'ponedoras_jaula': 'Ponedoras en Jaula',
+      'ponedoras_jaula_desc': 'Gallinas ponedoras en sistemas de jaula',
+      'pastoreo': 'Pastoreo',
+      'pastoreo_desc': 'Aves en sistemas de pastoreo libre',
+      
       'farm_information': 'Información de la Granja',
       'farm_name': 'Nombre de la Granja',
       'farm_name_example': 'Ej: Granja El Paraíso',
@@ -804,6 +817,19 @@ class AppLocalizations {
 
       'evaluation': 'Evaluation',
       'evaluation_of': 'Evaluation of',
+      
+      // Poultry production types
+      'select_production_type': 'Select production type',
+      'production_type_description': 'Indicators will be adjusted according to the selected production system',
+      'pollo_engorde': 'Broiler Chicken',
+      'pollo_engorde_desc': 'Chicken production for meat',
+      'ponedoras_piso': 'Floor Layers',
+      'ponedoras_piso_desc': 'Laying hens in floor systems',
+      'ponedoras_jaula': 'Cage Layers',
+      'ponedoras_jaula_desc': 'Laying hens in cage systems',
+      'pastoreo': 'Free Range',
+      'pastoreo_desc': 'Birds in free-range systems',
+      
       'farm_information': 'Farm Information',
       'farm_name': 'Farm Name',
       'farm_name_example': 'E.g.: Paradise Farm',
