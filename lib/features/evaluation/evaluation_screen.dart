@@ -83,7 +83,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       return widget.species;
     }
 
-    final filteredCategories = _filteredSpecies.categories.map((category) {
+    final filteredCategories = widget.species.categories.map((category) {
       final filteredFields = category.fields.where((field) {
         // Si el campo no tiene applicableTo, incluirlo
         if (field.applicableTo == null || field.applicableTo!.isEmpty) {
