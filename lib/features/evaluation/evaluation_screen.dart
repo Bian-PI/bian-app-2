@@ -1295,7 +1295,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   Future<void> _completeEvaluation() async {
     final loc = AppLocalizations.of(context);
     
-    if (!_evaluation.isComplete(widget.species)) {
+    // Usar _filteredSpecies para validar solo los campos del tipo de producción seleccionado
+    if (!_evaluation.isComplete(_filteredSpecies)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(loc.translate('complete_required_fields')),
@@ -1385,7 +1386,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         final translatedRecommendations = _translateRecommendations(results['recommendations']);
         
         final structuredJson = await _evaluation.generateStructuredJSON(
-          widget.species,
+          _filteredSpecies,
           results,
           translatedRecommendations,
           isOfflineMode: widget.isOfflineMode,
@@ -1454,7 +1455,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
             MaterialPageRoute(
               builder: (_) => ResultsScreen(
                 evaluation: completedEvaluation,
-                species: widget.species,
+                species: _filteredSpecies,
                 results: results,
                 structuredJson: structuredJson,
                 isLocal: widget.isOfflineMode,
@@ -1621,7 +1622,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 Widget build(BuildContext context) {
   final loc = AppLocalizations.of(context);
   final currentCategory = _filteredSpecies.categories[_currentCategoryIndex];
-  final progress = _evaluation.getProgress(widget.species);
+  final progress = _evaluation.getProgress(_filteredSpecies);
 
   return WillPopScope(
     onWillPop: () async {
