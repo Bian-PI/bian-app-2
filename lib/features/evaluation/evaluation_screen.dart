@@ -160,6 +160,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       _evaluation = Evaluation(
         id: _uuid.v4(),
         speciesId: widget.species.id,
+        productionType: widget.productionType,
         farmName: '',
         farmLocation: '',
         evaluationDate: DateTime.now(),
