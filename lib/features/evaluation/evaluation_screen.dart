@@ -1558,16 +1558,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     print('╚═══════════════════════════════════════════════════════════════╝');
     print('');
     print('📋 INFORMACIÓN GENERAL:');
-    print('   Fecha: ${json['evaluation_date']}');
+    print('   Fecha: ${json['evaluationDate']}');
     print('   Idioma: ${json['language']}');
     print('   Especie: ${json['species']}');
-    print('   Granja: ${json['farm_name']}');
-    print('   Ubicación: ${json['farm_location']}');
-    print('   Evaluador: ${json['evaluator_name']}');
+    if (json['productionType'] != null) {
+      print('   Tipo Producción: ${json['productionType']}');
+    }
+    print('   Granja: ${json['farmName']}');
+    print('   Ubicación: ${json['farmLocation']}');
+    print('   Evaluador: ${json['evaluatorName']}');
     print('');
     print('🎯 RESULTADOS:');
-    print('   Puntuación General: ${json['overall_score']}%');
-    print('   Nivel de Cumplimiento: ${json['compliance_level']}');
+    print('   Puntuación General: ${json['overallScore']}%');
+    print('   Nivel de Cumplimiento: ${json['complianceLevel']}');
     print('');
     print('📊 PUNTUACIONES POR CATEGORÍA:');
     
@@ -1586,7 +1589,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('⚠️  PUNTOS CRÍTICOS:');
-    final criticalPoints = json['critical_points'] as List;
+    final criticalPoints = json['criticalPoints'] as List? ?? [];
     if (criticalPoints.isEmpty) {
       print('   ✓ Ninguno');
     } else {
@@ -1597,7 +1600,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('✨ PUNTOS FUERTES:');
-    final strongPoints = json['strong_points'] as List;
+    final strongPoints = json['strongPoints'] as List? ?? [];
     if (strongPoints.isEmpty) {
       print('   - Ninguno destacable');
     } else {
@@ -1608,7 +1611,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('💡 RECOMENDACIONES:');
-    final recommendations = json['recommendations'] as List;
+    final recommendations = json['recommendations'] as List? ?? [];
     for (int i = 0; i < recommendations.length; i++) {
       print('   ${i + 1}. ${recommendations[i]}');
     }
