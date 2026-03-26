@@ -345,23 +345,23 @@ class Evaluation {
     final roundedScore = (overallScoreValue * 100).round() / 100;
 
     final structuredJson = <String, dynamic>{
-      'connectionStatus': connectionStatus,
-      'userId': userId,
-      'evaluationDate': evaluationDate.toIso8601String(),
+      'connection_status': connectionStatus,
+      'user_id': userId,
+      'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,
       'species': speciesId,
-      // Incluir productionType solo para aves
+      // Incluir production_type solo para aves
       if (speciesId == 'birds' && productionType != null)
-        'productionType': productionType,
-      'farmName': farmName,
-      'farmLocation': farmLocation,
-      'evaluatorName': evaluatorName,
-      'overallScore': roundedScore.toStringAsFixed(2),
-      'complianceLevel': (results['compliance_level'] ?? 'acceptable').toString(),
+        'production_type': productionType,
+      'farm_name': farmName,
+      'farm_location': farmLocation,
+      'evaluator_name': evaluatorName,
+      'overall_score': roundedScore.toStringAsFixed(2),
+      'compliance_level': (results['compliance_level'] ?? 'acceptable').toString(),
       'categories': _buildGenericCategories(species, results),
-      'criticalPoints':
+      'critical_points':
           _formatCriticalPoints(results['critical_points'] as List? ?? []),
-      'strongPoints':
+      'strong_points':
           _formatStrongPoints(results['strong_points'] as List? ?? []),
       'recommendations': translatedRecommendations,
     };
@@ -399,7 +399,13 @@ class Evaluation {
         categoryData['responses'][genericFieldId] = value?.toString() ?? '';
       }
 
-      categories[category.id] = categoryData;
+      // Normalizar nombre de categoría: 'resource' -> 'resources' (plural)
+      String categoryKey = category.id;
+      if (categoryKey == 'resource') {
+        categoryKey = 'resources';
+      }
+
+      categories[categoryKey] = categoryData;
     }
 
     return categories;
