@@ -5,6 +5,7 @@ import 'package:bian_app/core/storage/secure_storage.dart';
 class Evaluation {
   final String id;
   final String speciesId;
+  final String? productionType; // Tipo de producción para aves
   final String farmName;
   final String farmLocation;
   final DateTime evaluationDate;
@@ -25,6 +26,7 @@ class Evaluation {
   Evaluation({
     required this.id,
     required this.speciesId,
+    this.productionType,
     required this.farmName,
     required this.farmLocation,
     required this.evaluationDate,
@@ -75,6 +77,8 @@ class Evaluation {
         speciesId: json['speciesId']?.toString() ??
             json['species']?.toString() ??
             'birds',
+        productionType: json['productionType']?.toString() ??
+            json['production_type']?.toString(),
         farmName:
             json['farmName']?.toString() ?? json['farm_name']?.toString() ?? '',
         farmLocation: json['farmLocation']?.toString() ??
@@ -224,6 +228,7 @@ class Evaluation {
     return {
       'id': id,
       'speciesId': speciesId,
+      'productionType': productionType,
       'farmName': farmName,
       'farmLocation': farmLocation,
       'evaluationDate': evaluationDate.toIso8601String(),
@@ -242,6 +247,7 @@ class Evaluation {
   Evaluation copyWith({
     String? id,
     String? speciesId,
+    String? productionType,
     String? farmName,
     String? farmLocation,
     DateTime? evaluationDate,
@@ -259,6 +265,7 @@ class Evaluation {
     return Evaluation(
       id: id ?? this.id,
       speciesId: speciesId ?? this.speciesId,
+      productionType: productionType ?? this.productionType,
       farmName: farmName ?? this.farmName,
       farmLocation: farmLocation ?? this.farmLocation,
       evaluationDate: evaluationDate ?? this.evaluationDate,
@@ -333,21 +340,28 @@ class Evaluation {
       }
     }
 
+    // Redondear el score a 2 decimales
+    final overallScoreValue = (results['overall_score'] ?? 0.0) as double;
+    final roundedScore = (overallScoreValue * 100).round() / 100;
+
     final structuredJson = <String, dynamic>{
-      'connection_status': connectionStatus,
-      'user_id': userId,
-      'evaluation_date': evaluationDate.toIso8601String(),
+      'connectionStatus': connectionStatus,
+      'userId': userId,
+      'evaluationDate': evaluationDate.toIso8601String(),
       'language': language,
       'species': speciesId,
-      'farm_name': farmName,
-      'farm_location': farmLocation,
-      'evaluator_name': evaluatorName,
-      'overall_score': (results['overall_score'] ?? 0.0).toString(),
-      'compliance_level': (results['compliance_level'] ?? 0.0).toString(),
+      // Incluir productionType solo para aves
+      if (speciesId == 'birds' && productionType != null)
+        'productionType': productionType,
+      'farmName': farmName,
+      'farmLocation': farmLocation,
+      'evaluatorName': evaluatorName,
+      'overallScore': roundedScore.toStringAsFixed(2),
+      'complianceLevel': (results['compliance_level'] ?? 'acceptable').toString(),
       'categories': _buildGenericCategories(species, results),
-      'critical_points':
+      'criticalPoints':
           _formatCriticalPoints(results['critical_points'] as List? ?? []),
-      'strong_points':
+      'strongPoints':
           _formatStrongPoints(results['strong_points'] as List? ?? []),
       'recommendations': translatedRecommendations,
     };
@@ -364,14 +378,19 @@ class Evaluation {
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
 
+      // Agregar score redondeado a 2 decimales
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
-        categoryData['score'] =
-            results['category_scores'][category.id].toString();
+        final score = results['category_scores'][category.id] as double;
+        categoryData['score'] = score.toStringAsFixed(2);
       } else {
-        categoryData['score'] = '0.0';
+        categoryData['score'] = '0.00';
       }
 
+      // Agregar weight de la categoría
+      categoryData['weight'] = category.weight.toStringAsFixed(2);
+
+      // Agregar respuestas
       categoryData['responses'] = <String, String>{};
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
