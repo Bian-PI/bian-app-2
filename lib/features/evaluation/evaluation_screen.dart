@@ -1558,19 +1558,19 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     print('╚═══════════════════════════════════════════════════════════════╝');
     print('');
     print('📋 INFORMACIÓN GENERAL:');
-    print('   Fecha: ${json['evaluationDate']}');
+    print('   Fecha: ${json['evaluation_date']}');
     print('   Idioma: ${json['language']}');
     print('   Especie: ${json['species']}');
-    if (json['productionType'] != null) {
-      print('   Tipo Producción: ${json['productionType']}');
+    if (json['production_type'] != null) {
+      print('   Tipo Producción: ${json['production_type']}');
     }
-    print('   Granja: ${json['farmName']}');
-    print('   Ubicación: ${json['farmLocation']}');
-    print('   Evaluador: ${json['evaluatorName']}');
+    print('   Granja: ${json['farm_name']}');
+    print('   Ubicación: ${json['farm_location']}');
+    print('   Evaluador: ${json['evaluator_name']}');
     print('');
     print('🎯 RESULTADOS:');
-    print('   Puntuación General: ${json['overallScore']}%');
-    print('   Nivel de Cumplimiento: ${json['complianceLevel']}');
+    print('   Puntuación General: ${json['overall_score']}%');
+    print('   Nivel de Cumplimiento: ${json['compliance_level']}');
     print('');
     print('📊 PUNTUACIONES POR CATEGORÍA:');
     
@@ -1589,7 +1589,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('⚠️  PUNTOS CRÍTICOS:');
-    final criticalPoints = json['criticalPoints'] as List? ?? [];
+    final criticalPoints = json['critical_points'] as List? ?? [];
     if (criticalPoints.isEmpty) {
       print('   ✓ Ninguno');
     } else {
@@ -1600,7 +1600,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('✨ PUNTOS FUERTES:');
-    final strongPoints = json['strongPoints'] as List? ?? [];
+    final strongPoints = json['strong_points'] as List? ?? [];
     if (strongPoints.isEmpty) {
       print('   - Ninguno destacable');
     } else {
