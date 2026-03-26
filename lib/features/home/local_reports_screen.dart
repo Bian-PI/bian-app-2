@@ -180,11 +180,22 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   }
 
   void _viewReport(Evaluation report) async {
-    final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    // Obtener Species base
+    Species species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    
+    // Filtrar Species según el tipo de producción si aplica
+    if (report.speciesId == 'birds' && report.productionType != null) {
+      species = _filterSpeciesByProductionType(species, report.productionType!);
+    }
     
     // Debug
     print('📊 _viewReport - overallScore: ${report.overallScore}');
     print('📊 _viewReport - categoryScores: ${report.categoryScores}');
+    print('📊 _viewReport - productionType: ${report.productionType}');
+    print('📊 _viewReport - species categories: ${species.categories.length}');
+    for (var cat in species.categories) {
+      print('   - ${cat.id}: ${cat.fields.length} fields');
+    }
     
     // Primero intentar usar los datos ya calculados de la evaluación
     Map<String, dynamic> results;
@@ -245,6 +256,36 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
           isLocal: true,
         ),
       ),
+    );
+  }
+
+  /// Filtra los campos del Species según el tipo de producción
+  Species _filterSpeciesByProductionType(Species species, String productionType) {
+    final filteredCategories = species.categories.map((category) {
+      final filteredFields = category.fields.where((field) {
+        if (field.applicableTo == null || field.applicableTo!.isEmpty) {
+          return true;
+        }
+        return field.applicableTo!.contains(productionType);
+      }).toList();
+
+      return EvaluationCategory(
+        id: category.id,
+        name: category.name,
+        nameKey: category.nameKey,
+        icon: category.icon,
+        weight: category.weight,
+        fields: filteredFields,
+      );
+    }).where((category) => category.fields.isNotEmpty).toList();
+
+    return Species(
+      id: species.id,
+      name: species.name,
+      namePlural: species.namePlural,
+      iconPath: species.iconPath,
+      gradientColors: species.gradientColors,
+      categories: filteredCategories,
     );
   }
   
