@@ -323,7 +323,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           children: [
             Icon(Icons.admin_panel_settings, color: Colors.white),
             const SizedBox(width: 8),
-            Text(loc.translate('admin_all_reports')),
+            Expanded(
+              child: Text(
+                loc.translate('admin_all_reports'),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         backgroundColor: BianTheme.primaryRed,
