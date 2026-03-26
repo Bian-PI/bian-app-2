@@ -85,12 +85,14 @@ class PrivacyConsentDialog extends StatelessWidget {
                         size: 20,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        loc.translate('important_information'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: BianTheme.darkGray,
+                      Expanded(
+                        child: Text(
+                          loc.translate('important_information'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: BianTheme.darkGray,
+                          ),
                         ),
                       ),
                     ],
