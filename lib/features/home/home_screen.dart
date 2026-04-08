@@ -214,37 +214,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _navigateToEvaluation(Species species) async {
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     
-    // Si es aves, mostrar selector de tipo de producción
-    if (species.id == 'birds') {
-      final productionType = await _showProductionTypeSelector();
-      if (productionType == null) return; // Usuario canceló
-      
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => EvaluationScreen(
-            species: species,
-            currentLanguage: languageProvider.locale.languageCode,
-            productionType: productionType,
-          ),
+    // Para aves, usar directamente ponedoras_piso (único tipo soportado)
+    final String? productionType = species.id == 'birds' ? 'ponedoras_piso' : null;
+    
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EvaluationScreen(
+          species: species,
+          currentLanguage: languageProvider.locale.languageCode,
+          productionType: productionType,
         ),
-      );
-    } else {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => EvaluationScreen(
-            species: species,
-            currentLanguage: languageProvider.locale.languageCode,
-          ),
-        ),
-      );
-    }
+      ),
+    );
     
     _loadAllData();
   }
 
-  /// Muestra el selector de tipo de producción avícola
+  /// Selector de tipo de producción avícola (DEPRECATED - solo ponedoras_piso)
+  /// Se mantiene por compatibilidad pero ya no se usa
+  @Deprecated('Solo se soporta ponedoras_piso. Este método ya no se utiliza.')
   Future<String?> _showProductionTypeSelector() async {
     final loc = AppLocalizations.of(context);
     
