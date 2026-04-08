@@ -155,14 +155,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'skin_lesions_1': 'Porcentaje moderado con lesiones leves',
     'skin_lesions_2': 'Ninguna o mínimas lesiones',
 
-    // 8.8. Suciedad y apariencia del plumaje
-    'plumage_condition_label': 'Condición del plumaje',
-    'plumage_condition_question': '¿Cuál es la apariencia y el estado de suciedad del plumaje de las aves?',
-    'plumage_condition_description': 'Se examina visualmente las regiones dorsal y ventral del plumaje.',
-    'plumage_condition_0': 'Plumaje muy sucio o dañado',
-    'plumage_condition_1': 'Plumaje con suciedad o daño moderado',
-    'plumage_condition_2': 'Plumaje limpio y en buen estado',
-
     // 8.9. Integridad óculo-nasal
     'ocular_nasal_integrity_label': 'Integridad óculo-nasal',
     'ocular_nasal_integrity_question': '¿Cuántos animales se observan con descarga nasal y/u ocular, o con lesiones agudas o crónicas en estas áreas anatómicas?',
@@ -178,14 +170,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_0': 'Corrección agresiva o daños severos',
     'beak_condition_1': 'Corrección moderada o daños leves',
     'beak_condition_2': 'Sin corrección o corrección mínima adecuada',
-
-    // 8.11. Ablación de la cresta, corte de la primera falange y cualquier otra mutilación
-    'crest_mutilation_label': 'Ablación de cresta, corte de falange y mutilaciones',
-    'crest_mutilation_question': '¿Se realizan prácticas como la ablación de la cresta, el corte de la primera falange u otras formas de mutilación en las aves? ¿Cuál es el nivel de afectación o daño físico asociado?',
-    'crest_mutilation_description': 'La ablación de la cresta, el corte de la primera falange y cualquier otra forma de mutilación deben ser consideradas prácticas de alto impacto sobre el bienestar animal. Se verifica si estos procedimientos se llevan a cabo y el nivel de daño asociado.',
-    'crest_mutilation_0': 'Mutilaciones severas o prácticas arbitrarias sin justificación técnica',
-    'crest_mutilation_1': 'Mutilaciones moderadas con justificación parcial',
-    'crest_mutilation_2': 'Sin mutilaciones o procedimientos mínimos técnicamente justificados',
 
     // ═══════════════════════════════════════════════════════════════
     // MEDIDAS BASADAS EN LA GESTIÓN (30%)
@@ -445,14 +429,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'skin_lesions_1': 'Moderate percentage with mild lesions',
     'skin_lesions_2': 'No or minimal lesions',
 
-    // 8.8. Plumage condition
-    'plumage_condition_label': 'Plumage condition',
-    'plumage_condition_question': 'What is the appearance and dirtiness state of bird plumage?',
-    'plumage_condition_description': 'Visually examine dorsal and ventral plumage regions.',
-    'plumage_condition_0': 'Very dirty or damaged plumage',
-    'plumage_condition_1': 'Plumage with moderate dirt or damage',
-    'plumage_condition_2': 'Clean plumage in good condition',
-
     // 8.9. Ocular-nasal integrity
     'ocular_nasal_integrity_label': 'Ocular-nasal integrity',
     'ocular_nasal_integrity_question': 'How many animals are observed with nasal and/or ocular discharge, or with acute or chronic lesions in these anatomical areas?',
@@ -468,14 +444,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_0': 'Aggressive trimming or severe damage',
     'beak_condition_1': 'Moderate trimming or mild damage',
     'beak_condition_2': 'No trimming or minimal adequate trimming',
-
-    // 8.11. Crest ablation, first phalanx cutting and other mutilations
-    'crest_mutilation_label': 'Crest ablation, phalanx cutting and mutilations',
-    'crest_mutilation_question': 'Are practices such as crest ablation, first phalanx cutting or other forms of mutilation performed on birds? What is the level of physical damage associated?',
-    'crest_mutilation_description': 'Crest ablation, first phalanx cutting and any other form of mutilation should be considered high-impact practices on animal welfare. Verify if these procedures are performed and the associated damage level.',
-    'crest_mutilation_0': 'Severe mutilations or arbitrary practices without technical justification',
-    'crest_mutilation_1': 'Moderate mutilations with partial justification',
-    'crest_mutilation_2': 'No mutilations or minimal technically justified procedures',
 
     // ═══════════════════════════════════════════════════════════════
     // MANAGEMENT-BASED MEASURES (30%)
