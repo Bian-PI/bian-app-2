@@ -858,6 +858,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     bool isEBAEvaluation = _filteredSpecies.categories.any((cat) => 
       cat.fields.any((f) => f.type == FieldType.scale0to4));
+    
+    bool isEVAEvaluation = _filteredSpecies.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scaleEVA || f.type == FieldType.yesNo100));
 
     for (var category in _filteredSpecies.categories) {
       int categoryObtained = 0;
@@ -972,13 +975,15 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           'total_fields': category.fields.where((f) => 
             f.type == FieldType.scale0to2 || 
             f.type == FieldType.scale0to4 || 
+            f.type == FieldType.scaleEVA ||
+            f.type == FieldType.yesNo100 ||
             f.type == FieldType.yesNo).length,
         };
         
         // Calcular contribución ponderada al score total (solo si no es categoría de peso 0)
         if (!skipInMainCalculation) {
-          if ((isICAEvaluation || isEBAEvaluation) && category.weight < 1.0 && category.weight > 0) {
-            // Usar peso de la categoría para ICA/EBA
+          if ((isICAEvaluation || isEBAEvaluation || isEVAEvaluation) && category.weight < 1.0 && category.weight > 0) {
+            // Usar peso de la categoría para ICA/EBA/EVA
             weightedTotalScore += categoryPercentage * category.weight;
             totalWeight += category.weight;
           } else if (category.weight >= 1.0) {
