@@ -50,6 +50,9 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
     print('🔍 DEBUG OfflineHomeScreen: Navegando a EvaluationScreen en modo offline');
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
 
+    // Para aves, usar directamente ponedoras_piso (único tipo soportado)
+    final String? productionType = species.id == 'birds' ? 'ponedoras_piso' : null;
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -57,6 +60,7 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           species: species,
           currentLanguage: languageProvider.locale.languageCode,
           isOfflineMode: true,
+          productionType: productionType,
         ),
       ),
     );
