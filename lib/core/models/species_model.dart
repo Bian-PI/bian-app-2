@@ -282,7 +282,18 @@ class Species {
           icon: 'assignment',
           weight: 0.30, // 30%
           fields: [
-            // 9.1. Calidad del agua
+            // 9.1. Mortalidad
+            EvaluationField(
+              id: 'mortality',
+              label: 'mortality_label',
+              description: 'mortality_description',
+              question: 'mortality_question',
+              type: FieldType.scale0to2,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 2,
+              required: true,
+            ),
+            // 9.2. Calidad del agua
             EvaluationField(
               id: 'water_quality',
               label: 'water_quality_label',
@@ -293,7 +304,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.2. Alimentación equilibrada
+            // 9.3. Alimentación equilibrada
             EvaluationField(
               id: 'balanced_feeding',
               label: 'balanced_feeding_label',
@@ -304,7 +315,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.3. Programas de vigilancia y gestión sanitaria
+            // 9.4. Programas de vigilancia y gestión sanitaria
             EvaluationField(
               id: 'health_surveillance',
               label: 'health_surveillance_label',
@@ -315,7 +326,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.4. Procedimiento Operativo Estandarizado (POE-Bienestar animal)
+            // 9.5. Procedimiento Operativo Estandarizado (POE-Bienestar animal)
             EvaluationField(
               id: 'poe_animal_welfare',
               label: 'poe_animal_welfare_label',
@@ -326,7 +337,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.5. Condiciones térmicas diarias y manejo de emergencias
+            // 9.6. Condiciones térmicas diarias y manejo de emergencias
             EvaluationField(
               id: 'thermal_emergency',
               label: 'thermal_emergency_label',
@@ -337,7 +348,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.6. Programa de iluminación
+            // 9.7. Programa de iluminación
             EvaluationField(
               id: 'lighting_program',
               label: 'lighting_program_label',
@@ -348,7 +359,7 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.7. Capacitación básica en bienestar animal
+            // 9.8. Capacitación básica en bienestar animal
             EvaluationField(
               id: 'welfare_training',
               label: 'welfare_training_label',
@@ -359,23 +370,12 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 9.8. Uso responsable de medicamentos e insumos veterinarios
+            // 9.9. Uso responsable de medicamentos e insumos veterinarios
             EvaluationField(
               id: 'responsible_medication',
               label: 'responsible_medication_label',
               description: 'responsible_medication_description',
               question: 'responsible_medication_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.documentInspection,
-              maxScore: 2,
-              required: true,
-            ),
-            // 9.9. Mortalidad
-            EvaluationField(
-              id: 'mortality',
-              label: 'mortality_label',
-              description: 'mortality_description',
-              question: 'mortality_question',
               type: FieldType.scale0to2,
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
