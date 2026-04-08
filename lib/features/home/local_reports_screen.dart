@@ -308,7 +308,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   
   List<String> _extractCriticalPoints(Evaluation evaluation, Species species) {
     final criticalPoints = <String>[];
-    final isEBA = species.id == 'pigs';
+    final isPigs = species.id == 'pigs';
     
     for (var category in species.categories) {
       for (var field in category.fields) {
@@ -316,24 +316,15 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
         final value = evaluation.responses[key];
         
         if (value != null) {
-          if (isEBA) {
-            // EBA: 0-1 es crítico (escala 0-4)
-            if (value is int && value <= 1) {
+          if (isPigs) {
+            // EVA 4.0: <= 20 es crítico (escala 0, 20, 55, 80, 100)
+            if (value is int && value <= 20) {
               criticalPoints.add('${category.id}_${field.id}');
             }
           } else {
-            // ICA: respuesta negativa en campos de "buena práctica" es crítico
-            if (field.type == FieldType.yesNo) {
-              bool isCritical = false;
-              if (field.id.contains('access') || field.id.contains('quality') ||
-                  field.id.contains('sufficient') || field.id.contains('health')) {
-                isCritical = value == false;
-              } else {
-                isCritical = value == true;
-              }
-              if (isCritical) {
-                criticalPoints.add('${category.id}_${field.id}');
-              }
+            // ICA Aves: score 0 es crítico (escala 0-2)
+            if (value is int && value == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
             }
           }
         }
@@ -376,7 +367,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
     double totalWeightedScore = 0;
     double totalWeight = 0;
     
-    print('🔄 Recalculando EBA para ${species.categories.length} categorías');
+    print('🔄 Recalculando EVA 4.0 para ${species.categories.length} categorías');
     
     for (var category in species.categories) {
       int categoryObtained = 0;
@@ -399,8 +390,8 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
           categoryObtained += score;
           categoryMax += field.maxScore;
           
-          // Punto crítico si score <= 1 (de 4)
-          if (score <= 1) {
+          // Punto crítico: EVA 4.0 usa escala 0-100, crítico si <= 20
+          if (score <= 20) {
             criticalPoints.add('${category.id}_${field.id}');
           }
         }
@@ -433,7 +424,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
     
     final overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0.0;
     
-    print('📊 EBA Overall Score: ${overallScore.toStringAsFixed(1)}%');
+    print('📊 EVA 4.0 Overall Score: ${overallScore.toStringAsFixed(1)}%');
     
     return {
       'overall_score': overallScore,
@@ -443,7 +434,8 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       'recommendations': [],
       'critical_points': criticalPoints.take(10).toList(),
       'strong_points': strongPoints,
-      'is_eba_evaluation': true,
+      'is_eba_evaluation': false,
+      'is_eva_evaluation': true,
       'is_ica_evaluation': false,
     };
   }
