@@ -921,6 +921,38 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               criticalPoints.add('${category.id}_${field.id}');
             }
           }
+        } else if (field.type == FieldType.scaleEVA) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EVA 4.0: Escala 0, 20, 55, 80, 100 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // 100
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score <= 20)
+            if (score <= 20) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
+        } else if (field.type == FieldType.yesNo100) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EVA 4.0: Sí=100, No=0 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // 100
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score = 0)
+            if (score == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
         }
         // Otros tipos de campo (number, text, percentage) no afectan el score
       }
@@ -2362,6 +2394,18 @@ Widget build(BuildContext context) {
       case FieldType.scale0to4:
         return _buildScale0to4Widget(field, key, value, categoryId);
 
+      // ═══════════════════════════════════════════════════════════════
+      // ESCALA EVA 4.0 (0, 20, 55, 80, 100)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.scaleEVA:
+        return _buildScaleEVAWidget(field, key, value, categoryId);
+
+      // ═══════════════════════════════════════════════════════════════
+      // SÍ/NO CON VALOR 100/0 (EVA 4.0)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.yesNo100:
+        return _buildYesNo100Widget(field, key, value, categoryId);
+
       case FieldType.yesNo:
         return Row(
           children: [
@@ -2852,6 +2896,373 @@ Widget build(BuildContext context) {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  /// Widget para escala EVA 4.0 (0, 20, 55, 80, 100)
+  /// Usado en metodología EVA 4.0 para porcinos
+  Widget _buildScaleEVAWidget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Valores EVA: 0, 20, 55, 80, 100
+    final evaValues = [0, 20, 55, 80, 100];
+    
+    // Colores para cada nivel
+    final colors = [
+      const Color(0xFFD32F2F),  // 0 - Bajo (<50%)
+      const Color(0xFFFF5722),  // 20 - Bajo (≥50% y <60%)
+      const Color(0xFFFF9800),  // 55 - Medio (≥60% y <80%)
+      const Color(0xFF4CAF50),  // 80 - Alto (≥80% y <100%)
+      const Color(0xFF1B5E20),  // 100 - Excelente (100%)
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.dangerous,           // 0
+      Icons.warning_amber,       // 20
+      Icons.info_outline,        // 55
+      Icons.thumb_up,            // 80
+      Icons.workspace_premium,   // 100
+    ];
+    
+    // Labels cortos
+    final labels = [
+      '<50%',
+      '≥50%',
+      '≥60%',
+      '≥80%',
+      '100%',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Primera fila: 0, 20, 55
+        Row(
+          children: List.generate(3, (index) {
+            final evaValue = evaValues[index];
+            final isSelected = currentValue == evaValue;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 3,
+                  right: index == 2 ? 0 : 3,
+                ),
+                child: _buildEVAScaleButton(
+                  value: evaValue,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: labels[index],
+                  onTap: () => _updateResponse(categoryId, field.id, evaValue),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // Segunda fila: 80, 100
+        Row(
+          children: List.generate(2, (i) {
+            final index = i + 3;
+            final evaValue = evaValues[index];
+            final isSelected = currentValue == evaValue;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 4,
+                  right: i == 1 ? 0 : 4,
+                ),
+                child: _buildEVAScaleButton(
+                  value: evaValue,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: labels[index],
+                  onTap: () => _updateResponse(categoryId, field.id, evaValue),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[evaValues.indexOf(currentValue)].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[evaValues.indexOf(currentValue)].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[evaValues.indexOf(currentValue)],
+                  color: colors[evaValues.indexOf(currentValue)],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    loc.translate('scale_eva_$currentValue'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Botón para escala EVA
+  Widget _buildEVAScaleButton({
+    required int value,
+    required bool isSelected,
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : BianTheme.lightGray,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Número (valor EVA)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : BianTheme.mediumGray,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Icono
+            Icon(
+              icon,
+              color: isSelected ? color : BianTheme.mediumGray,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            // Label
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : BianTheme.mediumGray,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget para Sí/No con valor 100/0 (EVA 4.0)
+  Widget _buildYesNo100Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    return Row(
+      children: [
+        // Botón SÍ = 100
+        Expanded(
+          child: InkWell(
+            onTap: () => _updateResponse(categoryId, field.id, 100),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: currentValue == 100 
+                    ? BianTheme.successGreen.withOpacity(0.15) 
+                    : BianTheme.backgroundGray,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: currentValue == 100 ? BianTheme.successGreen : BianTheme.lightGray,
+                  width: currentValue == 100 ? 2 : 1,
+                ),
+                boxShadow: currentValue == 100
+                    ? [
+                        BoxShadow(
+                          color: BianTheme.successGreen.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen 
+                          : BianTheme.mediumGray.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: currentValue == 100 ? Colors.white : BianTheme.mediumGray,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('yes'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen 
+                          : BianTheme.mediumGray,
+                    ),
+                  ),
+                  Text(
+                    '100 pts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen.withOpacity(0.8) 
+                          : BianTheme.mediumGray.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Botón NO = 0
+        Expanded(
+          child: InkWell(
+            onTap: () => _updateResponse(categoryId, field.id, 0),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: currentValue == 0 
+                    ? BianTheme.errorRed.withOpacity(0.15) 
+                    : BianTheme.backgroundGray,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: currentValue == 0 ? BianTheme.errorRed : BianTheme.lightGray,
+                  width: currentValue == 0 ? 2 : 1,
+                ),
+                boxShadow: currentValue == 0
+                    ? [
+                        BoxShadow(
+                          color: BianTheme.errorRed.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed 
+                          : BianTheme.mediumGray.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.cancel,
+                      color: currentValue == 0 ? Colors.white : BianTheme.mediumGray,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('no'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed 
+                          : BianTheme.mediumGray,
+                    ),
+                  ),
+                  Text(
+                    '0 pts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed.withOpacity(0.8) 
+                          : BianTheme.mediumGray.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
