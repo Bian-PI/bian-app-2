@@ -247,17 +247,6 @@ class Species {
               maxScore: 2,
               required: true,
             ),
-            // 8.8. Suciedad y apariencia del plumaje
-            EvaluationField(
-              id: 'plumage_condition',
-              label: 'plumage_condition_label',
-              description: 'plumage_condition_description',
-              question: 'plumage_condition_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
-              maxScore: 2,
-              required: true,
-            ),
             // 8.9. Integridad óculo-nasal
             EvaluationField(
               id: 'ocular_nasal_integrity',
@@ -275,17 +264,6 @@ class Species {
               label: 'beak_condition_label',
               description: 'beak_condition_description',
               question: 'beak_condition_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
-              maxScore: 2,
-              required: true,
-            ),
-            // 8.11. Ablación de la cresta, corte de la primera falange y cualquier otra mutilación
-            EvaluationField(
-              id: 'crest_mutilation',
-              label: 'crest_mutilation_label',
-              description: 'crest_mutilation_description',
-              question: 'crest_mutilation_question',
               type: FieldType.scale0to2,
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
