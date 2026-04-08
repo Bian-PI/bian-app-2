@@ -1444,6 +1444,17 @@ class ResultsScreen extends StatelessWidget {
                               if (score == 0) { displayValue = 'No cumple'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
                               else if (score == 1) { displayValue = 'Parcial'; valueColor = PdfColor.fromInt(0xFFFF9800); }
                               else if (score == 2) { displayValue = 'Cumple'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                            } else if (field.type.toString().contains('scaleEVA')) {
+                              score = value is int ? value : (value is double ? value.toInt() : null);
+                              if (score == 0) { displayValue = 'Bajo (<50%)'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 20) { displayValue = 'Bajo (≥50%)'; valueColor = PdfColor.fromInt(0xFFFF5722); }
+                              else if (score == 55) { displayValue = 'Medio (≥60%)'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 80) { displayValue = 'Alto (≥80%)'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 100) { displayValue = 'Excelente (100%)'; valueColor = PdfColor.fromInt(0xFF1B5E20); }
+                            } else if (field.type.toString().contains('yesNo100')) {
+                              score = value is int ? value : (value is double ? value.toInt() : null);
+                              if (score == 100) { displayValue = 'Sí (100)'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 0) { displayValue = 'No (0)'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
                             } else if (field.type.toString().contains('scale0to4')) {
                               score = value is int ? value : (value is double ? value.toInt() : null);
                               if (score == 0) { displayValue = 'Crítico'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
@@ -3034,6 +3045,41 @@ class ResultsScreen extends StatelessWidget {
                   } else if (score == 2) {
                     displayValue = 'Cumple (2)';
                     valueColor = BianTheme.successGreen;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('scaleEVA')) {
+                  // Escala EVA 4.0 (Porcinos): 0, 20, 55, 80, 100
+                  score = value is int ? value : (value is double ? value.toInt() : null);
+                  if (score == 0) {
+                    displayValue = 'Bajo <50% (0)';
+                    valueColor = const Color(0xFFD32F2F);
+                  } else if (score == 20) {
+                    displayValue = 'Bajo ≥50% (20)';
+                    valueColor = const Color(0xFFFF5722);
+                  } else if (score == 55) {
+                    displayValue = 'Medio ≥60% (55)';
+                    valueColor = const Color(0xFFFF9800);
+                  } else if (score == 80) {
+                    displayValue = 'Alto ≥80% (80)';
+                    valueColor = const Color(0xFF4CAF50);
+                  } else if (score == 100) {
+                    displayValue = 'Excelente (100)';
+                    valueColor = const Color(0xFF1B5E20);
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('yesNo100')) {
+                  // Sí/No EVA 4.0: 100/0
+                  score = value is int ? value : (value is double ? value.toInt() : null);
+                  if (score == 100) {
+                    displayValue = 'Sí (100)';
+                    valueColor = BianTheme.successGreen;
+                  } else if (score == 0) {
+                    displayValue = 'No (0)';
+                    valueColor = BianTheme.errorRed;
                   } else {
                     displayValue = 'Sin respuesta';
                     valueColor = BianTheme.mediumGray;
