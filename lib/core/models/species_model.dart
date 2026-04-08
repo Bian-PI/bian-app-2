@@ -27,7 +27,8 @@ class Species {
   });
 
   /// Aves de Corral - Metodología ICA
-  /// Aplica para: Pollo de engorde, Ponedoras en piso, Ponedoras en jaula, Pastoreo
+  /// Sistema de producción: Ponedoras en piso
+  /// 30 indicadores según Resolución 253 de 2020
   static Species birds() {
     return Species(
       id: 'birds',
@@ -56,7 +57,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.3. Calidad de la cama
             EvaluationField(
@@ -68,7 +68,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'pastoreo'],
             ),
             // 7.5. Calidad de los bebederos
             EvaluationField(
@@ -80,7 +79,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.6. Suministro de agua en los bebederos
             EvaluationField(
@@ -92,7 +90,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.7. Animales por bebedero
             EvaluationField(
@@ -104,7 +101,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.8. Tratamiento del agua
             EvaluationField(
@@ -116,7 +112,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualAndDocumental,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.9. Calidad de los comederos
             EvaluationField(
@@ -128,7 +123,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.10. Animales por comedero
             EvaluationField(
@@ -140,7 +134,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.11. Medios para contribuir al confort térmico
             EvaluationField(
@@ -152,7 +145,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualAndDocumental,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.12. Calidad, integridad y funcionalidad del nidal
             EvaluationField(
@@ -164,7 +156,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'pastoreo'],
             ),
             // 7.14. Espacio disponible en ponedoras en piso y pastoreo
             EvaluationField(
@@ -176,7 +167,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
@@ -201,7 +191,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionNoSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.2. Acurrucarse en grupos (amontonamiento)
             EvaluationField(
@@ -213,7 +202,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionNoSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.3. Integridad del hueso de la quilla
             EvaluationField(
@@ -225,7 +213,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.4. Pododermatitis
             EvaluationField(
@@ -237,7 +224,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.5. Daño en los dedos
             EvaluationField(
@@ -249,7 +235,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.7. Lesiones en piel y/o otros tegumentos
             EvaluationField(
@@ -261,7 +246,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.8. Suciedad y apariencia del plumaje
             EvaluationField(
@@ -273,7 +257,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.9. Integridad óculo-nasal
             EvaluationField(
@@ -285,7 +268,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.10. Condición del pico
             EvaluationField(
@@ -297,7 +279,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.11. Ablación de la cresta, corte de la primera falange y cualquier otra mutilación
             EvaluationField(
@@ -309,7 +290,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
@@ -334,7 +314,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.2. Alimentación equilibrada
             EvaluationField(
@@ -346,7 +325,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.3. Programas de vigilancia y gestión sanitaria
             EvaluationField(
@@ -358,7 +336,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.4. Procedimiento Operativo Estandarizado (POE-Bienestar animal)
             EvaluationField(
@@ -370,7 +347,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.5. Condiciones térmicas diarias y manejo de emergencias
             EvaluationField(
@@ -382,7 +358,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.6. Programa de iluminación
             EvaluationField(
@@ -394,7 +369,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.7. Capacitación básica en bienestar animal
             EvaluationField(
@@ -406,7 +380,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.8. Uso responsable de medicamentos e insumos veterinarios
             EvaluationField(
@@ -418,7 +391,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 9.9. Mortalidad
             EvaluationField(
@@ -430,7 +402,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
