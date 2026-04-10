@@ -1003,8 +1003,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     // Calcular score general
     double overallScore = 0.0;
     if (totalWeight > 0) {
-      if (isICAEvaluation || isEBAEvaluation) {
-        // Para ICA/EBA: ya está ponderado, solo normalizar si no suma 100%
+      if (isICAEvaluation || isEBAEvaluation || isEVAEvaluation) {
+        // Para ICA/EBA/EVA: ya está ponderado, solo normalizar si no suma 100%
         overallScore = weightedTotalScore / totalWeight * 100;
         // Si los pesos suman 1.0 (100%), simplemente usar el weightedTotalScore
         if ((totalWeight - 1.0).abs() < 0.01) {
@@ -1020,8 +1020,23 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     String complianceLevel;
     String welfareClassification;
     
-    if (isEBAEvaluation) {
-      // Clasificación EBA (Porcinos) - 5 niveles
+    if (isEVAEvaluation) {
+      // Clasificación EVA 4.0 (Porcinos) - 4 niveles según ICA Colombia
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 76) {
+        complianceLevel = 'high';
+        welfareClassification = 'GRANJA CON ALTO BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'medium';
+        welfareClassification = 'GRANJA CON MEDIO BIENESTAR';
+      } else {
+        complianceLevel = 'low';
+        welfareClassification = 'GRANJA CON BAJO BIENESTAR';
+      }
+    } else if (isEBAEvaluation) {
+      // Clasificación EBA 3.0 (legacy Porcinos) - 5 niveles
       if (overallScore >= 90) {
         complianceLevel = 'excellent';
         welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
@@ -1079,7 +1094,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       categoryScores, 
       criticalPoints,
       isICAEvaluation,
-      isEBAEvaluation,
+      isEBAEvaluation || isEVAEvaluation, // EVA usa misma lógica que EBA para recomendaciones
     );
 
     return {
@@ -1089,6 +1104,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'welfare_classification': welfareClassification,
       'is_ica_evaluation': isICAEvaluation,
       'is_eba_evaluation': isEBAEvaluation,
+      'is_eva_evaluation': isEVAEvaluation,
       'category_scores': categoryScores,
       'category_details': categoryDetails,
       'critical_points': criticalPoints.take(15).toList(),
