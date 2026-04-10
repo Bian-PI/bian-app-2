@@ -180,6 +180,11 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   }
 
   void _viewReport(Evaluation report) async {
+    print('🔍 _viewReport INICIADO para: ${report.farmName}');
+    print('🔍 report.speciesId: ${report.speciesId}');
+    print('🔍 report.overallScore: ${report.overallScore}');
+    print('🔍 report.categoryScores: ${report.categoryScores}');
+    
     // Obtener Species base
     Species species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
     
