@@ -3033,9 +3033,17 @@ class ResultsScreen extends StatelessWidget {
           // Tabla de indicadores
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: DataTable(
+            child: Builder(
+              builder: (context) {
+                // DEBUG: Ver campos de la categoría
+                print('🟠 Categoría ${category.id} tiene ${category.fields.length} campos');
+                if (category.fields.isNotEmpty) {
+                  print('🟠 Primer campo: ${category.fields.first.id}');
+                }
+                
+                return DataTable(
               columnSpacing: 20,
-              headingRowColor: MaterialStateProperty.all(BianTheme.backgroundGray),
+              headingRowColor: WidgetStateProperty.all(BianTheme.backgroundGray),
               columns: [
                 DataColumn(label: Text('Indicador', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Respuesta', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -3192,6 +3200,8 @@ class ResultsScreen extends StatelessWidget {
                   ],
                 );
               }).toList(),
+            );
+              },
             ),
           ),
         ],
