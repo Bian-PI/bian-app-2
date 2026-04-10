@@ -70,8 +70,65 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
   }
 
   void _viewReport(Evaluation report) async {
+    print('🔍 _viewReport INICIADO para: ${report.farmName}');
+    print('🔍 report.overallScore: ${report.overallScore}');
+    print('🔍 report.categoryScores: ${report.categoryScores}');
+    
     final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
-    final results = _recalculateResults(report, species);
+    
+    // Usar datos guardados si existen, sino recalcular
+    Map<String, dynamic> results;
+    
+    if (report.overallScore != null && report.overallScore! > 0 && 
+        report.categoryScores != null && report.categoryScores!.isNotEmpty) {
+      // Usar datos guardados
+      print('✅ Usando datos guardados de la evaluación');
+      
+      final categoryDetails = <String, dynamic>{};
+      report.categoryScores!.forEach((catId, score) {
+        categoryDetails[catId] = {'percentage': score, 'score': score};
+      });
+      
+      // Detectar tipo de evaluación
+      final isICA = species.categories.any((cat) => 
+        cat.fields.any((f) => f.type == FieldType.scale0to2));
+      final isEVA = species.categories.any((cat) => 
+        cat.fields.any((f) => f.type == FieldType.scaleEVA || f.type == FieldType.yesNo100));
+      
+      String complianceLevel;
+      if (report.overallScore! >= 90) {
+        complianceLevel = 'excellent';
+      } else if (report.overallScore! >= 76) {
+        complianceLevel = isICA || isEVA ? 'high' : 'good';
+      } else if (report.overallScore! >= 50) {
+        complianceLevel = isICA || isEVA ? 'medium' : 'acceptable';
+      } else {
+        complianceLevel = isICA || isEVA ? 'low' : 'critical';
+      }
+      
+      results = {
+        'overall_score': report.overallScore,
+        'category_scores': report.categoryScores,
+        'category_details': categoryDetails,
+        'compliance_level': complianceLevel,
+        'recommendations': [],
+        'critical_points': [],
+        'strong_points': report.categoryScores!.entries
+            .where((e) => e.value >= 80)
+            .map((e) => e.key)
+            .toList(),
+        'is_ica_evaluation': isICA,
+        'is_eva_evaluation': isEVA,
+      };
+    } else {
+      // Recalcular si no hay datos guardados
+      print('⚠️ Recalculando resultados...');
+      results = _recalculateResults(report, species);
+    }
+    
+    print('📊 Results finales - overall_score: ${results['overall_score']}');
+    print('📊 Results finales - category_scores: ${results['category_scores']}');
+    
     final translatedRecommendations = _translateRecommendations(
       results['recommendations'] ?? [], 
       report.language,
@@ -91,98 +148,127 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
           species: species,
           results: results,
           structuredJson: structuredJson,
-          isLocal: true, // Reporte creado en modo offline, es local
+          isLocal: true,
         ),
       ),
     );
   }
 
   Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
     final categoryScores = <String, double>{};
     final criticalPoints = <String>[];
     final strongPoints = <String>[];
+    double totalWeightedScore = 0.0;
+    double totalWeight = 0.0;
+
+    // Detectar tipo de evaluación
+    final isICA = species.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scale0to2));
+    final isEVA = species.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scaleEVA || f.type == FieldType.yesNo100));
+
+    print('🔄 _recalculateResults - isICA: $isICA, isEVA: $isEVA');
 
     for (var category in species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
+      int categoryObtained = 0;
+      int categoryMax = 0;
+      int answeredFields = 0;
 
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = evaluation.responses[key];
-          
-          if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
-            
-            bool isPositive = false;
-            if (field.id.contains('access') || 
-                field.id.contains('quality') || 
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
-            }
-            
-            if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
-            } else {
-              criticalPoints.add('${category.id}_${field.id}');
-            }
-          }
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        if (value == null) continue;
+        
+        int score = 0;
+        if (value is int) {
+          score = value;
+        } else if (value is double) {
+          score = value.toInt();
+        } else if (value is String) {
+          score = int.tryParse(value) ?? 0;
+        } else if (value is bool) {
+          // Para campos yesNo legacy
+          score = value ? field.maxScore : 0;
+        }
+        
+        categoryObtained += score;
+        categoryMax += field.maxScore;
+        answeredFields++;
+        
+        // Detectar puntos críticos según tipo
+        if (field.type == FieldType.scale0to2 && score == 0) {
+          criticalPoints.add(key);
+        } else if ((field.type == FieldType.scaleEVA || field.type == FieldType.yesNo100) && score <= 20) {
+          criticalPoints.add(key);
+        } else if (field.type == FieldType.yesNo && value == false) {
+          criticalPoints.add(key);
         }
       }
 
-      if (categoryTotal > 0) {
-        final score = (categoryPositive / categoryTotal) * 100;
+      if (categoryMax > 0 && answeredFields > 0) {
+        final score = (categoryObtained / categoryMax) * 100;
         categoryScores[category.id] = score;
+        
+        // Calcular score ponderado
+        totalWeightedScore += score * category.weight;
+        totalWeight += category.weight;
+        
         if (score >= 80) {
           strongPoints.add(category.id);
         }
+        
+        print('📊 ${category.id}: $categoryObtained/$categoryMax = ${score.toStringAsFixed(1)}% (peso: ${category.weight})');
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0.0;
+    // Calcular score general
+    double overallScore = 0.0;
+    if (totalWeight > 0) {
+      overallScore = totalWeightedScore / totalWeight;
+    }
+    
+    print('📊 Overall Score: ${overallScore.toStringAsFixed(1)}%');
 
+    // Determinar nivel de cumplimiento
     String complianceLevel;
-    if (overallScore >= 90) {
-      complianceLevel = 'excellent';
-    } else if (overallScore >= 75) {
-      complianceLevel = 'good';
-    } else if (overallScore >= 60) {
-      complianceLevel = 'acceptable';
-    } else if (overallScore >= 40) {
-      complianceLevel = 'needs_improvement';
+    if (isICA || isEVA) {
+      // Clasificación ICA/EVA - 4 niveles
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+      } else if (overallScore >= 76) {
+        complianceLevel = 'high';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'medium';
+      } else {
+        complianceLevel = 'low';
+      }
     } else {
-      complianceLevel = 'critical';
+      // Clasificación legacy - 5 niveles
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+      } else if (overallScore >= 75) {
+        complianceLevel = 'good';
+      } else if (overallScore >= 60) {
+        complianceLevel = 'acceptable';
+      } else if (overallScore >= 40) {
+        complianceLevel = 'needs_improvement';
+      } else {
+        complianceLevel = 'critical';
+      }
     }
 
+    // Generar recomendaciones
     final recommendationKeys = <String>[];
     if (overallScore < 60) recommendationKeys.add('immediate_attention_required');
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendationKeys.add('improve_feeding_practices');
-    }
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendationKeys.add('strengthen_health_program');
-    }
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+    if (categoryScores['resource'] != null && categoryScores['resource']! < 70) {
       recommendationKeys.add('improve_infrastructure');
+    }
+    if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
+      recommendationKeys.add('improve_infrastructure');
+    }
+    if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+      recommendationKeys.add('strengthen_health_program');
     }
     if (categoryScores['management'] != null && categoryScores['management']! < 70) {
       recommendationKeys.add('train_staff_welfare');
@@ -193,9 +279,11 @@ class _OfflineHomeScreenState extends State<OfflineHomeScreen> {
       'overall_score': overallScore,
       'compliance_level': complianceLevel,
       'category_scores': categoryScores,
-      'critical_points': criticalPoints,
+      'critical_points': criticalPoints.take(15).toList(),
       'strong_points': strongPoints,
       'recommendations': recommendationKeys,
+      'is_ica_evaluation': isICA,
+      'is_eva_evaluation': isEVA,
     };
   }
 
