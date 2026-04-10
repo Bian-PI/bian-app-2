@@ -48,9 +48,11 @@ class Evaluation {
 
       print(
           '📊 overallScore presente: ${json.containsKey('overallScore')} / overall_score: ${json.containsKey('overall_score')}');
+      print('📊 overallScore valor raw: ${json['overallScore']} (tipo: ${json['overallScore']?.runtimeType})');
 
       print(
           '📊 categoryScores presente: ${json.containsKey('categoryScores')} / category_scores: ${json.containsKey('category_scores')}');
+      print('📊 categoryScores valor raw: ${json['categoryScores']} (tipo: ${json['categoryScores']?.runtimeType})');
 
       print('📊 categories presente: ${json.containsKey('categories')}');
 
@@ -71,6 +73,13 @@ class Evaluation {
           });
         }
       }
+
+      // Parse scores antes de crear el objeto
+      final parsedOverallScore = _parseScore(json['overallScore']) ?? _parseScore(json['overall_score']);
+      final parsedCategoryScores = _parseCategoryScores(json['categoryScores'] ?? json['category_scores']) ?? _extractCategoryScoresFromCategories(json['categories']);
+      
+      print('📊 PARSED overallScore: $parsedOverallScore');
+      print('📊 PARSED categoryScores: $parsedCategoryScores');
 
       return Evaluation(
         id: json['id']?.toString() ?? '',
@@ -100,11 +109,8 @@ class Evaluation {
             : (json['categories'] != null
                 ? _parseCategoriesToResponses(json['categories'])
                 : {}),
-        overallScore: _parseScore(json['overallScore']) ??
-            _parseScore(json['overall_score']),
-        categoryScores: _parseCategoryScores(
-                json['categoryScores'] ?? json['category_scores']) ??
-            _extractCategoryScoresFromCategories(json['categories']),
+        overallScore: parsedOverallScore,
+        categoryScores: parsedCategoryScores,
         status: json['status']?.toString() ?? 'completed',
         language: json['language']?.toString() ?? 'es',
         createdAt: json['createdAt'] != null
