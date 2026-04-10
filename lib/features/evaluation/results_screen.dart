@@ -2884,6 +2884,16 @@ class ResultsScreen extends StatelessWidget {
     final bool isICAEvaluation = results['is_ica_evaluation'] == true;
     final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
     
+    // DEBUG: Ver qué hay en evaluation.responses
+    print('🔵 _buildDetailedAnalysisSection');
+    print('🔵 evaluation.responses tiene ${evaluation.responses.length} entradas');
+    print('🔵 Primeras 10 claves: ${evaluation.responses.keys.take(10).toList()}');
+    if (evaluation.responses.isNotEmpty) {
+      final firstKey = evaluation.responses.keys.first;
+      print('🔵 Primera clave: $firstKey = ${evaluation.responses[firstKey]}');
+    }
+    print('🔵 species.categories: ${species.categories.map((c) => c.id).toList()}');
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
