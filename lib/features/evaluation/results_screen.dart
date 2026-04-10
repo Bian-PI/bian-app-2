@@ -1619,10 +1619,20 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    
+    // DEBUG: Ver qué hay en results
+    print('🔴 ResultsScreen.build() - results keys: ${results.keys.toList()}');
+    print('🔴 ResultsScreen.build() - results[overall_score]: ${results['overall_score']} (tipo: ${results['overall_score']?.runtimeType})');
+    print('🔴 ResultsScreen.build() - results[category_scores]: ${results['category_scores']}');
+    
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
+    print('🔴 ResultsScreen.build() - overallScore PARSEADO: $overallScore');
+    
     final complianceLevel = (results['compliance_level'] as String?) ?? '';
     final categoryScores = (results['category_scores'] as Map<String, double>?) ?? {};
+    print('🔴 ResultsScreen.build() - categoryScores: $categoryScores');
+    
     final criticalPoints = (results['critical_points'] as List?) ?? [];
     final strongPoints = (results['strong_points'] as List?) ?? [];
     final recommendations = (structuredJson['recommendations'] as List?) ?? [];
