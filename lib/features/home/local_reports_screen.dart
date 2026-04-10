@@ -692,11 +692,12 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
 
   Widget _buildReportCard(Evaluation report) {
     final isPending = _pendingSyncIds.contains(report.id);
+    final score = report.overallScore ?? 0.0;
 
     Color scoreColor;
-    if (report.overallScore! >= 80) {
+    if (score >= 80) {
       scoreColor = BianTheme.successGreen;
-    } else if (report.overallScore! >= 60) {
+    } else if (score >= 60) {
       scoreColor = BianTheme.warningYellow;
     } else {
       scoreColor = BianTheme.errorRed;
@@ -726,7 +727,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
                       child: Column(
                         children: [
                           Text(
-                            '${report.overallScore!.toStringAsFixed(0)}',
+                            '${score.toStringAsFixed(0)}',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
