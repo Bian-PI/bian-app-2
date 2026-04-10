@@ -3048,6 +3048,9 @@ class ResultsScreen extends StatelessWidget {
                 final key = '${category.id}_${field.id}';
                 final value = evaluation.responses[key];
                 
+                // DEBUG
+                print('🟡 Campo: $key, value: $value (tipo: ${value?.runtimeType}), fieldType: ${field.type}');
+                
                 // Formatear valor de respuesta
                 String displayValue;
                 int? score;
