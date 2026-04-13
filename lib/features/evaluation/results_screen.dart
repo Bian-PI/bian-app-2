@@ -53,35 +53,61 @@ class ResultsScreen extends StatelessWidget {
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final categoryScores = results['category_scores'] as Map<String, double>;
+    
+    // Helper local para buscar score
+    double getScore(String catId) {
+      if (categoryScores.containsKey(catId)) return categoryScores[catId]!;
+      if (categoryScores.containsKey('${catId}s')) return categoryScores['${catId}s']!;
+      if (catId.endsWith('s') && categoryScores.containsKey(catId.substring(0, catId.length - 1))) {
+        return categoryScores[catId.substring(0, catId.length - 1)]!;
+      }
+      return 0.0;
+    }
 
     for (var category in species.categories) {
-      final score = categoryScores[category.id] ?? 0.0;
-      categories[category.id] = {
-        'score': score.toString(), // String
-        'fields': evaluation.responses.entries
-            .where((e) => e.key.startsWith('${category.id}_'))
-            .map((e) {
-          // Convertir booleanos y números a strings
+      final score = getScore(category.id);
+      
+      // Buscar responses con variantes de prefijo
+      final fields = <Map<String, String>>[];
+      for (var field in category.fields) {
+        final key1 = '${category.id}_${field.id}';
+        final key2 = '${category.id}s_${field.id}';
+        final key3 = category.id.endsWith('s') 
+            ? '${category.id.substring(0, category.id.length - 1)}_${field.id}' 
+            : null;
+        
+        dynamic value = evaluation.responses[key1] ?? 
+                        evaluation.responses[key2] ?? 
+                        (key3 != null ? evaluation.responses[key3] : null);
+        
+        if (value != null) {
           String valueStr;
-          final value = e.value;
           if (value is bool) {
-            valueStr = value.toString(); // "true" o "false"
+            valueStr = value.toString();
           } else if (value is num) {
-            valueStr = value.toString(); // "1.0", "2", etc.
+            valueStr = value.toString();
           } else {
             valueStr = value.toString();
           }
-
-          return {
-            'field_id': e.key.toString(), // String
-            'value': valueStr, // String
-          };
-        }).toList(),
+          fields.add({
+            'field_id': field.id,
+            'value': valueStr,
+          });
+        }
+      }
+      
+      categories[category.id] = {
+        'score': score.toString(),
+        'fields': fields,
       };
     }
 
-    // Preparar critical_points
-    final criticalPoints = (results['critical_points'] as List)
+    // Preparar critical_points - extraer si está vacío
+    List rawCriticalPoints = (results['critical_points'] as List?) ?? [];
+    if (rawCriticalPoints.isEmpty) {
+      rawCriticalPoints = _extractCriticalPointsFromResponses();
+    }
+    final criticalPoints = rawCriticalPoints
         .map((point) => {
               'category': point.toString().split('_')[0],
               'field': point.toString(),
@@ -822,9 +848,27 @@ class ResultsScreen extends StatelessWidget {
         double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
-    final criticalPoints = results['critical_points'] as List;
-    final strongPoints = results['strong_points'] as List;
-    final recommendations = structuredJson['recommendations'] as List;
+    
+    // Obtener puntos críticos, o extraerlos si está vacío
+    List criticalPoints = results['critical_points'] as List? ?? [];
+    if (criticalPoints.isEmpty) {
+      criticalPoints = _extractCriticalPointsFromResponses();
+    }
+    
+    final strongPoints = results['strong_points'] as List? ?? [];
+    final recommendations = structuredJson['recommendations'] as List? ?? [];
+    
+    // Helper para buscar score con variantes singular/plural
+    double getScoreForCategory(String categoryId) {
+      if (categoryScores.containsKey(categoryId)) {
+        return categoryScores[categoryId]!;
+      } else if (categoryScores.containsKey('${categoryId}s')) {
+        return categoryScores['${categoryId}s']!;
+      } else if (categoryId.endsWith('s') && categoryScores.containsKey(categoryId.substring(0, categoryId.length - 1))) {
+        return categoryScores[categoryId.substring(0, categoryId.length - 1)]!;
+      }
+      return 0.0;
+    }
 
     print('📊 Datos cargados - Score: $overallScore');
 
@@ -1008,7 +1052,7 @@ class ResultsScreen extends StatelessWidget {
             ),
             pw.SizedBox(height: 16),
             ...species.categories.map((category) {
-              final score = categoryScores[category.id] ?? 0.0;
+              final score = getScoreForCategory(category.id);
               // Traducir nombre de categoría correctamente
               String categoryName = loc.translate(category.nameKey ?? '');
               if (categoryName == (category.nameKey ?? '')) {
@@ -1051,10 +1095,10 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       child: pw.Center(
                         child: pw.Text(
-                          '✓',
+                          'OK',
                           style: pw.TextStyle(
                             color: PdfColors.white,
-                            fontSize: 14,
+                            fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
@@ -1213,10 +1257,10 @@ class ResultsScreen extends StatelessWidget {
                         ),
                         child: pw.Center(
                           child: pw.Text(
-                            '✓',
+                            'OK',
                             style: pw.TextStyle(
                               color: PdfColors.white,
-                              fontSize: 13,
+                              fontSize: 9,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -1317,7 +1361,12 @@ class ResultsScreen extends StatelessWidget {
               final category = entry.value;
               final categoryDetails = results['category_details'] as Map<String, dynamic>?;
               final details = categoryDetails?[category.id] as Map<String, dynamic>?;
-              final percentage = details?['percentage'] as double? ?? 0.0;
+              
+              // Obtener porcentaje con fallback a categoryScores
+              double percentage = details?['percentage'] as double? ?? 0.0;
+              if (percentage == 0.0) {
+                percentage = getScoreForCategory(category.id);
+              }
               
               // Traducir nombre de categoría
               String categoryName = loc.translate(category.nameKey ?? '');
@@ -1423,7 +1472,14 @@ class ResultsScreen extends StatelessWidget {
                           // Filas de indicadores
                           ...category.fields.map((field) {
                             final key = '${category.id}_${field.id}';
-                            final value = evaluation.responses[key];
+                            // Buscar valor con variantes
+                            var value = evaluation.responses[key];
+                            if (value == null) {
+                              value = evaluation.responses['${category.id}s_${field.id}'];
+                            }
+                            if (value == null && category.id.endsWith('s')) {
+                              value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+                            }
                             
                             // Traducir label del indicador
                             String fieldLabel = loc.translate(field.label);
