@@ -602,11 +602,12 @@ class ApiService {
         return {'success': false, 'message': 'no_user'};
       }
 
-      print('📥 [ADMIN] Usuario ID: ${user.id}');
+      final adminId = user.id!;
+      print('📥 [ADMIN] Admin ID: $adminId');
 
-      // Usar endpoint que devuelve TODAS las evaluaciones
+      // Endpoint /users/{id} - getReportsForAdmins en backend
       final url = Uri.parse(
-          '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllEvaluations}');
+          '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
       print('📍 URL: $url');
 
       final token = await _storage.getToken();
@@ -806,11 +807,10 @@ class ApiService {
 
   Future<Map<String, dynamic>> getAdminEvaluationReports(int adminId) async {
     try {
-      // Usar endpoint que devuelve TODAS las evaluaciones
       final url = Uri.parse(
-          '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAllEvaluations}');
+          '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
 
-      print('📥 Obteniendo TODOS los reportes (admin): $url');
+      print('📥 Obteniendo reportes para admin $adminId: $url');
 
       final token = await _storage.getToken();
       final response = await http
