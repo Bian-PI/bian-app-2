@@ -2997,11 +2997,24 @@ class ResultsScreen extends StatelessWidget {
     int obtained = details?['obtained'] as int? ?? 0;
     int maxPossible = details?['max_possible'] as int? ?? 0;
     
-    // Obtener porcentaje: buscar con ID exacto y también con variantes (singular/plural)
-    double percentage = details?['percentage'] as double? ?? 
-                        categoryScores?[category.id] ?? 
-                        categoryScores?['${category.id}s'] ??  // resource -> resources
-                        (category.id.endsWith('s') ? categoryScores?[category.id.substring(0, category.id.length - 1)] ?? 0.0 : 0.0);
+    // Obtener porcentaje: buscar con ID exacto y variantes singular/plural
+    double percentage = 0.0;
+    if (details?['percentage'] != null) {
+      percentage = details!['percentage'] as double;
+    } else if (categoryScores != null) {
+      // Buscar con ID exacto
+      if (categoryScores.containsKey(category.id)) {
+        percentage = categoryScores[category.id]!;
+      }
+      // Buscar con plural (resource -> resources)
+      else if (categoryScores.containsKey('${category.id}s')) {
+        percentage = categoryScores['${category.id}s']!;
+      }
+      // Buscar con singular (resources -> resource)
+      else if (category.id.endsWith('s') && categoryScores.containsKey(category.id.substring(0, category.id.length - 1))) {
+        percentage = categoryScores[category.id.substring(0, category.id.length - 1)]!;
+      }
+    }
     
     // DEBUG
     print('🟣 Categoría ${category.id}: percentage=$percentage (scores keys: ${categoryScores?.keys.toList()})');
