@@ -2513,6 +2513,53 @@ class ResultsScreen extends StatelessWidget {
       'biosecurity': 'Bioseguridad',
       'handling': 'Manejo',
       'castration': 'Castración',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EVA 4.0 - Porcinos - INDICADORES DE RECURSO (R1-R18)
+      // ═══════════════════════════════════════════════════════════════
+      'eva_r1_feeder_condition': 'Estado de los comederos',
+      'eva_r2_feeder_cleanliness': 'Limpieza de comederos',
+      'eva_r3_water_access': 'Acceso a agua',
+      'eva_r4_drinker_cleanliness': 'Limpieza de bebederos',
+      'eva_r5_drinker_height': 'Altura de los bebederos',
+      'eva_r6_drinker_availability': 'Disponibilidad de bebederos',
+      'eva_r7_environmental_protection': 'Protección contra condiciones ambientales',
+      'eva_r8_ventilation': 'Ventilación',
+      'eva_r9_resting_surface': 'Superficie de descanso',
+      'eva_r10_piglet_shelter': 'Refugio para lechones',
+      'eva_r11_floor_condition': 'Condición del piso',
+      'eva_r12_space_allowance': 'Espacio disponible',
+      'eva_r13_free_access_cages': 'Jaulas de libre acceso',
+      'eva_r14_boar_housing': 'Alojamiento de verracos',
+      'eva_r15_gestation_housing': 'Alojamiento en gestación',
+      'eva_r16_farrowing_crates': 'Jaulas de parto',
+      'eva_r17_enrichment_material': 'Material de enriquecimiento',
+      'eva_r18_handling_facilities': 'Instalaciones de manejo',
+      
+      // EVA 4.0 - Porcinos - INDICADORES DEL ANIMAL (A1-A14)
+      'eva_a1_body_condition': 'Condición corporal',
+      'eva_a2_body_condition_growing': 'Condición corporal (crecimiento)',
+      'eva_a3_lameness': 'Cojeras',
+      'eva_a4_skin_condition': 'Condición de la piel',
+      'eva_a5_shivering_huddling': 'Temblor/Amontonamiento',
+      'eva_a6_panting': 'Jadeo',
+      'eva_a7_manure_on_body': 'Suciedad en el cuerpo',
+      'eva_a8_vulva_lesions': 'Lesiones en vulva',
+      'eva_a9_shoulder_lesions': 'Lesiones en hombros',
+      'eva_a10_identification': 'Identificación',
+      'eva_a11_teeth_clipping': 'Corte de dientes',
+      'eva_a12_tail_docking': 'Corte de cola',
+      'eva_a13_castration': 'Castración',
+      'eva_a14_mortality': 'Mortalidad',
+      
+      // EVA 4.0 - Porcinos - INDICADORES DE GESTIÓN (G1-G7)
+      'eva_g1_contingency_plan': 'Plan de contingencia',
+      'eva_g2_health_plan': 'Plan sanitario',
+      'eva_g3_records': 'Registros',
+      'eva_g4_mixing_procedures': 'Procedimientos de mezcla',
+      'eva_g5_weaning_age': 'Edad al destete',
+      'eva_g6_tail_docking_justification': 'Justificación corte de cola',
+      'eva_g7_staff_training': 'Capacitación del personal',
     };
 
     final labelsEn = {
@@ -2950,12 +2997,15 @@ class ResultsScreen extends StatelessWidget {
     int obtained = details?['obtained'] as int? ?? 0;
     int maxPossible = details?['max_possible'] as int? ?? 0;
     
-    // Obtener porcentaje: primero de category_details, luego de category_scores
+    // Obtener porcentaje: buscar con ID exacto y también con variantes (singular/plural)
     double percentage = details?['percentage'] as double? ?? 
-                        categoryScores?[category.id] ?? 0.0;
+                        categoryScores?[category.id] ?? 
+                        categoryScores?['${category.id}s'] ??  // resource -> resources
+                        (category.id.endsWith('s') ? categoryScores?[category.id.substring(0, category.id.length - 1)] : null) ?? // resources -> resource
+                        0.0;
     
     // DEBUG
-    print('🟣 Categoría ${category.id}: percentage=$percentage (from details: ${details?['percentage']}, from scores: ${categoryScores?[category.id]})');
+    print('🟣 Categoría ${category.id}: percentage=$percentage (scores keys: ${categoryScores?.keys.toList()})');
     
     // Color según resultado
     Color headerColor;
@@ -3070,7 +3120,16 @@ class ResultsScreen extends StatelessWidget {
               ],
               rows: category.fields.map<DataRow>((field) {
                 final key = '${category.id}_${field.id}';
-                final value = evaluation.responses[key];
+                // Buscar valor con clave exacta o con variante singular/plural
+                var value = evaluation.responses[key];
+                if (value == null) {
+                  // Intentar con plural (resource -> resources)
+                  value = evaluation.responses['${category.id}s_${field.id}'];
+                }
+                if (value == null && category.id.endsWith('s')) {
+                  // Intentar con singular (resources -> resource)
+                  value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+                }
                 
                 // DEBUG
                 print('🟡 Campo: $key, value: $value (tipo: ${value?.runtimeType}), fieldType: ${field.type}');
