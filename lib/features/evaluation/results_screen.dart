@@ -1642,7 +1642,12 @@ class ResultsScreen extends StatelessWidget {
     final categoryScores = (results['category_scores'] as Map<String, double>?) ?? {};
     print('🔴 ResultsScreen.build() - categoryScores: $categoryScores');
     
-    final criticalPoints = (results['critical_points'] as List?) ?? [];
+    // Obtener puntos críticos, o extraerlos de responses si está vacío
+    List criticalPoints = (results['critical_points'] as List?) ?? [];
+    if (criticalPoints.isEmpty) {
+      criticalPoints = _extractCriticalPointsFromResponses();
+    }
+    
     final strongPoints = (results['strong_points'] as List?) ?? [];
     final recommendations = (structuredJson['recommendations'] as List?) ?? [];
 
@@ -2164,6 +2169,55 @@ class ResultsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Extrae puntos críticos de las respuestas cuando la lista está vacía
+  List<String> _extractCriticalPointsFromResponses() {
+    final criticalPoints = <String>[];
+    
+    for (var category in species.categories) {
+      for (var field in category.fields) {
+        // Buscar valor con variantes de clave
+        final key = '${category.id}_${field.id}';
+        var value = evaluation.responses[key];
+        if (value == null) {
+          value = evaluation.responses['${category.id}s_${field.id}'];
+        }
+        if (value == null && category.id.endsWith('s')) {
+          value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+        }
+        
+        if (value == null) continue;
+        
+        // Parsear valor
+        int? score;
+        if (value is int) score = value;
+        else if (value is double) score = value.toInt();
+        else if (value is String) score = int.tryParse(value);
+        
+        if (score == null) continue;
+        
+        // Determinar si es crítico según tipo de campo
+        bool isCritical = false;
+        final fieldType = field.type.toString();
+        
+        if (fieldType.contains('scale0to2') && score == 0) {
+          isCritical = true;
+        } else if (fieldType.contains('scaleEVA') && score <= 20) {
+          isCritical = true;
+        } else if (fieldType.contains('yesNo100') && score == 0) {
+          isCritical = true;
+        } else if (fieldType.contains('scale0to4') && score <= 1) {
+          isCritical = true;
+        }
+        
+        if (isCritical) {
+          criticalPoints.add('${category.id}_${field.id}');
+        }
+      }
+    }
+    
+    return criticalPoints.take(15).toList();
   }
 
   Widget _buildCategoryScoreCard(BuildContext context, AppLocalizations loc,
