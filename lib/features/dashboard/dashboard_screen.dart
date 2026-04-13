@@ -101,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         slivers: [
           // App Bar con gradiente
           SliverAppBar(
-            expandedHeight: _isAdmin ? 200 : 130,
+            expandedHeight: _isAdmin ? 200 : 145,
             floating: false,
             pinned: true,
             elevation: 0,
