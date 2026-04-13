@@ -1191,36 +1191,105 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       }
     } else if (isICAEvaluation) {
       // ═══════════════════════════════════════════════════════════════
-      // Recomendaciones específicas ICA (Aves)
+      // Recomendaciones específicas ICA (Aves) - Mejoradas
       // ═══════════════════════════════════════════════════════════════
+      
+      // Por score general
       if (overallScore < 50) {
-        recommendations.add('immediate_attention_required');
+        recommendations.add('critical_welfare_birds');
+      } else if (overallScore < 76) {
+        recommendations.add('medium_welfare_birds');
       }
       
-      // Verificar cada categoría ICA
+      // Por categoría con bajo rendimiento
       if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
-        recommendations.add('improve_resources');
+        recommendations.add('improve_resources_birds');
       }
       if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
-        recommendations.add('improve_animal_indicators');
+        recommendations.add('improve_animal_birds');
       }
       if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-        recommendations.add('improve_management');
+        recommendations.add('improve_management_birds');
       }
       
-      // Recomendaciones por puntos críticos específicos
-      for (var critical in criticalPoints.take(5)) {
+      // Recomendaciones específicas por indicador crítico (score 0)
+      for (var critical in criticalPoints.take(10)) {
+        // === RECURSOS ===
+        if (critical.contains('air_particles')) {
+          recommendations.add('improve_air_quality');
+        }
+        if (critical.contains('bedding_quality')) {
+          recommendations.add('improve_bedding');
+        }
+        if (critical.contains('drinker_quality') || critical.contains('water_supply') || critical.contains('animals_per_drinker')) {
+          recommendations.add('improve_water_system');
+        }
+        if (critical.contains('water_treatment')) {
+          recommendations.add('implement_water_treatment');
+        }
+        if (critical.contains('feeder_quality') || critical.contains('animals_per_feeder')) {
+          recommendations.add('improve_feeding_system');
+        }
+        if (critical.contains('thermal_comfort')) {
+          recommendations.add('improve_thermal_control');
+        }
+        if (critical.contains('nest_quality')) {
+          recommendations.add('improve_nest_areas');
+        }
+        if (critical.contains('available_space')) {
+          recommendations.add('increase_space_per_bird');
+        }
+        
+        // === ANIMAL ===
+        if (critical.contains('panting') || critical.contains('huddling')) {
+          recommendations.add('address_thermal_stress');
+        }
+        if (critical.contains('keel_bone')) {
+          recommendations.add('prevent_keel_damage');
+        }
+        if (critical.contains('pododermatitis')) {
+          recommendations.add('prevent_pododermatitis');
+        }
+        if (critical.contains('toe_damage')) {
+          recommendations.add('prevent_toe_injuries');
+        }
+        if (critical.contains('skin_lesions')) {
+          recommendations.add('reduce_skin_lesions');
+        }
+        if (critical.contains('ocular_nasal')) {
+          recommendations.add('improve_respiratory_health');
+        }
+        if (critical.contains('beak_condition')) {
+          recommendations.add('monitor_beak_health');
+        }
+        
+        // === GESTIÓN ===
+        if (critical.contains('mortality')) {
+          recommendations.add('reduce_mortality');
+        }
+        if (critical.contains('water_quality')) {
+          recommendations.add('monitor_water_quality');
+        }
+        if (critical.contains('balanced_feeding')) {
+          recommendations.add('optimize_nutrition');
+        }
+        if (critical.contains('health_surveillance')) {
+          recommendations.add('strengthen_health_monitoring');
+        }
         if (critical.contains('poe_animal_welfare')) {
           recommendations.add('implement_poe');
         }
-        if (critical.contains('welfare_training') || critical.contains('euthanasia_training')) {
-          recommendations.add('train_staff_welfare');
-        }
-        if (critical.contains('thermal')) {
+        if (critical.contains('thermal_emergency')) {
           recommendations.add('implement_thermal_protocol');
         }
-        if (critical.contains('lighting')) {
+        if (critical.contains('lighting_program')) {
           recommendations.add('implement_lighting_program');
+        }
+        if (critical.contains('welfare_training')) {
+          recommendations.add('train_staff_welfare');
+        }
+        if (critical.contains('responsible_medication')) {
+          recommendations.add('improve_medication_practices');
         }
       }
     } else {
@@ -1299,8 +1368,91 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           : 'Implement documentation: create/update critical SOPs and contingency plan with annual drills',
       
       // ═══════════════════════════════════════════════════════════════
-      // Recomendaciones ICA (Aves)
+      // Recomendaciones ICA (Aves) - MEJORADAS
       // ═══════════════════════════════════════════════════════════════
+      'critical_welfare_birds': widget.currentLanguage == 'es'
+          ? 'CRÍTICO: Bienestar bajo (<50%). Implementar plan de mejora inmediato con supervisión veterinaria'
+          : 'CRITICAL: Low welfare (<50%). Implement immediate improvement plan with veterinary supervision',
+      'medium_welfare_birds': widget.currentLanguage == 'es'
+          ? 'Bienestar medio. Revisar indicadores con puntuación 0-1 para alcanzar nivel alto (≥76%)'
+          : 'Medium welfare. Review indicators with 0-1 scores to reach high level (≥76%)',
+      'improve_resources_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Recursos <70%: revisar infraestructura, equipos y condiciones ambientales del galpón'
+          : 'Resources category <70%: review infrastructure, equipment and environmental conditions',
+      'improve_animal_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Animal <70%: evaluar signos clínicos, lesiones y bienestar físico de las aves'
+          : 'Animal category <70%: evaluate clinical signs, lesions and physical welfare of birds',
+      'improve_management_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Gestión <70%: fortalecer protocolos, registros y capacitación del personal'
+          : 'Management category <70%: strengthen protocols, records and staff training',
+      
+      // Recursos específicos
+      'improve_air_quality': widget.currentLanguage == 'es'
+          ? 'Mejorar calidad del aire: reducir partículas suspendidas mediante ventilación adecuada y limpieza regular'
+          : 'Improve air quality: reduce suspended particles through adequate ventilation and regular cleaning',
+      'improve_bedding': widget.currentLanguage == 'es'
+          ? 'Mejorar calidad de cama: mantener seca, suelta y con profundidad mínima de 5cm'
+          : 'Improve bedding quality: keep dry, loose and with minimum depth of 5cm',
+      'improve_water_system': widget.currentLanguage == 'es'
+          ? 'Optimizar sistema de agua: verificar caudal, limpieza de bebederos y relación aves/bebedero'
+          : 'Optimize water system: verify flow, drinker cleanliness and birds/drinker ratio',
+      'implement_water_treatment': widget.currentLanguage == 'es'
+          ? 'Implementar tratamiento de agua: cloración u otro método aprobado para garantizar potabilidad'
+          : 'Implement water treatment: chlorination or other approved method to ensure potability',
+      'improve_feeding_system': widget.currentLanguage == 'es'
+          ? 'Mejorar sistema de alimentación: verificar espacio de comedero y acceso uniforme al alimento'
+          : 'Improve feeding system: verify feeder space and uniform access to feed',
+      'improve_thermal_control': widget.currentLanguage == 'es'
+          ? 'Mejorar control térmico: instalar/calibrar termómetros, ventilación y sistemas de enfriamiento'
+          : 'Improve thermal control: install/calibrate thermometers, ventilation and cooling systems',
+      'improve_nest_areas': widget.currentLanguage == 'es'
+          ? 'Mejorar áreas de nidales: asegurar cantidad suficiente, limpieza y acceso adecuado'
+          : 'Improve nest areas: ensure sufficient quantity, cleanliness and adequate access',
+      'increase_space_per_bird': widget.currentLanguage == 'es'
+          ? 'Aumentar espacio disponible: reducir densidad para cumplir mínimo requerido por ave'
+          : 'Increase available space: reduce density to meet minimum required per bird',
+      
+      // Animal específicos
+      'address_thermal_stress': widget.currentLanguage == 'es'
+          ? 'Atender estrés térmico: jadeo/amontonamiento indica problemas de temperatura. Ajustar ventilación inmediatamente'
+          : 'Address thermal stress: panting/huddling indicates temperature issues. Adjust ventilation immediately',
+      'prevent_keel_damage': widget.currentLanguage == 'es'
+          ? 'Prevenir daño de quilla: evaluar perchas, altura de equipos y manejo de aves'
+          : 'Prevent keel damage: evaluate perches, equipment height and bird handling',
+      'prevent_pododermatitis': widget.currentLanguage == 'es'
+          ? 'Prevenir pododermatitis: mejorar calidad de cama, reducir humedad y revisar nutrición'
+          : 'Prevent pododermatitis: improve bedding quality, reduce humidity and review nutrition',
+      'prevent_toe_injuries': widget.currentLanguage == 'es'
+          ? 'Prevenir lesiones en dedos: revisar pisos, rejillas y áreas donde las aves pueden atorarse'
+          : 'Prevent toe injuries: review floors, grids and areas where birds can get stuck',
+      'reduce_skin_lesions': widget.currentLanguage == 'es'
+          ? 'Reducir lesiones cutáneas: evaluar picaje, densidad, enriquecimiento y causas de agresión'
+          : 'Reduce skin lesions: evaluate pecking, density, enrichment and aggression causes',
+      'improve_respiratory_health': widget.currentLanguage == 'es'
+          ? 'Mejorar salud respiratoria: controlar amoníaco, polvo y ventilación. Evaluar programa sanitario'
+          : 'Improve respiratory health: control ammonia, dust and ventilation. Evaluate health program',
+      'monitor_beak_health': widget.currentLanguage == 'es'
+          ? 'Monitorear condición del pico: verificar deformidades, lesiones y capacidad de alimentación'
+          : 'Monitor beak condition: verify deformities, injuries and feeding ability',
+      
+      // Gestión específicos
+      'reduce_mortality': widget.currentLanguage == 'es'
+          ? 'Reducir mortalidad: analizar causas, mejorar registros y establecer umbrales de alerta'
+          : 'Reduce mortality: analyze causes, improve records and establish alert thresholds',
+      'monitor_water_quality': widget.currentLanguage == 'es'
+          ? 'Monitorear calidad de agua: realizar análisis periódicos y mantener registros de potabilidad'
+          : 'Monitor water quality: perform periodic analysis and maintain potability records',
+      'optimize_nutrition': widget.currentLanguage == 'es'
+          ? 'Optimizar nutrición: revisar formulación, almacenamiento y programa de alimentación por etapa'
+          : 'Optimize nutrition: review formulation, storage and feeding program by stage',
+      'strengthen_health_monitoring': widget.currentLanguage == 'es'
+          ? 'Fortalecer vigilancia sanitaria: implementar inspecciones diarias y registros de hallazgos'
+          : 'Strengthen health surveillance: implement daily inspections and findings records',
+      'improve_medication_practices': widget.currentLanguage == 'es'
+          ? 'Mejorar uso responsable de medicamentos: registros, periodos de retiro y supervisión veterinaria'
+          : 'Improve responsible medication use: records, withdrawal periods and veterinary supervision',
+      
+      // Existentes mejorados
       'improve_resources': widget.currentLanguage == 'es'
           ? 'Mejorar las medidas basadas en recursos: calidad de cama, bebederos, comederos y condiciones ambientales'
           : 'Improve resource-based measures: bedding quality, drinkers, feeders and environmental conditions',
@@ -1311,17 +1463,17 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
           ? 'Fortalecer las medidas de gestión: documentación, protocolos y capacitación del personal'
           : 'Strengthen management measures: documentation, protocols and staff training',
       'implement_poe': widget.currentLanguage == 'es'
-          ? 'Implementar el Procedimiento Operativo Estandarizado (POE) de Bienestar Animal según normativa ICA'
-          : 'Implement the Standard Operating Procedure (SOP) for Animal Welfare according to ICA regulations',
+          ? 'Implementar POE de Bienestar Animal: documentar procedimientos según Resolución ICA 253/2020'
+          : 'Implement Animal Welfare SOP: document procedures according to ICA Resolution 253/2020',
       'train_staff_welfare': widget.currentLanguage == 'es'
-          ? 'Capacitar al personal en bienestar animal y técnicas de manejo humanitario'
-          : 'Train staff in animal welfare and humane handling techniques',
+          ? 'Capacitar personal en bienestar animal: manejo humanitario, detección de problemas y protocolos de emergencia'
+          : 'Train staff in animal welfare: humane handling, problem detection and emergency protocols',
       'implement_thermal_protocol': widget.currentLanguage == 'es'
-          ? 'Implementar protocolo de monitoreo térmico diario y manejo de emergencias'
-          : 'Implement daily thermal monitoring protocol and emergency management',
+          ? 'Implementar protocolo térmico: monitoreo continuo, umbrales de alarma y plan de emergencia por calor/frío'
+          : 'Implement thermal protocol: continuous monitoring, alarm thresholds and heat/cold emergency plan',
       'implement_lighting_program': widget.currentLanguage == 'es'
-          ? 'Establecer programa de iluminación con régimen luz/oscuridad adecuado'
-          : 'Establish lighting program with adequate light/dark regime',
+          ? 'Establecer programa de iluminación: mínimo 8h oscuridad, intensidad adecuada y transiciones graduales'
+          : 'Establish lighting program: minimum 8h darkness, adequate intensity and gradual transitions',
       
       // Recomendaciones legacy
       'improve_feeding_practices': widget.currentLanguage == 'es'
