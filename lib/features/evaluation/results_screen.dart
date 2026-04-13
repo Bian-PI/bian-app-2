@@ -2939,6 +2939,7 @@ class ResultsScreen extends StatelessWidget {
     bool isEBAEvaluation,
   ) {
     final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+    final categoryScores = results['category_scores'] as Map<String, double>?;
     final details = categoryDetails?[category.id] as Map<String, dynamic>?;
     
     // Variable para determinar si mostrar columnas de puntuación
@@ -2948,7 +2949,13 @@ class ResultsScreen extends StatelessWidget {
     double weight = category.weight ?? 1.0;
     int obtained = details?['obtained'] as int? ?? 0;
     int maxPossible = details?['max_possible'] as int? ?? 0;
-    double percentage = details?['percentage'] as double? ?? 0.0;
+    
+    // Obtener porcentaje: primero de category_details, luego de category_scores
+    double percentage = details?['percentage'] as double? ?? 
+                        categoryScores?[category.id] ?? 0.0;
+    
+    // DEBUG
+    print('🟣 Categoría ${category.id}: percentage=$percentage (from details: ${details?['percentage']}, from scores: ${categoryScores?[category.id]})');
     
     // Color según resultado
     Color headerColor;
