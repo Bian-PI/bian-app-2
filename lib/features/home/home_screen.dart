@@ -602,14 +602,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Scaffold(
         appBar: AppBar(
           title: Text(loc.translate('home')),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                CustomSnackbar.showInfo(context, loc.translate('no_notifications'));
-              },
-            ),
-          ],
         ),
         drawer: _buildDrawer(context),
         body: Column(
