@@ -1677,7 +1677,15 @@ class ResultsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ...species.categories.map((category) {
-              final score = categoryScores[category.id] ?? 0.0;
+              // Buscar score con variantes singular/plural
+              double score = 0.0;
+              if (categoryScores.containsKey(category.id)) {
+                score = categoryScores[category.id]!;
+              } else if (categoryScores.containsKey('${category.id}s')) {
+                score = categoryScores['${category.id}s']!;
+              } else if (category.id.endsWith('s') && categoryScores.containsKey(category.id.substring(0, category.id.length - 1))) {
+                score = categoryScores[category.id.substring(0, category.id.length - 1)]!;
+              }
               return _buildCategoryScoreCard(context, loc, category.id, score);
             }),
             const SizedBox(height: 24),
