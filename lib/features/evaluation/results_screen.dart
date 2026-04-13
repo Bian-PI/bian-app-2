@@ -3001,8 +3001,7 @@ class ResultsScreen extends StatelessWidget {
     double percentage = details?['percentage'] as double? ?? 
                         categoryScores?[category.id] ?? 
                         categoryScores?['${category.id}s'] ??  // resource -> resources
-                        (category.id.endsWith('s') ? categoryScores?[category.id.substring(0, category.id.length - 1)] : null) ?? // resources -> resource
-                        0.0;
+                        (category.id.endsWith('s') ? categoryScores?[category.id.substring(0, category.id.length - 1)] ?? 0.0 : 0.0);
     
     // DEBUG
     print('🟣 Categoría ${category.id}: percentage=$percentage (scores keys: ${categoryScores?.keys.toList()})');
