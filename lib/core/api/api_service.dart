@@ -608,9 +608,11 @@ class ApiService {
       // Endpoint /users/{id} - getReportsForAdmins en backend
       final url = Uri.parse(
           '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
-      print('📍 URL: $url');
+      print('📍 [ADMIN] URL: $url');
 
       final token = await _storage.getToken();
+      print('📍 [ADMIN] Token: ${token != null ? "presente" : "NULL"}');
+      
       final response = await http.get(
         url,
         headers: {
@@ -619,7 +621,8 @@ class ApiService {
         },
       );
 
-      print('📥 Response status: ${response.statusCode}');
+      print('📥 [ADMIN] Response status: ${response.statusCode}');
+      print('📥 [ADMIN] Response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
