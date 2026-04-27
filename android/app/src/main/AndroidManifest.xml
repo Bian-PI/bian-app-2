@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     
     <application
+        android:usesCleartextTraffic="true"
         android:label="BIAN - Bienestar Animal"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"

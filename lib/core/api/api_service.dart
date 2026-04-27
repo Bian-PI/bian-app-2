@@ -10,7 +10,7 @@ class ApiService {
   // ═══════════════════════════════════════════════════════════════════
   // ⚠️ DESARROLLO SOLAMENTE - CAMBIAR A false ANTES DE PRODUCCIÓN
   // ═══════════════════════════════════════════════════════════════════
-  static const bool bypassAuthForDev = true; // TODO: Cambiar a false en producción
+  static const bool bypassAuthForDev = false; // TODO: Cambiar a false en producción
 
   /// Login de desarrollo que bypasea la autenticación real.
   /// ⚠️ SOLO FUNCIONA EN DEBUG MODE Y CON bypassAuthForDev = true
