@@ -72,6 +72,14 @@ class AppLocalizations {
       'registering': 'Registrando...',
       'login_subtitle': 'Inicia sesión para continuar',
       'register_subtitle': 'Únete a nuestra comunidad BIAN',
+      
+      // Requisitos de contraseña
+      'password_requirements': 'La contraseña debe tener:',
+      'min_8_characters': 'Mínimo 8 caracteres',
+      'one_uppercase': 'Una letra mayúscula (A-Z)',
+      'one_lowercase': 'Una letra minúscula (a-z)',
+      'one_number': 'Un número (0-9)',
+      'one_special_char': 'Un carácter especial (!@#\$%^&*)',
 
       // Categorías ICA (Aves)
       'category_resources': 'Medidas Basadas en los Recursos',
@@ -615,6 +623,14 @@ class AppLocalizations {
       'registering': 'Registering...',
       'login_subtitle': 'Sign in to continue',
       'register_subtitle': 'Join our BIAN community',
+      
+      // Password requirements
+      'password_requirements': 'Password must have:',
+      'min_8_characters': 'At least 8 characters',
+      'one_uppercase': 'One uppercase letter (A-Z)',
+      'one_lowercase': 'One lowercase letter (a-z)',
+      'one_number': 'One number (0-9)',
+      'one_special_char': 'One special character (!@#\$%^&*)',
 
       // ICA Categories (Birds)
       'category_resources': 'Resource-Based Measures',
