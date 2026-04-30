@@ -279,6 +279,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _passwordController,
                     enabled: !_isLoading,
                     obscureText: _obscurePassword,
+                    onChanged: (value) => setState(() {}), // Actualizar indicadores
                     decoration: InputDecoration(
                       labelText: loc.translate('password'),
                       prefixIcon: Icon(Icons.lock_outline),
@@ -298,6 +299,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return error != null ? loc.translate(error) : null;
                     },
                   ),
+                  
+                  // Indicadores visuales de requisitos
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirements(loc),
                   
                   const SizedBox(height: 16),
                   
@@ -387,6 +392,82 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+  
+  Widget _buildPasswordRequirements(AppLocalizations loc) {
+    final password = _passwordController.text;
+    
+    final hasMinLength = password.length >= 8;
+    final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    final hasLowercase = password.contains(RegExp(r'[a-z]'));
+    final hasNumber = password.contains(RegExp(r'[0-9]'));
+    final hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            loc.translate('password_requirements'),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementRow(
+            loc.translate('min_8_characters'),
+            hasMinLength,
+          ),
+          _buildRequirementRow(
+            loc.translate('one_uppercase'),
+            hasUppercase,
+          ),
+          _buildRequirementRow(
+            loc.translate('one_lowercase'),
+            hasLowercase,
+          ),
+          _buildRequirementRow(
+            loc.translate('one_number'),
+            hasNumber,
+          ),
+          _buildRequirementRow(
+            loc.translate('one_special_char'),
+            hasSpecial,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildRequirementRow(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isMet ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isMet ? Colors.green.shade700 : Colors.grey.shade600,
+              fontWeight: isMet ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }
