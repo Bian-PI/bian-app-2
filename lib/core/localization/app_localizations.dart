@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'ica_birds_translations.dart';
+import 'eva_pigs_translations.dart';
 
 class AppLocalizations {
   final Locale locale;
@@ -31,6 +33,25 @@ class AppLocalizations {
       'logout': 'Cerrar Sesión',
       'yes': 'Sí',
       'no': 'No',
+      
+      // Dashboard
+      'dashboard': 'Dashboard',
+      'view_statistics': 'Ver estadísticas y gráficas',
+      'average_score': 'Score Promedio',
+      'total_evaluations': 'Total Evaluaciones',
+      'this_month': 'Este Mes',
+      'evaluations_by_month': 'Evaluaciones por Mes',
+      'last_6_months': 'Últimos 6 meses',
+      'welfare_trend': 'Tendencia de Bienestar',
+      'score_evolution': 'Evolución del score promedio',
+      'by_species': 'Por Especie',
+      'categories': 'Categorías',
+      'average_by_area': 'Promedio por área',
+      'recent_evaluations': 'Evaluaciones Recientes',
+      'no_recent_evaluations': 'Sin evaluaciones recientes',
+      'today': 'Hoy',
+      'yesterday': 'Ayer',
+      'days_ago': 'Hace {0} días',
       'warning': 'Advertencia',
 
       'login': 'Iniciar Sesión',
@@ -51,6 +72,33 @@ class AppLocalizations {
       'registering': 'Registrando...',
       'login_subtitle': 'Inicia sesión para continuar',
       'register_subtitle': 'Únete a nuestra comunidad BIAN',
+      
+      // Requisitos de contraseña
+      'password_requirements': 'La contraseña debe tener:',
+      'min_8_characters': 'Mínimo 8 caracteres',
+      'one_uppercase': 'Una letra mayúscula (A-Z)',
+      'one_lowercase': 'Una letra minúscula (a-z)',
+      'one_number': 'Un número (0-9)',
+      'one_special_char': 'Un carácter especial (!@#\$%^&*)',
+
+      // Categorías ICA (Aves)
+      'category_resources': 'Medidas Basadas en los Recursos',
+      'category_resource': 'Indicadores de Recurso',
+      'category_animal': 'Indicadores del Animal',
+      'category_management': 'Indicadores de Gestión',
+      'category_transport': 'Indicadores de Transporte',
+      'category_slaughter': 'Indicadores de Sacrificio',
+      'category_resource_pigs': 'Indicadores de Recurso',
+      'category_animal_pigs': 'Indicadores del Animal',
+      'category_management_pigs': 'Indicadores de Gestión',
+      'category_transport_pigs': 'Indicadores de Transporte',
+      'category_slaughter_pigs': 'Indicadores de Sacrificio',
+      'resources': 'Medidas Basadas en los Recursos',
+      'resource': 'Indicadores de Recurso',
+      'animal': 'Indicadores del Animal',
+      'management': 'Indicadores de Gestión',
+      'transport': 'Indicadores de Transporte',
+      'slaughter': 'Indicadores de Sacrificio',
 
       'offline_mode': 'Modo sin conexión',
       'no_connection': 'Sin conexión',
@@ -235,11 +283,28 @@ class AppLocalizations {
 
       'evaluation': 'Evaluación',
       'evaluation_of': 'Evaluación de',
+      
+      // Tipos de producción avícola
+      'select_production_type': 'Selecciona el tipo de producción',
+      'production_type_description': 'Los indicadores se ajustarán según el sistema productivo seleccionado',
+      'pollo_engorde': 'Pollo de Engorde',
+      'pollo_engorde_desc': 'Producción de pollos para carne',
+      'ponedoras_piso': 'Ponedoras en Piso',
+      'ponedoras_piso_desc': 'Gallinas ponedoras en sistemas de piso',
+      'ponedoras_jaula': 'Ponedoras en Jaula',
+      'ponedoras_jaula_desc': 'Gallinas ponedoras en sistemas de jaula',
+      'pastoreo': 'Pastoreo',
+      'pastoreo_desc': 'Aves en sistemas de pastoreo libre',
+      
       'farm_information': 'Información de la Granja',
       'farm_name': 'Nombre de la Granja',
       'farm_name_example': 'Ej: Granja El Paraíso',
       'location': 'Ubicación',
       'location_example': 'Ej: Ocaña, Norte de Santander',
+      'department': 'Departamento',
+      'municipality': 'Municipio / Vereda',
+      'coordinates': 'Coordenadas GPS',
+      'location_obtained': 'Ubicación obtenida correctamente',
       'evaluator_name': 'Nombre del Evaluador',
       'evaluator_name_hint': 'Tu nombre',
       'continue': 'Continuar',
@@ -259,6 +324,8 @@ class AppLocalizations {
       'finish_evaluation': 'Finalizar Evaluación',
       'finish_evaluation_confirm':
           '¿Estás seguro de finalizar esta evaluación? Se generará un reporte completo.',
+      'processing_evaluation': 'Procesando evaluación...',
+      'error_completing_evaluation': 'Error al completar la evaluación',
       'evaluation_completed': '¡Evaluación completada!',
       'complete_required_fields':
           'Por favor completa todos los campos obligatorios',
@@ -518,6 +585,25 @@ class AppLocalizations {
       'logout': 'Logout',
       'yes': 'Yes',
       'no': 'No',
+      
+      // Dashboard
+      'dashboard': 'Dashboard',
+      'view_statistics': 'View statistics and charts',
+      'average_score': 'Average Score',
+      'total_evaluations': 'Total Evaluations',
+      'this_month': 'This Month',
+      'evaluations_by_month': 'Evaluations by Month',
+      'last_6_months': 'Last 6 months',
+      'welfare_trend': 'Welfare Trend',
+      'score_evolution': 'Average score evolution',
+      'by_species': 'By Species',
+      'categories': 'Categories',
+      'average_by_area': 'Average by area',
+      'recent_evaluations': 'Recent Evaluations',
+      'no_recent_evaluations': 'No recent evaluations',
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'days_ago': '{0} days ago',
 
       'login': 'Login',
       'register': 'Register',
@@ -537,6 +623,33 @@ class AppLocalizations {
       'registering': 'Registering...',
       'login_subtitle': 'Sign in to continue',
       'register_subtitle': 'Join our BIAN community',
+      
+      // Password requirements
+      'password_requirements': 'Password must have:',
+      'min_8_characters': 'At least 8 characters',
+      'one_uppercase': 'One uppercase letter (A-Z)',
+      'one_lowercase': 'One lowercase letter (a-z)',
+      'one_number': 'One number (0-9)',
+      'one_special_char': 'One special character (!@#\$%^&*)',
+
+      // ICA Categories (Birds)
+      'category_resources': 'Resource-Based Measures',
+      'category_resource': 'Resource Indicators',
+      'category_animal': 'Animal-Based Indicators',
+      'category_management': 'Management Indicators',
+      'category_transport': 'Transport Indicators',
+      'category_slaughter': 'Slaughter Indicators',
+      'category_resource_pigs': 'Resource Indicators',
+      'category_animal_pigs': 'Animal Indicators',
+      'category_management_pigs': 'Management Indicators',
+      'category_transport_pigs': 'Transport Indicators',
+      'category_slaughter_pigs': 'Slaughter Indicators',
+      'resources': 'Resource-Based Measures',
+      'resource': 'Resource Indicators',
+      'animal': 'Animal-Based Indicators',
+      'management': 'Management Indicators',
+      'transport': 'Transport Indicators',
+      'slaughter': 'Slaughter Indicators',
 
       'offline_mode': 'Offline Mode',
       'no_connection': 'No connection',
@@ -720,11 +833,28 @@ class AppLocalizations {
 
       'evaluation': 'Evaluation',
       'evaluation_of': 'Evaluation of',
+      
+      // Poultry production types
+      'select_production_type': 'Select production type',
+      'production_type_description': 'Indicators will be adjusted according to the selected production system',
+      'pollo_engorde': 'Broiler Chicken',
+      'pollo_engorde_desc': 'Chicken production for meat',
+      'ponedoras_piso': 'Floor Layers',
+      'ponedoras_piso_desc': 'Laying hens in floor systems',
+      'ponedoras_jaula': 'Cage Layers',
+      'ponedoras_jaula_desc': 'Laying hens in cage systems',
+      'pastoreo': 'Free Range',
+      'pastoreo_desc': 'Birds in free-range systems',
+      
       'farm_information': 'Farm Information',
       'farm_name': 'Farm Name',
       'farm_name_example': 'E.g.: Paradise Farm',
       'location': 'Location',
       'location_example': 'E.g.: Ocaña, Norte de Santander',
+      'department': 'Department / State',
+      'municipality': 'Municipality / Village',
+      'coordinates': 'GPS Coordinates',
+      'location_obtained': 'Location obtained successfully',
       'evaluator_name': 'Evaluator Name',
       'evaluator_name_hint': 'Your name',
       'continue': 'Continue',
@@ -744,6 +874,8 @@ class AppLocalizations {
       'finish_evaluation': 'Finish Evaluation',
       'finish_evaluation_confirm':
           'Are you sure you want to finish this evaluation? A complete report will be generated.',
+      'processing_evaluation': 'Processing evaluation...',
+      'error_completing_evaluation': 'Error completing evaluation',
       'evaluation_completed': 'Evaluation completed!',
       'complete_required_fields': 'Please complete all required fields',
       'exit_without_saving': 'Exit without saving?',
@@ -984,6 +1116,12 @@ class AppLocalizations {
 
   String translate(String key, [List<String>? params]) {
     String? value = _localizedValues[locale.languageCode]?[key];
+    
+    // Buscar en traducciones ICA (Aves)
+    value ??= icaBirdsTranslations[locale.languageCode]?[key];
+    
+    // Buscar en traducciones EVA 4.0 (Porcinos)
+    value ??= evaPigsTranslations[key]?[locale.languageCode];
 
     if (value == null) {
       return key;

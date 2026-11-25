@@ -155,14 +155,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'skin_lesions_1': 'Porcentaje moderado con lesiones leves',
     'skin_lesions_2': 'Ninguna o mínimas lesiones',
 
-    // 8.8. Suciedad y apariencia del plumaje
-    'plumage_condition_label': 'Condición del plumaje',
-    'plumage_condition_question': '¿Cuál es la apariencia y el estado de suciedad del plumaje de las aves?',
-    'plumage_condition_description': 'Se examina visualmente las regiones dorsal y ventral del plumaje.',
-    'plumage_condition_0': 'Plumaje muy sucio o dañado',
-    'plumage_condition_1': 'Plumaje con suciedad o daño moderado',
-    'plumage_condition_2': 'Plumaje limpio y en buen estado',
-
     // 8.9. Integridad óculo-nasal
     'ocular_nasal_integrity_label': 'Integridad óculo-nasal',
     'ocular_nasal_integrity_question': '¿Cuántos animales se observan con descarga nasal y/u ocular, o con lesiones agudas o crónicas en estas áreas anatómicas?',
@@ -178,14 +170,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_0': 'Corrección agresiva o daños severos',
     'beak_condition_1': 'Corrección moderada o daños leves',
     'beak_condition_2': 'Sin corrección o corrección mínima adecuada',
-
-    // 8.11. Mortalidad
-    'mortality_label': 'Mortalidad',
-    'mortality_question': '¿Cuál es la tasa de mortalidad acumulada?',
-    'mortality_description': 'Se verifica el registro de mortalidad acumulada de los últimos 5 ciclos de la granja.',
-    'mortality_0': 'Tasa de mortalidad alta (superior al estándar)',
-    'mortality_1': 'Tasa de mortalidad moderada',
-    'mortality_2': 'Tasa de mortalidad baja (dentro del estándar)',
 
     // ═══════════════════════════════════════════════════════════════
     // MEDIDAS BASADAS EN LA GESTIÓN (30%)
@@ -247,29 +231,21 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'welfare_training_1': 'Capacitación parcial del personal',
     'welfare_training_2': 'Todo el personal capacitado y certificado',
 
-    // 9.8. Protocolo de sacrificio humanitario o eutanasia
-    'euthanasia_protocol_label': 'Protocolo de eutanasia',
-    'euthanasia_protocol_question': '¿Existe protocolo de sacrificio humanitario o eutanasia?',
-    'euthanasia_protocol_description': 'Se verifica existencia de protocolo documentado para sacrificio humanitario o eutanasia.',
-    'euthanasia_protocol_0': 'No existe protocolo de eutanasia',
-    'euthanasia_protocol_1': 'Protocolo existe pero incompleto',
-    'euthanasia_protocol_2': 'Protocolo completo e implementado',
-
-    // 9.9. Capacitación en técnicas de sacrificio humanitario
-    'euthanasia_training_label': 'Capacitación en eutanasia',
-    'euthanasia_training_question': '¿El personal cuenta con capacitación en técnicas de sacrificio humanitario o eutanasia?',
-    'euthanasia_training_description': 'Se verifica que el personal esté capacitado en técnicas de sacrificio humanitario.',
-    'euthanasia_training_0': 'Personal sin capacitación en eutanasia',
-    'euthanasia_training_1': 'Capacitación parcial',
-    'euthanasia_training_2': 'Personal completamente capacitado',
-
-    // 9.10. Uso responsable de medicamentos e insumos veterinarios
+    // 9.8. Uso responsable de medicamentos e insumos veterinarios
     'responsible_medication_label': 'Uso responsable de medicamentos',
-    'responsible_medication_question': '¿Se realiza uso responsable de medicamentos e insumos veterinarios?',
-    'responsible_medication_description': 'Se verifica el uso adecuado y documentado de medicamentos e insumos veterinarios.',
-    'responsible_medication_0': 'No hay control de medicamentos',
-    'responsible_medication_1': 'Control parcial documentado',
-    'responsible_medication_2': 'Control completo y uso responsable documentado',
+    'responsible_medication_question': '¿El personal responsable del manejo y aplicación de medicamentos e insumos veterinarios cuenta con certificación que respalde su formación en el uso adecuado y responsable de estos productos?',
+    'responsible_medication_description': 'El uso responsable de medicamentos e insumos veterinarios constituye un componente esencial en la gestión sanitaria de las aves. Se verifica que el personal cuente con formación y soportes que acrediten conocimientos actualizados.',
+    'responsible_medication_0': 'No hay control de medicamentos ni certificación del personal',
+    'responsible_medication_1': 'Control parcial o certificación incompleta',
+    'responsible_medication_2': 'Control completo y personal certificado',
+
+    // 9.9. Mortalidad
+    'mortality_label': 'Mortalidad',
+    'mortality_question': '¿Cuál es la tasa de mortalidad acumulada?',
+    'mortality_description': 'La tasa de mortalidad permite identificar el impacto del ambiente productivo en la capacidad adaptativa de la parvada. Se verifica el registro de mortalidad acumulada de los últimos 5 ciclos de la granja.',
+    'mortality_0': 'Tasa de mortalidad alta (superior al estándar)',
+    'mortality_1': 'Tasa de mortalidad moderada',
+    'mortality_2': 'Tasa de mortalidad baja (dentro del estándar)',
 
     // ═══════════════════════════════════════════════════════════════
     // ESCALA GENERAL
@@ -453,14 +429,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'skin_lesions_1': 'Moderate percentage with mild lesions',
     'skin_lesions_2': 'No or minimal lesions',
 
-    // 8.8. Plumage condition
-    'plumage_condition_label': 'Plumage condition',
-    'plumage_condition_question': 'What is the appearance and dirtiness state of bird plumage?',
-    'plumage_condition_description': 'Visually examine dorsal and ventral plumage regions.',
-    'plumage_condition_0': 'Very dirty or damaged plumage',
-    'plumage_condition_1': 'Plumage with moderate dirt or damage',
-    'plumage_condition_2': 'Clean plumage in good condition',
-
     // 8.9. Ocular-nasal integrity
     'ocular_nasal_integrity_label': 'Ocular-nasal integrity',
     'ocular_nasal_integrity_question': 'How many animals are observed with nasal and/or ocular discharge, or with acute or chronic lesions in these anatomical areas?',
@@ -476,14 +444,6 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'beak_condition_0': 'Aggressive trimming or severe damage',
     'beak_condition_1': 'Moderate trimming or mild damage',
     'beak_condition_2': 'No trimming or minimal adequate trimming',
-
-    // 8.11. Mortality
-    'mortality_label': 'Mortality',
-    'mortality_question': 'What is the accumulated mortality rate?',
-    'mortality_description': 'Verify accumulated mortality records from the last 5 farm cycles.',
-    'mortality_0': 'High mortality rate (above standard)',
-    'mortality_1': 'Moderate mortality rate',
-    'mortality_2': 'Low mortality rate (within standard)',
 
     // ═══════════════════════════════════════════════════════════════
     // MANAGEMENT-BASED MEASURES (30%)
@@ -545,29 +505,21 @@ const Map<String, Map<String, String>> icaBirdsTranslations = {
     'welfare_training_1': 'Partial personnel training',
     'welfare_training_2': 'All personnel trained and certified',
 
-    // 9.8. Humane slaughter or euthanasia protocol
-    'euthanasia_protocol_label': 'Euthanasia protocol',
-    'euthanasia_protocol_question': 'Is there a humane slaughter or euthanasia protocol?',
-    'euthanasia_protocol_description': 'Verify existence of documented protocol for humane slaughter or euthanasia.',
-    'euthanasia_protocol_0': 'No euthanasia protocol exists',
-    'euthanasia_protocol_1': 'Protocol exists but incomplete',
-    'euthanasia_protocol_2': 'Complete and implemented protocol',
-
-    // 9.9. Humane slaughter training
-    'euthanasia_training_label': 'Euthanasia training',
-    'euthanasia_training_question': 'Does personnel have training in humane slaughter or euthanasia techniques?',
-    'euthanasia_training_description': 'Verify that personnel is trained in humane slaughter techniques.',
-    'euthanasia_training_0': 'Personnel without euthanasia training',
-    'euthanasia_training_1': 'Partial training',
-    'euthanasia_training_2': 'Fully trained personnel',
-
-    // 9.10. Responsible use of medications and veterinary supplies
+    // 9.8. Responsible use of medications and veterinary supplies
     'responsible_medication_label': 'Responsible medication use',
-    'responsible_medication_question': 'Is there responsible use of medications and veterinary supplies?',
-    'responsible_medication_description': 'Verify adequate and documented use of medications and veterinary supplies.',
-    'responsible_medication_0': 'No medication control',
-    'responsible_medication_1': 'Partial documented control',
-    'responsible_medication_2': 'Complete control and documented responsible use',
+    'responsible_medication_question': 'Does personnel responsible for handling and applying medications and veterinary supplies have certification supporting their training in the proper and responsible use of these products?',
+    'responsible_medication_description': 'Responsible use of medications and veterinary supplies is an essential component in poultry health management. Verify that personnel has training and documentation supporting updated knowledge.',
+    'responsible_medication_0': 'No medication control or personnel certification',
+    'responsible_medication_1': 'Partial control or incomplete certification',
+    'responsible_medication_2': 'Complete control and certified personnel',
+
+    // 9.9. Mortality
+    'mortality_label': 'Mortality',
+    'mortality_question': 'What is the accumulated mortality rate?',
+    'mortality_description': 'Mortality rate identifies the impact of the productive environment on the flock adaptive capacity. Verify accumulated mortality records from the last 5 farm cycles.',
+    'mortality_0': 'High mortality rate (above standard)',
+    'mortality_1': 'Moderate mortality rate',
+    'mortality_2': 'Low mortality rate (within standard)',
 
     // ═══════════════════════════════════════════════════════════════
     // GENERAL SCALE

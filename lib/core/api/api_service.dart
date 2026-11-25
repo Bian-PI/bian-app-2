@@ -10,7 +10,7 @@ class ApiService {
   // ═══════════════════════════════════════════════════════════════════
   // ⚠️ DESARROLLO SOLAMENTE - CAMBIAR A false ANTES DE PRODUCCIÓN
   // ═══════════════════════════════════════════════════════════════════
-  static const bool bypassAuthForDev = true; // TODO: Cambiar a false en producción
+  static const bool bypassAuthForDev = false; // TODO: Cambiar a false en producción
 
   /// Login de desarrollo que bypasea la autenticación real.
   /// ⚠️ SOLO FUNCIONA EN DEBUG MODE Y CON bypassAuthForDev = true
@@ -605,11 +605,14 @@ class ApiService {
       final adminId = user.id!;
       print('📥 [ADMIN] Admin ID: $adminId');
 
+      // Endpoint /users/{id} - getReportsForAdmins en backend
       final url = Uri.parse(
           '${ApiConfig.evaluationsBaseUrl}${ApiConfig.getAdminEvaluations(adminId)}');
-      print('📍 URL: $url');
+      print('📍 [ADMIN] URL: $url');
 
       final token = await _storage.getToken();
+      print('📍 [ADMIN] Token: ${token != null ? "presente" : "NULL"}');
+      
       final response = await http.get(
         url,
         headers: {
@@ -618,7 +621,8 @@ class ApiService {
         },
       );
 
-      print('📥 Response status: ${response.statusCode}');
+      print('📥 [ADMIN] Response status: ${response.statusCode}');
+      print('📥 [ADMIN] Response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -811,10 +815,14 @@ class ApiService {
 
       print('📥 Obteniendo reportes para admin $adminId: $url');
 
+      final token = await _storage.getToken();
       final response = await http
           .get(
             url,
-            headers: ApiConfig.headers,
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
           )
           .timeout(ApiConfig.receiveTimeout);
 

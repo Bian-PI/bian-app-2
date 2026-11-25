@@ -5,6 +5,7 @@ import 'package:bian_app/core/storage/secure_storage.dart';
 class Evaluation {
   final String id;
   final String speciesId;
+  final String? productionType; // Tipo de producción para aves
   final String farmName;
   final String farmLocation;
   final DateTime evaluationDate;
@@ -25,6 +26,7 @@ class Evaluation {
   Evaluation({
     required this.id,
     required this.speciesId,
+    this.productionType,
     required this.farmName,
     required this.farmLocation,
     required this.evaluationDate,
@@ -46,9 +48,11 @@ class Evaluation {
 
       print(
           '📊 overallScore presente: ${json.containsKey('overallScore')} / overall_score: ${json.containsKey('overall_score')}');
+      print('📊 overallScore valor raw: ${json['overallScore']} (tipo: ${json['overallScore']?.runtimeType})');
 
       print(
           '📊 categoryScores presente: ${json.containsKey('categoryScores')} / category_scores: ${json.containsKey('category_scores')}');
+      print('📊 categoryScores valor raw: ${json['categoryScores']} (tipo: ${json['categoryScores']?.runtimeType})');
 
       print('📊 categories presente: ${json.containsKey('categories')}');
 
@@ -70,11 +74,20 @@ class Evaluation {
         }
       }
 
+      // Parse scores antes de crear el objeto
+      final parsedOverallScore = _parseScore(json['overallScore']) ?? _parseScore(json['overall_score']);
+      final parsedCategoryScores = _parseCategoryScores(json['categoryScores'] ?? json['category_scores']) ?? _extractCategoryScoresFromCategories(json['categories']);
+      
+      print('📊 PARSED overallScore: $parsedOverallScore');
+      print('📊 PARSED categoryScores: $parsedCategoryScores');
+
       return Evaluation(
         id: json['id']?.toString() ?? '',
         speciesId: json['speciesId']?.toString() ??
             json['species']?.toString() ??
             'birds',
+        productionType: json['productionType']?.toString() ??
+            json['production_type']?.toString(),
         farmName:
             json['farmName']?.toString() ?? json['farm_name']?.toString() ?? '',
         farmLocation: json['farmLocation']?.toString() ??
@@ -96,11 +109,8 @@ class Evaluation {
             : (json['categories'] != null
                 ? _parseCategoriesToResponses(json['categories'])
                 : {}),
-        overallScore: _parseScore(json['overallScore']) ??
-            _parseScore(json['overall_score']),
-        categoryScores: _parseCategoryScores(
-                json['categoryScores'] ?? json['category_scores']) ??
-            _extractCategoryScoresFromCategories(json['categories']),
+        overallScore: parsedOverallScore,
+        categoryScores: parsedCategoryScores,
         status: json['status']?.toString() ?? 'completed',
         language: json['language']?.toString() ?? 'es',
         createdAt: json['createdAt'] != null
@@ -224,6 +234,7 @@ class Evaluation {
     return {
       'id': id,
       'speciesId': speciesId,
+      'productionType': productionType,
       'farmName': farmName,
       'farmLocation': farmLocation,
       'evaluationDate': evaluationDate.toIso8601String(),
@@ -242,6 +253,7 @@ class Evaluation {
   Evaluation copyWith({
     String? id,
     String? speciesId,
+    String? productionType,
     String? farmName,
     String? farmLocation,
     DateTime? evaluationDate,
@@ -259,6 +271,7 @@ class Evaluation {
     return Evaluation(
       id: id ?? this.id,
       speciesId: speciesId ?? this.speciesId,
+      productionType: productionType ?? this.productionType,
       farmName: farmName ?? this.farmName,
       farmLocation: farmLocation ?? this.farmLocation,
       evaluationDate: evaluationDate ?? this.evaluationDate,
@@ -333,17 +346,24 @@ class Evaluation {
       }
     }
 
+    // Redondear el score a 2 decimales
+    final overallScoreValue = (results['overall_score'] ?? 0.0) as double;
+    final roundedScore = (overallScoreValue * 100).round() / 100;
+
     final structuredJson = <String, dynamic>{
       'connection_status': connectionStatus,
       'user_id': userId,
       'evaluation_date': evaluationDate.toIso8601String(),
       'language': language,
       'species': speciesId,
+      // Incluir production_type solo para aves
+      if (speciesId == 'birds' && productionType != null)
+        'production_type': productionType,
       'farm_name': farmName,
       'farm_location': farmLocation,
       'evaluator_name': evaluatorName,
-      'overall_score': (results['overall_score'] ?? 0.0).toString(),
-      'compliance_level': (results['compliance_level'] ?? 0.0).toString(),
+      'overall_score': roundedScore.toStringAsFixed(2),
+      'compliance_level': (results['compliance_level'] ?? 'acceptable').toString(),
       'categories': _buildGenericCategories(species, results),
       'critical_points':
           _formatCriticalPoints(results['critical_points'] as List? ?? []),
@@ -364,14 +384,19 @@ class Evaluation {
     for (var category in species.categories) {
       final categoryData = <String, dynamic>{};
 
+      // Agregar score redondeado a 2 decimales
       if (results['category_scores'] != null &&
           results['category_scores'][category.id] != null) {
-        categoryData['score'] =
-            results['category_scores'][category.id].toString();
+        final score = results['category_scores'][category.id] as double;
+        categoryData['score'] = score.toStringAsFixed(2);
       } else {
-        categoryData['score'] = '0.0';
+        categoryData['score'] = '0.00';
       }
 
+      // Agregar weight de la categoría
+      categoryData['weight'] = category.weight.toStringAsFixed(2);
+
+      // Agregar respuestas
       categoryData['responses'] = <String, String>{};
       for (var field in category.fields) {
         final key = '${category.id}_${field.id}';
@@ -380,7 +405,13 @@ class Evaluation {
         categoryData['responses'][genericFieldId] = value?.toString() ?? '';
       }
 
-      categories[category.id] = categoryData;
+      // Normalizar nombre de categoría: 'resource' -> 'resources' (plural)
+      String categoryKey = category.id;
+      if (categoryKey == 'resource') {
+        categoryKey = 'resources';
+      }
+
+      categories[categoryKey] = categoryData;
     }
 
     return categories;

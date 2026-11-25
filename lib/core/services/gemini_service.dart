@@ -113,9 +113,8 @@ CONTEXTO (basado en ICA):
 
     } catch (e) {
       print('❌ Error en chat Gemini: $e');
-      return language == 'es'
-          ? 'Error al procesar tu pregunta. Por favor, intenta de nuevo.'
-          : 'Error processing your question. Please try again.';
+      // Relanzar excepción para que el llamador pueda manejarla (ej: no descontar intento)
+      rethrow;
     }
   }
 

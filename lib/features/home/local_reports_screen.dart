@@ -180,10 +180,67 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
   }
 
   void _viewReport(Evaluation report) async {
-    final species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
-    final results = _recalculateResults(report, species);
+    print('🔍 _viewReport INICIADO para: ${report.farmName}');
+    print('🔍 report.speciesId: ${report.speciesId}');
+    print('🔍 report.overallScore: ${report.overallScore}');
+    print('🔍 report.categoryScores: ${report.categoryScores}');
+    
+    // Obtener Species base
+    Species species = report.speciesId == 'birds' ? Species.birds() : Species.pigs();
+    
+    // Filtrar Species según el tipo de producción si aplica
+    if (report.speciesId == 'birds' && report.productionType != null) {
+      species = _filterSpeciesByProductionType(species, report.productionType!);
+    }
+    
+    // Debug
+    print('📊 _viewReport - overallScore: ${report.overallScore}');
+    print('📊 _viewReport - categoryScores: ${report.categoryScores}');
+    print('📊 _viewReport - productionType: ${report.productionType}');
+    print('📊 _viewReport - species categories: ${species.categories.length}');
+    for (var cat in species.categories) {
+      print('   - ${cat.id}: ${cat.fields.length} fields');
+    }
+    
+    // Primero intentar usar los datos ya calculados de la evaluación
+    Map<String, dynamic> results;
+    
+    if (report.overallScore != null && report.overallScore! > 0 && 
+        report.categoryScores != null && report.categoryScores!.isNotEmpty) {
+      // Usar datos guardados
+      print('✅ Usando datos guardados de la evaluación');
+      
+      // Construir category_details desde categoryScores
+      final categoryDetails = <String, dynamic>{};
+      report.categoryScores!.forEach((catId, score) {
+        categoryDetails[catId] = {
+          'percentage': score,
+          'score': score,
+        };
+      });
+      
+      results = {
+        'overall_score': report.overallScore,
+        'category_scores': report.categoryScores,
+        'category_details': categoryDetails,
+        'compliance_level': _getComplianceLevel(report.overallScore!, report.speciesId == 'pigs'),
+        'recommendations': [],
+        'critical_points': _extractCriticalPoints(report, species),
+        'strong_points': _extractStrongPoints(report, species),
+        'is_ica_evaluation': report.speciesId == 'birds',
+        'is_eba_evaluation': report.speciesId == 'pigs',
+      };
+    } else {
+      // Recalcular si no hay datos
+      print('⚠️ Recalculando resultados...');
+      results = _recalculateResults(report, species);
+    }
+    
+    print('📊 Results finales - overall_score: ${results['overall_score']}');
+    print('📊 Results finales - category_scores: ${results['category_scores']}');
+    
     final translatedRecommendations = _translateRecommendations(
-      results['recommendations'],
+      results['recommendations'] ?? [],
       report.language,
     );
 
@@ -201,66 +258,258 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
           species: species,
           results: results,
           structuredJson: structuredJson,
-          isLocal: true, // Este es un reporte local, mostrar botón de sincronizar
+          isLocal: true,
         ),
       ),
     );
   }
 
-  Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
-    final categoryScores = <String, double>{};
+  /// Filtra los campos del Species según el tipo de producción
+  Species _filterSpeciesByProductionType(Species species, String productionType) {
+    final filteredCategories = species.categories.map((category) {
+      final filteredFields = category.fields.where((field) {
+        if (field.applicableTo == null || field.applicableTo!.isEmpty) {
+          return true;
+        }
+        return field.applicableTo!.contains(productionType);
+      }).toList();
 
+      return EvaluationCategory(
+        id: category.id,
+        name: category.name,
+        nameKey: category.nameKey,
+        icon: category.icon,
+        weight: category.weight,
+        fields: filteredFields,
+      );
+    }).where((category) => category.fields.isNotEmpty).toList();
+
+    return Species(
+      id: species.id,
+      name: species.name,
+      namePlural: species.namePlural,
+      iconPath: species.iconPath,
+      gradientColors: species.gradientColors,
+      categories: filteredCategories,
+    );
+  }
+  
+  String _getComplianceLevel(double score, bool isEBA) {
+    if (isEBA) {
+      // EBA 5 niveles
+      if (score >= 90) return 'excellent';
+      if (score >= 75) return 'good';
+      if (score >= 50) return 'acceptable';
+      if (score >= 25) return 'needs_improvement';
+      return 'critical';
+    } else {
+      // ICA 4 niveles
+      if (score >= 90) return 'excellent';
+      if (score >= 76) return 'good';
+      if (score >= 50) return 'acceptable';
+      return 'critical';
+    }
+  }
+  
+  List<String> _extractCriticalPoints(Evaluation evaluation, Species species) {
+    final criticalPoints = <String>[];
+    final isPigs = species.id == 'pigs';
+    
     for (var category in species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
-
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = evaluation.responses[key];
-
-          if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
-
-            bool isPositive = false;
-            if (field.id.contains('access') ||
-                field.id.contains('quality') ||
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        if (value != null) {
+          if (isPigs) {
+            // EVA 4.0: <= 20 es crítico (escala 0, 20, 55, 80, 100)
+            if (value is int && value <= 20) {
+              criticalPoints.add('${category.id}_${field.id}');
             }
-
-            if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
+          } else {
+            // ICA Aves: score 0 es crítico (escala 0-2)
+            if (value is int && value == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
             }
           }
         }
       }
+    }
+    
+    return criticalPoints.take(10).toList();
+  }
+  
+  List<String> _extractStrongPoints(Evaluation evaluation, Species species) {
+    final strongPoints = <String>[];
+    final isEBA = species.id == 'pigs';
+    final categoryScores = evaluation.categoryScores ?? {};
+    
+    for (var category in species.categories) {
+      final score = categoryScores[category.id] ?? 0.0;
+      if (score >= 80) {
+        strongPoints.add(category.id);
+      }
+    }
+    
+    return strongPoints;
+  }
 
-      if (categoryTotal > 0) {
-        categoryScores[category.id] = (categoryPositive / categoryTotal) * 100;
+  Map<String, dynamic> _recalculateResults(Evaluation evaluation, Species species) {
+    final isEBA = species.id == 'pigs';
+    
+    if (isEBA) {
+      return _recalculateEBAResults(evaluation, species);
+    } else {
+      return _recalculateICAResults(evaluation, species);
+    }
+  }
+  
+  Map<String, dynamic> _recalculateEBAResults(Evaluation evaluation, Species species) {
+    final categoryScores = <String, double>{};
+    final categoryDetails = <String, dynamic>{};
+    final criticalPoints = <String>[];
+    final strongPoints = <String>[];
+    double totalWeightedScore = 0;
+    double totalWeight = 0;
+    
+    print('🔄 Recalculando EVA 4.0 para ${species.categories.length} categorías');
+    
+    for (var category in species.categories) {
+      int categoryObtained = 0;
+      int categoryMax = 0;
+      
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        if (value != null) {
+          int score = 0;
+          if (value is int) {
+            score = value;
+          } else if (value is double) {
+            score = value.toInt();
+          } else if (value is String) {
+            score = int.tryParse(value) ?? 0;
+          }
+          
+          categoryObtained += score;
+          categoryMax += field.maxScore;
+          
+          // Punto crítico: EVA 4.0 usa escala 0-100, crítico si <= 20
+          if (score <= 20) {
+            criticalPoints.add('${category.id}_${field.id}');
+          }
+        }
+      }
+      
+      if (categoryMax > 0) {
+        final score = (categoryObtained / categoryMax) * 100;
+        categoryScores[category.id] = score;
+        
+        // Guardar detalles de categoría
+        categoryDetails[category.id] = {
+          'percentage': score,
+          'obtained': categoryObtained,
+          'max_possible': categoryMax,
+          'weight': category.weight,
+        };
+        
+        // Calcular score ponderado
+        totalWeightedScore += score * category.weight;
+        totalWeight += category.weight;
+        
+        // Punto fuerte si >= 80%
+        if (score >= 80) {
+          strongPoints.add(category.id);
+        }
+        
+        print('  📊 ${category.id}: $categoryObtained/$categoryMax = ${score.toStringAsFixed(1)}%');
+      }
+    }
+    
+    final overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0.0;
+    
+    print('📊 EVA 4.0 Overall Score: ${overallScore.toStringAsFixed(1)}%');
+    
+    return {
+      'overall_score': overallScore,
+      'category_scores': categoryScores,
+      'category_details': categoryDetails,
+      'compliance_level': _getComplianceLevel(overallScore, true),
+      'recommendations': [],
+      'critical_points': criticalPoints.take(10).toList(),
+      'strong_points': strongPoints,
+      'is_eba_evaluation': false,
+      'is_eva_evaluation': true,
+      'is_ica_evaluation': false,
+    };
+  }
+  
+  Map<String, dynamic> _recalculateICAResults(Evaluation evaluation, Species species) {
+    final categoryScores = <String, double>{};
+    final categoryDetails = <String, dynamic>{};
+    final criticalPoints = <String>[];
+    final strongPoints = <String>[];
+    double weightedTotalScore = 0.0;
+    double totalWeight = 0.0;
+
+    for (var category in species.categories) {
+      int categoryObtained = 0;
+      int categoryMaxPossible = 0;
+
+      for (var field in category.fields) {
+        final key = '${category.id}_${field.id}';
+        final value = evaluation.responses[key];
+        
+        // ICA usa scale0to2 (maxScore = 2 por campo)
+        categoryMaxPossible += field.maxScore;
+        
+        if (value != null) {
+          int score = 0;
+          if (value is int) {
+            score = value;
+          } else if (value is double) {
+            score = value.toInt();
+          } else if (value is bool) {
+            // Compatibilidad con respuestas yesNo antiguas
+            score = value ? 2 : 0;
+          }
+          
+          categoryObtained += score;
+          
+          // Punto crítico si score = 0
+          if (score == 0) {
+            criticalPoints.add('${category.id}_${field.id}');
+          }
+        }
+      }
+
+      if (categoryMaxPossible > 0) {
+        final score = (categoryObtained / categoryMaxPossible) * 100;
+        categoryScores[category.id] = score;
+        
+        // Guardar detalles con puntos reales
+        categoryDetails[category.id] = {
+          'percentage': score,
+          'obtained': categoryObtained,
+          'max_possible': categoryMaxPossible,
+          'weight': category.weight,
+        };
+        
+        // Calcular score ponderado
+        if (category.weight > 0) {
+          weightedTotalScore += score * category.weight;
+          totalWeight += category.weight;
+        }
+        
+        // Punto fuerte si >= 80%
+        if (score >= 80) {
+          strongPoints.add(category.id);
+        }
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    final overallScore = totalWeight > 0 ? weightedTotalScore / totalWeight : 0.0;
 
     String complianceLevel;
     if (overallScore >= 90) {
@@ -295,9 +544,12 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
       'overall_score': overallScore,
       'compliance_level': complianceLevel,
       'category_scores': categoryScores,
+      'category_details': categoryDetails,
       'recommendations': recommendationKeys,
       'critical_points': [],
       'strong_points': [],
+      'is_ica_evaluation': true,
+      'is_eba_evaluation': false,
     };
   }
 
@@ -445,11 +697,12 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
 
   Widget _buildReportCard(Evaluation report) {
     final isPending = _pendingSyncIds.contains(report.id);
+    final score = report.overallScore ?? 0.0;
 
     Color scoreColor;
-    if (report.overallScore! >= 80) {
+    if (score >= 80) {
       scoreColor = BianTheme.successGreen;
-    } else if (report.overallScore! >= 60) {
+    } else if (score >= 60) {
       scoreColor = BianTheme.warningYellow;
     } else {
       scoreColor = BianTheme.errorRed;
@@ -479,7 +732,7 @@ class _LocalReportsScreenState extends State<LocalReportsScreen> {
                       child: Column(
                         children: [
                           Text(
-                            '${report.overallScore!.toStringAsFixed(0)}',
+                            '${score.toStringAsFixed(0)}',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,

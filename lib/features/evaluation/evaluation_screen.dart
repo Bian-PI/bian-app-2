@@ -22,6 +22,7 @@ class EvaluationScreen extends StatefulWidget {
   final Evaluation? draftToEdit;
   final String currentLanguage;
   final bool isOfflineMode;
+  final String? productionType; // Tipo de producción: pollo_engorde, ponedoras_piso, ponedoras_jaula, pastoreo
 
   const EvaluationScreen({
     super.key,
@@ -29,6 +30,7 @@ class EvaluationScreen extends StatefulWidget {
     this.draftToEdit,
     required this.currentLanguage,
     this.isOfflineMode = false,
+    this.productionType,
   });
 
   @override
@@ -42,9 +44,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   int _currentCategoryIndex = 0;
   late Evaluation _evaluation;
+  late Species _filteredSpecies; // Species con campos filtrados según tipo de producción
 
   final _farmNameController = TextEditingController();
   final _farmLocationController = TextEditingController();
+  final _departmentController = TextEditingController();
+  final _municipalityController = TextEditingController();
+  final _coordinatesController = TextEditingController();
   final _evaluatorNameController = TextEditingController();
   final _evaluatorDocumentController = TextEditingController();
 
@@ -53,11 +59,13 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   bool _showInfoDialog = true;
   bool _hasUnsavedChanges = false;
   bool _isGettingLocation = false;
+  bool _hasCoordinates = false; // Para saber si tenemos coordenadas GPS
   User? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _filteredSpecies = _filterSpeciesByProductionType();
     _initializeEvaluation();
     _loadCurrentUser();
 
@@ -66,6 +74,43 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         _showWelcomeDialog();
       }
     });
+  }
+
+  /// Filtra los campos del Species según el tipo de producción seleccionado
+  Species _filterSpeciesByProductionType() {
+    // Si no hay tipo de producción o no es aves, retornar sin filtrar
+    if (widget.productionType == null || widget.species.id != 'birds') {
+      return widget.species;
+    }
+
+    final filteredCategories = widget.species.categories.map((category) {
+      final filteredFields = category.fields.where((field) {
+        // Si el campo no tiene applicableTo, incluirlo
+        if (field.applicableTo == null || field.applicableTo!.isEmpty) {
+          return true;
+        }
+        // Incluir si el tipo de producción está en la lista
+        return field.applicableTo!.contains(widget.productionType);
+      }).toList();
+
+      return EvaluationCategory(
+        id: category.id,
+        name: category.name,
+        nameKey: category.nameKey,
+        icon: category.icon,
+        weight: category.weight,
+        fields: filteredFields,
+      );
+    }).where((category) => category.fields.isNotEmpty).toList();
+
+    return Species(
+      id: widget.species.id,
+      name: widget.species.name,
+      namePlural: widget.species.namePlural,
+      iconPath: widget.species.iconPath,
+      gradientColors: widget.species.gradientColors,
+      categories: filteredCategories,
+    );
   }
 
   Future<void> _loadCurrentUser() async {
@@ -83,6 +128,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     _scrollController.dispose();
     _farmNameController.dispose();
     _farmLocationController.dispose();
+    _departmentController.dispose();
+    _municipalityController.dispose();
+    _coordinatesController.dispose();
     _evaluatorNameController.dispose();
     _evaluatorDocumentController.dispose();
     _textControllers.values.forEach((controller) => controller.dispose());
@@ -97,7 +145,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       _evaluatorNameController.text = _evaluation.evaluatorName;
       _showInfoDialog = false;
       
-      for (var category in widget.species.categories) {
+      for (var category in _filteredSpecies.categories) {
         for (var field in category.fields) {
           final key = '${category.id}_${field.id}';
           final value = _evaluation.responses[key];
@@ -112,6 +160,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       _evaluation = Evaluation(
         id: _uuid.v4(),
         speciesId: widget.species.id,
+        productionType: widget.productionType,
         farmName: '',
         farmLocation: '',
         evaluationDate: DateTime.now(),
@@ -174,21 +223,26 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                loc.translate('categories_to_evaluate', [widget.species.categories.length.toString()]),
+                loc.translate('categories_to_evaluate', [_filteredSpecies.categories.length.toString()]),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 12),
-              ...widget.species.categories.map((cat) => Padding(
+              ..._filteredSpecies.categories.map((cat) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Icon(
-                      _getIconData(cat.icon),
+                      _getCategoryIcon(cat.id),
                       size: 20,
                       color: Color(int.parse(widget.species.gradientColors[0])),
                     ),
                     const SizedBox(width: 12),
-                    Text(loc.translate(cat.id)),
+                    Expanded(
+                      child: Text(
+                        _getCategoryName(cat, loc),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
                   ],
                 ),
               )),
@@ -246,24 +300,123 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
   }
 
+  /// Obtiene el nombre traducido de la categoría
+  String _getCategoryName(dynamic category, AppLocalizations loc) {
+    // Intentar con nameKey primero
+    if (category.nameKey != null) {
+      final translated = loc.translate(category.nameKey);
+      if (translated != category.nameKey) {
+        return translated;
+      }
+    }
+    
+    // Intentar con category_ID
+    final categoryKey = 'category_${category.id}';
+    final translated = loc.translate(categoryKey);
+    if (translated != categoryKey) {
+      return translated;
+    }
+    
+    // Traducciones hardcoded
+    final hardcodedTranslations = {
+      // ICA categories (Aves)
+      'resources': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en los Recursos' 
+          : 'Resource-Based Measures',
+      'animal': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en el Animal' 
+          : 'Animal-Based Measures',
+      'management': widget.currentLanguage == 'es' 
+          ? 'Medidas Basadas en la Gestión' 
+          : 'Management-Based Measures',
+      // EBA categories (Porcinos)
+      'resource': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Recurso' 
+          : 'Resource Indicators',
+      'transport': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Transporte' 
+          : 'Transport Indicators',
+      'slaughter': widget.currentLanguage == 'es' 
+          ? 'Indicadores de Sacrificio' 
+          : 'Slaughter Indicators',
+      // Legacy categories
+      'feeding': widget.currentLanguage == 'es' ? 'Alimentación' : 'Feeding',
+      'health': widget.currentLanguage == 'es' ? 'Salud' : 'Health',
+      'behavior': widget.currentLanguage == 'es' ? 'Comportamiento' : 'Behavior',
+      'infrastructure': widget.currentLanguage == 'es' ? 'Infraestructura' : 'Infrastructure',
+    };
+    
+    return hardcodedTranslations[category.id] ?? category.id;
+  }
+
+  /// Obtiene el icono correspondiente a la categoría
+  IconData _getCategoryIcon(String categoryId) {
+    switch (categoryId) {
+      // ICA categories (Aves)
+      case 'resources':
+        return Icons.home_work;
+      case 'animal':
+        return Icons.pets;
+      case 'management':
+        return Icons.assignment;
+      // EBA categories (Porcinos)
+      case 'resource':
+        return Icons.home_work;
+      case 'transport':
+        return Icons.local_shipping;
+      case 'slaughter':
+        return Icons.gavel;
+      // Legacy categories
+      case 'feeding':
+        return Icons.restaurant;
+      case 'health':
+        return Icons.medical_services;
+      case 'behavior':
+        return Icons.psychology;
+      case 'infrastructure':
+        return Icons.foundation;
+      default:
+        return Icons.category;
+    }
+  }
+
   Future<void> _getCurrentLocation() async {
     final loc = AppLocalizations.of(context);
 
     setState(() => _isGettingLocation = true);
 
-    final location = await LocationService.getCurrentLocation();
+    final locationData = await LocationService.getCurrentLocationDetailed();
 
     setState(() => _isGettingLocation = false);
 
-    if (location != null) {
+    if (locationData != null) {
       setState(() {
-        _farmLocationController.text = location;
+        // Llenar departamento si está disponible
+        if (locationData.department != null && locationData.department!.isNotEmpty) {
+          _departmentController.text = locationData.department!;
+        }
+        
+        // Llenar municipio/ciudad si está disponible
+        if (locationData.municipality != null && locationData.municipality!.isNotEmpty) {
+          _municipalityController.text = locationData.municipality!;
+        } else if (locationData.subLocality != null && locationData.subLocality!.isNotEmpty) {
+          _municipalityController.text = locationData.subLocality!;
+        }
+        
+        // Siempre llenar coordenadas
+        _coordinatesController.text = locationData.coordinatesString;
+        _hasCoordinates = true;
+        
+        // Llenar ubicación formateada
+        _farmLocationController.text = locationData.formattedAddress;
       });
 
       if (mounted) {
         CustomSnackbar.showSuccess(
           context,
-          '${loc.translate('location')}: $location',
+          loc.translate('location_obtained') != 'location_obtained'
+              ? loc.translate('location_obtained')
+              : 'Ubicación obtenida correctamente',
         );
       }
     } else {
@@ -358,6 +511,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                
+                // Ubicación con botón GPS
                 TextField(
                   controller: _farmLocationController,
                   decoration: InputDecoration(
@@ -379,19 +534,71 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                             ),
                           )
                         : IconButton(
-                            icon: Icon(Icons.my_location),
+                            icon: Icon(Icons.my_location, color: BianTheme.primaryRed),
                             onPressed: () async {
                               setDialogState(() => _isGettingLocation = true);
                               setState(() => _isGettingLocation = true);
                               await _getCurrentLocation();
-                              setDialogState(() => _isGettingLocation = false);
+                              setDialogState(() {
+                                _isGettingLocation = false;
+                              });
                               setState(() => _isGettingLocation = false);
                             },
                             tooltip: loc.translate('get_current_location'),
                           ),
                   ),
                 ),
+                
+                // Mostrar coordenadas como label informativo si existen
+                if (_hasCoordinates && _coordinatesController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.gps_fixed, size: 14, color: BianTheme.successGreen),
+                        const SizedBox(width: 6),
+                        Text(
+                          'GPS: ${_coordinatesController.text}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.successGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.check_circle, size: 14, color: BianTheme.successGreen),
+                      ],
+                    ),
+                  ),
+                
                 const SizedBox(height: 16),
+                
+                // Departamento
+                TextField(
+                  controller: _departmentController,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('department') != 'department' 
+                        ? loc.translate('department') 
+                        : 'Departamento',
+                    hintText: 'Ej: Norte de Santander',
+                    prefixIcon: Icon(Icons.map_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Municipio / Ciudad / Vereda
+                TextField(
+                  controller: _municipalityController,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('municipality') != 'municipality' 
+                        ? loc.translate('municipality') 
+                        : 'Municipio / Vereda',
+                    hintText: 'Ej: Ocaña, Vereda El Carmen',
+                    prefixIcon: Icon(Icons.location_city),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 TextField(
                   controller: _evaluatorNameController,
                   decoration: InputDecoration(
@@ -534,7 +741,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
   bool _validateCurrentCategory() {
     final loc = AppLocalizations.of(context);
-    final currentCategory = widget.species.categories[_currentCategoryIndex];
+    final currentCategory = _filteredSpecies.categories[_currentCategoryIndex];
     
     for (var field in currentCategory.fields) {
       if (field.required) {
@@ -612,125 +819,663 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     }
   }
 
+  /// Calcula los resultados de la evaluación según metodología ICA o EBA
+  /// 
+  /// Para aves (scale0to2) - ICA:
+  /// - Medidas Basadas en los Recursos (MBR): 35%
+  /// - Medidas Basadas en el Animal (MBA): 35%
+  /// - Medidas Basadas en la Gestión (MBG): 30%
+  /// 
+  /// Para porcinos (scale0to4) - EBA 3.0:
+  /// - Indicadores de Recurso: 40%
+  /// - Indicadores del Animal: 40%
+  /// - Indicadores de Gestión: 20%
+  /// 
+  /// Clasificación ICA (aves):
+  /// - ≥90%: EXCELENTE BIENESTAR
+  /// - 76%-90%: ALTO BIENESTAR
+  /// - 50%-75%: MEDIO BIENESTAR
+  /// - <50%: BAJO BIENESTAR
+  ///
+  /// Clasificación EBA (porcinos):
+  /// - ≥90%: EXCELENTE BIENESTAR
+  /// - 75%-90%: BUEN BIENESTAR
+  /// - 50%-75%: BIENESTAR ACEPTABLE
+  /// - 25%-50%: BIENESTAR DEFICIENTE
+  /// - <25%: BIENESTAR CRÍTICO
   Map<String, dynamic> _calculateResults() {
-    int totalQuestions = 0;
-    int positiveResponses = 0;
     final categoryScores = <String, double>{};
+    final categoryDetails = <String, Map<String, dynamic>>{};
     final criticalPoints = <String>[];
     final strongPoints = <String>[];
+    
+    double weightedTotalScore = 0.0;
+    double totalWeight = 0.0;
+    
+    // Verificar tipo de evaluación
+    bool isICAEvaluation = _filteredSpecies.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scale0to2));
+    
+    bool isEBAEvaluation = _filteredSpecies.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scale0to4));
+    
+    bool isEVAEvaluation = _filteredSpecies.categories.any((cat) => 
+      cat.fields.any((f) => f.type == FieldType.scaleEVA || f.type == FieldType.yesNo100));
 
-    for (var category in widget.species.categories) {
-      int categoryTotal = 0;
-      int categoryPositive = 0;
-
+    for (var category in _filteredSpecies.categories) {
+      int categoryObtained = 0;
+      int categoryMaxPossible = 0;
+      int answeredFields = 0;
+      
+      // Saltar categorías con peso 0 en el cálculo principal (ej: transporte, sacrificio)
+      bool skipInMainCalculation = category.weight == 0.0;
+      
       for (var field in category.fields) {
-        if (field.type == FieldType.yesNo) {
-          final key = '${category.id}_${field.id}';
-          final value = _evaluation.responses[key];
+        final key = '${category.id}_${field.id}';
+        final value = _evaluation.responses[key];
+        
+        if (field.type == FieldType.scale0to2) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA ICA: Escala 0-2 (Aves)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // Generalmente 2
           
           if (value != null) {
-            categoryTotal++;
-            totalQuestions++;
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
             
-            bool isPositive = false;
-            if (field.id.contains('access') || 
-                field.id.contains('quality') || 
-                field.id.contains('sufficient') ||
-                field.id.contains('health') ||
-                field.id.contains('vaccination') ||
-                field.id.contains('natural_behavior') ||
-                field.id.contains('movement') ||
-                field.id.contains('ventilation') ||
-                field.id.contains('training') ||
-                field.id.contains('records') ||
-                field.id.contains('biosecurity') ||
-                field.id.contains('handling') ||
-                field.id.contains('lighting') ||
-                field.id.contains('enrichment') ||
-                field.id.contains('resting_area') ||
-                field.id.contains('castration')) {
-              isPositive = value == true;
-            } else {
-              isPositive = value == false;
+            // Identificar puntos críticos (score 0)
+            if (score == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
             }
+          }
+        } else if (field.type == FieldType.scale0to4) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EBA 3.0: Escala 0-4 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // Generalmente 4
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score 0 o 1)
+            if (score <= 1) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
+        } else if (field.type == FieldType.yesNo) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA LEGACY: Sí/No
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += 1;
+          
+          if (value != null) {
+            answeredFields++;
+            
+            // Determinar si la respuesta es positiva según el tipo de campo
+            bool isPositive = _isPositiveResponse(field.id, value);
             
             if (isPositive) {
-              categoryPositive++;
-              positiveResponses++;
+              categoryObtained += 1;
             } else {
               criticalPoints.add('${category.id}_${field.id}');
             }
           }
+        } else if (field.type == FieldType.scaleEVA) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EVA 4.0: Escala 0, 20, 55, 80, 100 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // 100
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score <= 20)
+            if (score <= 20) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
+        } else if (field.type == FieldType.yesNo100) {
+          // ═══════════════════════════════════════════════════════════════
+          // METODOLOGÍA EVA 4.0: Sí=100, No=0 (Porcinos)
+          // ═══════════════════════════════════════════════════════════════
+          categoryMaxPossible += field.maxScore; // 100
+          
+          if (value != null) {
+            final score = value is int ? value : (value is double ? value.toInt() : 0);
+            categoryObtained += score;
+            answeredFields++;
+            
+            // Identificar puntos críticos (score = 0)
+            if (score == 0) {
+              criticalPoints.add('${category.id}_${field.id}');
+            }
+          }
         }
+        // Otros tipos de campo (number, text, percentage) no afectan el score
       }
 
-      if (categoryTotal > 0) {
-        final score = (categoryPositive / categoryTotal) * 100;
-        categoryScores[category.id] = score;
+      // Calcular porcentaje de la categoría
+      if (categoryMaxPossible > 0 && answeredFields > 0) {
+        final categoryPercentage = (categoryObtained / categoryMaxPossible) * 100;
+        categoryScores[category.id] = categoryPercentage;
         
-        if (score >= 80) {
+        // Guardar detalles de la categoría
+        categoryDetails[category.id] = {
+          'obtained': categoryObtained,
+          'max_possible': categoryMaxPossible,
+          'percentage': categoryPercentage,
+          'weight': category.weight,
+          'answered': answeredFields,
+          'total_fields': category.fields.where((f) => 
+            f.type == FieldType.scale0to2 || 
+            f.type == FieldType.scale0to4 || 
+            f.type == FieldType.scaleEVA ||
+            f.type == FieldType.yesNo100 ||
+            f.type == FieldType.yesNo).length,
+        };
+        
+        // Calcular contribución ponderada al score total (solo si no es categoría de peso 0)
+        if (!skipInMainCalculation) {
+          if ((isICAEvaluation || isEBAEvaluation || isEVAEvaluation) && category.weight < 1.0 && category.weight > 0) {
+            // Usar peso de la categoría para ICA/EBA/EVA
+            weightedTotalScore += categoryPercentage * category.weight;
+            totalWeight += category.weight;
+          } else if (category.weight >= 1.0) {
+            // Sin ponderación para evaluaciones legacy
+            weightedTotalScore += categoryPercentage;
+            totalWeight += 1.0;
+          }
+        }
+        
+        // Identificar puntos fuertes (≥80%)
+        if (categoryPercentage >= 80) {
           strongPoints.add(category.id);
         }
       }
     }
 
-    final overallScore = totalQuestions > 0 ? (positiveResponses / totalQuestions) * 100 : 0;
+    // Calcular score general
+    double overallScore = 0.0;
+    if (totalWeight > 0) {
+      if (isICAEvaluation || isEBAEvaluation || isEVAEvaluation) {
+        // Para ICA/EBA/EVA: ya está ponderado, solo normalizar si no suma 100%
+        overallScore = weightedTotalScore / totalWeight * 100;
+        // Si los pesos suman 1.0 (100%), simplemente usar el weightedTotalScore
+        if ((totalWeight - 1.0).abs() < 0.01) {
+          overallScore = weightedTotalScore;
+        }
+      } else {
+        // Para legacy: promedio simple
+        overallScore = weightedTotalScore / totalWeight;
+      }
+    }
 
+    // Determinar nivel de cumplimiento según metodología
     String complianceLevel;
-    if (overallScore >= 90) {
-      complianceLevel = 'excellent';
-    } else if (overallScore >= 75) {
-      complianceLevel = 'good';
-    } else if (overallScore >= 60) {
-      complianceLevel = 'acceptable';
-    } else if (overallScore >= 40) {
-      complianceLevel = 'needs_improvement';
+    String welfareClassification;
+    
+    if (isEVAEvaluation) {
+      // Clasificación EVA 4.0 (Porcinos) - 4 niveles según ICA Colombia
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 76) {
+        complianceLevel = 'high';
+        welfareClassification = 'GRANJA CON ALTO BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'medium';
+        welfareClassification = 'GRANJA CON MEDIO BIENESTAR';
+      } else {
+        complianceLevel = 'low';
+        welfareClassification = 'GRANJA CON BAJO BIENESTAR';
+      }
+    } else if (isEBAEvaluation) {
+      // Clasificación EBA 3.0 (legacy Porcinos) - 5 niveles
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 75) {
+        complianceLevel = 'good';
+        welfareClassification = 'GRANJA CON BUEN BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'acceptable';
+        welfareClassification = 'GRANJA CON BIENESTAR ACEPTABLE';
+      } else if (overallScore >= 25) {
+        complianceLevel = 'deficient';
+        welfareClassification = 'GRANJA CON BIENESTAR DEFICIENTE';
+      } else {
+        complianceLevel = 'critical';
+        welfareClassification = 'GRANJA CON BIENESTAR CRÍTICO';
+      }
+    } else if (isICAEvaluation) {
+      // Clasificación ICA (Aves) - 4 niveles
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'GRANJA CON EXCELENTE BIENESTAR';
+      } else if (overallScore >= 76) {
+        complianceLevel = 'high';
+        welfareClassification = 'GRANJA CON ALTO BIENESTAR';
+      } else if (overallScore >= 50) {
+        complianceLevel = 'medium';
+        welfareClassification = 'GRANJA CON MEDIO BIENESTAR';
+      } else {
+        complianceLevel = 'low';
+        welfareClassification = 'GRANJA CON BAJO BIENESTAR';
+      }
     } else {
-      complianceLevel = 'critical';
+      // Clasificación legacy
+      if (overallScore >= 90) {
+        complianceLevel = 'excellent';
+        welfareClassification = 'Excelente';
+      } else if (overallScore >= 75) {
+        complianceLevel = 'good';
+        welfareClassification = 'Bueno';
+      } else if (overallScore >= 60) {
+        complianceLevel = 'acceptable';
+        welfareClassification = 'Aceptable';
+      } else if (overallScore >= 40) {
+        complianceLevel = 'needs_improvement';
+        welfareClassification = 'Necesita mejora';
+      } else {
+        complianceLevel = 'critical';
+        welfareClassification = 'Crítico';
+      }
     }
 
-    final recommendationKeys = <String>[];
-    
-    if (overallScore < 60) {
-      recommendationKeys.add('immediate_attention_required');
-    }
-    
-    if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
-      recommendationKeys.add('improve_feeding_practices');
-    }
-    
-    if (categoryScores['health'] != null && categoryScores['health']! < 70) {
-      recommendationKeys.add('strengthen_health_program');
-    }
-    
-    if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
-      recommendationKeys.add('improve_infrastructure');
-    }
-    
-    if (categoryScores['management'] != null && categoryScores['management']! < 70) {
-      recommendationKeys.add('train_staff_welfare');
-    }
-
-    if (recommendationKeys.isEmpty) {
-      recommendationKeys.add('maintain_current_practices');
-    }
+    // Generar recomendaciones
+    final recommendationKeys = _generateRecommendations(
+      overallScore, 
+      categoryScores, 
+      criticalPoints,
+      isICAEvaluation,
+      isEBAEvaluation || isEVAEvaluation, // EVA usa misma lógica que EBA para recomendaciones
+    );
 
     return {
       'overall_score': overallScore,
       'overall_score_formatted': overallScore.toStringAsFixed(1),
       'compliance_level': complianceLevel,
+      'welfare_classification': welfareClassification,
+      'is_ica_evaluation': isICAEvaluation,
+      'is_eba_evaluation': isEBAEvaluation,
+      'is_eva_evaluation': isEVAEvaluation,
       'category_scores': categoryScores,
-      'critical_points': criticalPoints.take(10).toList(),
+      'category_details': categoryDetails,
+      'critical_points': criticalPoints.take(15).toList(),
       'strong_points': strongPoints,
       'recommendations': recommendationKeys,
+      'total_weight_applied': totalWeight,
     };
+  }
+
+  /// Determina si una respuesta Sí/No es positiva según el tipo de indicador
+  bool _isPositiveResponse(String fieldId, dynamic value) {
+    // Campos donde Sí (true) es positivo
+    final positiveWhenTrue = [
+      'access', 'quality', 'sufficient', 'health', 'vaccination',
+      'natural_behavior', 'movement', 'ventilation', 'training',
+      'records', 'biosecurity', 'handling', 'lighting', 'enrichment',
+      'resting_area', 'castration', 'feed', 'water',
+    ];
+    
+    for (var keyword in positiveWhenTrue) {
+      if (fieldId.contains(keyword)) {
+        return value == true;
+      }
+    }
+    
+    // Por defecto, false es positivo (ausencia de problemas)
+    return value == false;
+  }
+
+  /// Genera recomendaciones basadas en los resultados
+  List<String> _generateRecommendations(
+    double overallScore,
+    Map<String, double> categoryScores,
+    List<String> criticalPoints,
+    bool isICAEvaluation,
+    bool isEBAEvaluation,
+  ) {
+    final recommendations = <String>[];
+    
+    if (isEBAEvaluation) {
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones específicas EBA (Porcinos)
+      // ═══════════════════════════════════════════════════════════════
+      if (overallScore < 25) {
+        recommendations.add('critical_welfare_intervention');
+      } else if (overallScore < 50) {
+        recommendations.add('immediate_attention_required');
+      }
+      
+      // Verificar cada categoría EBA
+      if (categoryScores['resource'] != null && categoryScores['resource']! < 70) {
+        recommendations.add('improve_resource_indicators');
+      }
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add('improve_animal_health');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('improve_management_eba');
+      }
+      
+      // Recomendaciones por puntos críticos específicos EBA
+      for (var critical in criticalPoints.take(8)) {
+        if (critical.contains('eba_a') || critical.contains('drinker') || critical.contains('water')) {
+          recommendations.add('improve_water_supply');
+        }
+        if (critical.contains('eba_f') || critical.contains('feeder') || critical.contains('body_condition')) {
+          recommendations.add('improve_feeding_eba');
+        }
+        if (critical.contains('eba_e') || critical.contains('thi') || critical.contains('ammonia') || critical.contains('co2')) {
+          recommendations.add('improve_environment');
+        }
+        if (critical.contains('eba_h') || critical.contains('lameness') || critical.contains('lesion') || critical.contains('mortality')) {
+          recommendations.add('improve_health_monitoring');
+        }
+        if (critical.contains('eba_b') || critical.contains('fight') || critical.contains('enrichment')) {
+          recommendations.add('improve_behavior_welfare');
+        }
+        if (critical.contains('eba_p') || critical.contains('training')) {
+          recommendations.add('train_staff_eba');
+        }
+        if (critical.contains('eba_d') || critical.contains('sop') || critical.contains('contingency')) {
+          recommendations.add('implement_documentation');
+        }
+      }
+    } else if (isICAEvaluation) {
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones específicas ICA (Aves) - Mejoradas
+      // ═══════════════════════════════════════════════════════════════
+      
+      // Por score general
+      if (overallScore < 50) {
+        recommendations.add('critical_welfare_birds');
+      } else if (overallScore < 76) {
+        recommendations.add('medium_welfare_birds');
+      }
+      
+      // Por categoría con bajo rendimiento
+      if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
+        recommendations.add('improve_resources_birds');
+      }
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add('improve_animal_birds');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('improve_management_birds');
+      }
+      
+      // Recomendaciones específicas por indicador crítico (score 0)
+      for (var critical in criticalPoints.take(10)) {
+        // === RECURSOS ===
+        if (critical.contains('air_particles')) {
+          recommendations.add('improve_air_quality');
+        }
+        if (critical.contains('bedding_quality')) {
+          recommendations.add('improve_bedding');
+        }
+        if (critical.contains('drinker_quality') || critical.contains('water_supply') || critical.contains('animals_per_drinker')) {
+          recommendations.add('improve_water_system');
+        }
+        if (critical.contains('water_treatment')) {
+          recommendations.add('implement_water_treatment');
+        }
+        if (critical.contains('feeder_quality') || critical.contains('animals_per_feeder')) {
+          recommendations.add('improve_feeding_system');
+        }
+        if (critical.contains('thermal_comfort')) {
+          recommendations.add('improve_thermal_control');
+        }
+        if (critical.contains('nest_quality')) {
+          recommendations.add('improve_nest_areas');
+        }
+        if (critical.contains('available_space')) {
+          recommendations.add('increase_space_per_bird');
+        }
+        
+        // === ANIMAL ===
+        if (critical.contains('panting') || critical.contains('huddling')) {
+          recommendations.add('address_thermal_stress');
+        }
+        if (critical.contains('keel_bone')) {
+          recommendations.add('prevent_keel_damage');
+        }
+        if (critical.contains('pododermatitis')) {
+          recommendations.add('prevent_pododermatitis');
+        }
+        if (critical.contains('toe_damage')) {
+          recommendations.add('prevent_toe_injuries');
+        }
+        if (critical.contains('skin_lesions')) {
+          recommendations.add('reduce_skin_lesions');
+        }
+        if (critical.contains('ocular_nasal')) {
+          recommendations.add('improve_respiratory_health');
+        }
+        if (critical.contains('beak_condition')) {
+          recommendations.add('monitor_beak_health');
+        }
+        
+        // === GESTIÓN ===
+        if (critical.contains('mortality')) {
+          recommendations.add('reduce_mortality');
+        }
+        if (critical.contains('water_quality')) {
+          recommendations.add('monitor_water_quality');
+        }
+        if (critical.contains('balanced_feeding')) {
+          recommendations.add('optimize_nutrition');
+        }
+        if (critical.contains('health_surveillance')) {
+          recommendations.add('strengthen_health_monitoring');
+        }
+        if (critical.contains('poe_animal_welfare')) {
+          recommendations.add('implement_poe');
+        }
+        if (critical.contains('thermal_emergency')) {
+          recommendations.add('implement_thermal_protocol');
+        }
+        if (critical.contains('lighting_program')) {
+          recommendations.add('implement_lighting_program');
+        }
+        if (critical.contains('welfare_training')) {
+          recommendations.add('train_staff_welfare');
+        }
+        if (critical.contains('responsible_medication')) {
+          recommendations.add('improve_medication_practices');
+        }
+      }
+    } else {
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones legacy
+      // ═══════════════════════════════════════════════════════════════
+      if (overallScore < 60) {
+        recommendations.add('immediate_attention_required');
+      }
+      if (categoryScores['feeding'] != null && categoryScores['feeding']! < 70) {
+        recommendations.add('improve_feeding_practices');
+      }
+      if (categoryScores['health'] != null && categoryScores['health']! < 70) {
+        recommendations.add('strengthen_health_program');
+      }
+      if (categoryScores['infrastructure'] != null && categoryScores['infrastructure']! < 70) {
+        recommendations.add('improve_infrastructure');
+      }
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add('train_staff_welfare');
+      }
+    }
+    
+    if (recommendations.isEmpty) {
+      recommendations.add('maintain_current_practices');
+    }
+    
+    return recommendations.toSet().toList(); // Eliminar duplicados
   }
 
   List<String> _translateRecommendations(List recommendationKeys) {
     final translations = <String, String>{
+      // Recomendaciones generales
       'immediate_attention_required': widget.currentLanguage == 'es' 
           ? 'Se requiere atención inmediata para mejorar las condiciones de bienestar animal'
           : 'Immediate attention required to improve animal welfare conditions',
+      'maintain_current_practices': widget.currentLanguage == 'es'
+          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
+          : 'Maintain current good practices and continue monitoring animal welfare',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones EBA (Porcinos)
+      // ═══════════════════════════════════════════════════════════════
+      'critical_welfare_intervention': widget.currentLanguage == 'es'
+          ? 'URGENTE: El nivel de bienestar es crítico. Se requiere intervención inmediata de un profesional veterinario'
+          : 'URGENT: Welfare level is critical. Immediate veterinary professional intervention required',
+      'improve_resource_indicators': widget.currentLanguage == 'es'
+          ? 'Mejorar indicadores de recurso: revisar bebederos, comederos, densidad de alojamiento y condiciones ambientales'
+          : 'Improve resource indicators: review drinkers, feeders, housing density and environmental conditions',
+      'improve_animal_health': widget.currentLanguage == 'es'
+          ? 'Atender indicadores del animal: evaluar cojeras, lesiones cutáneas, problemas respiratorios y mortalidad'
+          : 'Address animal indicators: evaluate lameness, skin lesions, respiratory issues and mortality',
+      'improve_management_eba': widget.currentLanguage == 'es'
+          ? 'Fortalecer gestión: actualizar SOPs, plan de contingencia y capacitación del personal en bienestar animal'
+          : 'Strengthen management: update SOPs, contingency plan and staff training in animal welfare',
+      'improve_water_supply': widget.currentLanguage == 'es'
+          ? 'Mejorar suministro de agua: verificar caudal de bebederos, calidad microbiológica y relación animales/bebedero'
+          : 'Improve water supply: verify drinker flow, microbiological quality and animals/drinker ratio',
+      'improve_feeding_eba': widget.currentLanguage == 'es'
+          ? 'Optimizar alimentación: revisar espacios de comedero, condición corporal y tiempo de acceso al alimento'
+          : 'Optimize feeding: review feeder spaces, body condition and feed access time',
+      'improve_environment': widget.currentLanguage == 'es'
+          ? 'Mejorar ambiente: controlar THI, niveles de amoníaco/CO2, ruido e iluminación según estándares EBA'
+          : 'Improve environment: control THI, ammonia/CO2 levels, noise and lighting according to EBA standards',
+      'improve_health_monitoring': widget.currentLanguage == 'es'
+          ? 'Intensificar monitoreo de salud: vigilar cojeras, lesiones, signos respiratorios, diarrea y mortalidad'
+          : 'Intensify health monitoring: watch for lameness, lesions, respiratory signs, diarrhea and mortality',
+      'improve_behavior_welfare': widget.currentLanguage == 'es'
+          ? 'Mejorar bienestar conductual: reducir peleas, aumentar uso de enriquecimiento y mejorar relación humano-animal'
+          : 'Improve behavioral welfare: reduce fights, increase enrichment use and improve human-animal relationship',
+      'train_staff_eba': widget.currentLanguage == 'es'
+          ? 'Capacitar al personal: asegurar que ≥90% tenga formación anual certificada en bienestar animal'
+          : 'Train staff: ensure ≥90% have annual certified training in animal welfare',
+      'implement_documentation': widget.currentLanguage == 'es'
+          ? 'Implementar documentación: crear/actualizar SOPs críticos y plan de contingencia con simulacros anuales'
+          : 'Implement documentation: create/update critical SOPs and contingency plan with annual drills',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // Recomendaciones ICA (Aves) - MEJORADAS
+      // ═══════════════════════════════════════════════════════════════
+      'critical_welfare_birds': widget.currentLanguage == 'es'
+          ? 'CRÍTICO: Bienestar bajo (<50%). Implementar plan de mejora inmediato con supervisión veterinaria'
+          : 'CRITICAL: Low welfare (<50%). Implement immediate improvement plan with veterinary supervision',
+      'medium_welfare_birds': widget.currentLanguage == 'es'
+          ? 'Bienestar medio. Revisar indicadores con puntuación 0-1 para alcanzar nivel alto (≥76%)'
+          : 'Medium welfare. Review indicators with 0-1 scores to reach high level (≥76%)',
+      'improve_resources_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Recursos <70%: revisar infraestructura, equipos y condiciones ambientales del galpón'
+          : 'Resources category <70%: review infrastructure, equipment and environmental conditions',
+      'improve_animal_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Animal <70%: evaluar signos clínicos, lesiones y bienestar físico de las aves'
+          : 'Animal category <70%: evaluate clinical signs, lesions and physical welfare of birds',
+      'improve_management_birds': widget.currentLanguage == 'es'
+          ? 'Categoría Gestión <70%: fortalecer protocolos, registros y capacitación del personal'
+          : 'Management category <70%: strengthen protocols, records and staff training',
+      
+      // Recursos específicos
+      'improve_air_quality': widget.currentLanguage == 'es'
+          ? 'Mejorar calidad del aire: reducir partículas suspendidas mediante ventilación adecuada y limpieza regular'
+          : 'Improve air quality: reduce suspended particles through adequate ventilation and regular cleaning',
+      'improve_bedding': widget.currentLanguage == 'es'
+          ? 'Mejorar calidad de cama: mantener seca, suelta y con profundidad mínima de 5cm'
+          : 'Improve bedding quality: keep dry, loose and with minimum depth of 5cm',
+      'improve_water_system': widget.currentLanguage == 'es'
+          ? 'Optimizar sistema de agua: verificar caudal, limpieza de bebederos y relación aves/bebedero'
+          : 'Optimize water system: verify flow, drinker cleanliness and birds/drinker ratio',
+      'implement_water_treatment': widget.currentLanguage == 'es'
+          ? 'Implementar tratamiento de agua: cloración u otro método aprobado para garantizar potabilidad'
+          : 'Implement water treatment: chlorination or other approved method to ensure potability',
+      'improve_feeding_system': widget.currentLanguage == 'es'
+          ? 'Mejorar sistema de alimentación: verificar espacio de comedero y acceso uniforme al alimento'
+          : 'Improve feeding system: verify feeder space and uniform access to feed',
+      'improve_thermal_control': widget.currentLanguage == 'es'
+          ? 'Mejorar control térmico: instalar/calibrar termómetros, ventilación y sistemas de enfriamiento'
+          : 'Improve thermal control: install/calibrate thermometers, ventilation and cooling systems',
+      'improve_nest_areas': widget.currentLanguage == 'es'
+          ? 'Mejorar áreas de nidales: asegurar cantidad suficiente, limpieza y acceso adecuado'
+          : 'Improve nest areas: ensure sufficient quantity, cleanliness and adequate access',
+      'increase_space_per_bird': widget.currentLanguage == 'es'
+          ? 'Aumentar espacio disponible: reducir densidad para cumplir mínimo requerido por ave'
+          : 'Increase available space: reduce density to meet minimum required per bird',
+      
+      // Animal específicos
+      'address_thermal_stress': widget.currentLanguage == 'es'
+          ? 'Atender estrés térmico: jadeo/amontonamiento indica problemas de temperatura. Ajustar ventilación inmediatamente'
+          : 'Address thermal stress: panting/huddling indicates temperature issues. Adjust ventilation immediately',
+      'prevent_keel_damage': widget.currentLanguage == 'es'
+          ? 'Prevenir daño de quilla: evaluar perchas, altura de equipos y manejo de aves'
+          : 'Prevent keel damage: evaluate perches, equipment height and bird handling',
+      'prevent_pododermatitis': widget.currentLanguage == 'es'
+          ? 'Prevenir pododermatitis: mejorar calidad de cama, reducir humedad y revisar nutrición'
+          : 'Prevent pododermatitis: improve bedding quality, reduce humidity and review nutrition',
+      'prevent_toe_injuries': widget.currentLanguage == 'es'
+          ? 'Prevenir lesiones en dedos: revisar pisos, rejillas y áreas donde las aves pueden atorarse'
+          : 'Prevent toe injuries: review floors, grids and areas where birds can get stuck',
+      'reduce_skin_lesions': widget.currentLanguage == 'es'
+          ? 'Reducir lesiones cutáneas: evaluar picaje, densidad, enriquecimiento y causas de agresión'
+          : 'Reduce skin lesions: evaluate pecking, density, enrichment and aggression causes',
+      'improve_respiratory_health': widget.currentLanguage == 'es'
+          ? 'Mejorar salud respiratoria: controlar amoníaco, polvo y ventilación. Evaluar programa sanitario'
+          : 'Improve respiratory health: control ammonia, dust and ventilation. Evaluate health program',
+      'monitor_beak_health': widget.currentLanguage == 'es'
+          ? 'Monitorear condición del pico: verificar deformidades, lesiones y capacidad de alimentación'
+          : 'Monitor beak condition: verify deformities, injuries and feeding ability',
+      
+      // Gestión específicos
+      'reduce_mortality': widget.currentLanguage == 'es'
+          ? 'Reducir mortalidad: analizar causas, mejorar registros y establecer umbrales de alerta'
+          : 'Reduce mortality: analyze causes, improve records and establish alert thresholds',
+      'monitor_water_quality': widget.currentLanguage == 'es'
+          ? 'Monitorear calidad de agua: realizar análisis periódicos y mantener registros de potabilidad'
+          : 'Monitor water quality: perform periodic analysis and maintain potability records',
+      'optimize_nutrition': widget.currentLanguage == 'es'
+          ? 'Optimizar nutrición: revisar formulación, almacenamiento y programa de alimentación por etapa'
+          : 'Optimize nutrition: review formulation, storage and feeding program by stage',
+      'strengthen_health_monitoring': widget.currentLanguage == 'es'
+          ? 'Fortalecer vigilancia sanitaria: implementar inspecciones diarias y registros de hallazgos'
+          : 'Strengthen health surveillance: implement daily inspections and findings records',
+      'improve_medication_practices': widget.currentLanguage == 'es'
+          ? 'Mejorar uso responsable de medicamentos: registros, periodos de retiro y supervisión veterinaria'
+          : 'Improve responsible medication use: records, withdrawal periods and veterinary supervision',
+      
+      // Existentes mejorados
+      'improve_resources': widget.currentLanguage == 'es'
+          ? 'Mejorar las medidas basadas en recursos: calidad de cama, bebederos, comederos y condiciones ambientales'
+          : 'Improve resource-based measures: bedding quality, drinkers, feeders and environmental conditions',
+      'improve_animal_indicators': widget.currentLanguage == 'es'
+          ? 'Atender los indicadores basados en el animal: verificar signos de estrés térmico, lesiones y condición física'
+          : 'Address animal-based indicators: check for thermal stress signs, injuries and physical condition',
+      'improve_management': widget.currentLanguage == 'es'
+          ? 'Fortalecer las medidas de gestión: documentación, protocolos y capacitación del personal'
+          : 'Strengthen management measures: documentation, protocols and staff training',
+      'implement_poe': widget.currentLanguage == 'es'
+          ? 'Implementar POE de Bienestar Animal: documentar procedimientos según Resolución ICA 253/2020'
+          : 'Implement Animal Welfare SOP: document procedures according to ICA Resolution 253/2020',
+      'train_staff_welfare': widget.currentLanguage == 'es'
+          ? 'Capacitar personal en bienestar animal: manejo humanitario, detección de problemas y protocolos de emergencia'
+          : 'Train staff in animal welfare: humane handling, problem detection and emergency protocols',
+      'implement_thermal_protocol': widget.currentLanguage == 'es'
+          ? 'Implementar protocolo térmico: monitoreo continuo, umbrales de alarma y plan de emergencia por calor/frío'
+          : 'Implement thermal protocol: continuous monitoring, alarm thresholds and heat/cold emergency plan',
+      'implement_lighting_program': widget.currentLanguage == 'es'
+          ? 'Establecer programa de iluminación: mínimo 8h oscuridad, intensidad adecuada y transiciones graduales'
+          : 'Establish lighting program: minimum 8h darkness, adequate intensity and gradual transitions',
+      
+      // Recomendaciones legacy
       'improve_feeding_practices': widget.currentLanguage == 'es'
           ? 'Mejorar las prácticas de alimentación y asegurar acceso constante a agua y alimento de calidad'
           : 'Improve feeding practices and ensure constant access to quality water and food',
@@ -740,12 +1485,6 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       'improve_infrastructure': widget.currentLanguage == 'es'
           ? 'Mejorar las instalaciones para proporcionar espacios adecuados, ventilación y condiciones ambientales óptimas'
           : 'Improve facilities to provide adequate space, ventilation and optimal environmental conditions',
-      'train_staff_welfare': widget.currentLanguage == 'es'
-          ? 'Capacitar al personal en bienestar animal y mantener registros actualizados'
-          : 'Train staff in animal welfare and maintain updated records',
-      'maintain_current_practices': widget.currentLanguage == 'es'
-          ? 'Mantener las buenas prácticas actuales y continuar monitoreando el bienestar animal'
-          : 'Maintain current good practices and continue monitoring animal welfare',
     };
 
     final translatedRecommendations = <String>[];
@@ -761,7 +1500,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   Future<void> _completeEvaluation() async {
     final loc = AppLocalizations.of(context);
     
-    if (!_evaluation.isComplete(widget.species)) {
+    // Usar _filteredSpecies para validar solo los campos del tipo de producción seleccionado
+    if (!_evaluation.isComplete(_filteredSpecies)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(loc.translate('complete_required_fields')),
@@ -793,90 +1533,155 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     );
 
     if (confirm == true) {
-      final results = _calculateResults();
-      final translatedRecommendations = _translateRecommendations(results['recommendations']);
-      
-      final structuredJson = await _evaluation.generateStructuredJSON(
-        widget.species,
-        results,
-        translatedRecommendations,
-        isOfflineMode: widget.isOfflineMode,
-      );
-
-      _logEvaluationResults(structuredJson);
-
-      final completedEvaluation = _evaluation.copyWith(
-        status: 'completed',
-        overallScore: results['overall_score'],
-        categoryScores: Map<String, double>.from(results['category_scores']),
-        updatedAt: DateTime.now(),
-      );
-
-      // Eliminar borrador
-      await DraftsStorage.deleteDraft(_evaluation.id);
-
-      if (widget.isOfflineMode) {
-        // Modo offline: guardar como pendiente de sincronización
-        print('🔍 DEBUG: Guardando evaluación en modo offline...');
-        print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
-        print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
-
-        final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
-        print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
-
-        // Verificar que se guardó correctamente
-        final allReports = await LocalReportsStorage.getAllLocalReports();
-        print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
-        final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
-        print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
-      } else {
-        // Modo online: intentar sincronizar INMEDIATAMENTE
-        print('🌐 Modo online: Sincronizando evaluación al servidor...');
-        final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
-
-        if (syncSuccess) {
-          print('✅ Evaluación sincronizada exitosamente con el servidor');
-          // Guardar también localmente para acceso offline
-          await ReportsStorage.saveReport(completedEvaluation);
-
-          // Mostrar feedback de éxito
-          if (mounted) {
-            CustomSnackbar.showSuccess(
-              context,
-              AppLocalizations.of(context).translate('evaluation_synced_successfully'),
-            );
-          }
-        } else {
-          print('⚠️ Error al sincronizar, guardando como pendiente');
-          // Si falla, guardar como pendiente para reintento posterior
-          await LocalReportsStorage.saveLocalReport(completedEvaluation);
-
-          // Mostrar feedback de que se guardó localmente
-          if (mounted) {
-            CustomSnackbar.show(
-              context,
-              AppLocalizations.of(context).translate('saved_locally_will_sync_later'),
-              isWarning: true,
-              duration: const Duration(seconds: 4),
-            );
-          }
-        }
-      }
-
-      setState(() => _hasUnsavedChanges = false);
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultsScreen(
-              evaluation: completedEvaluation,
-              species: widget.species,
-              results: results,
-              structuredJson: structuredJson,
+      // Mostrar loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WillPopScope(
+          onWillPop: () async => false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animación de loading
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(int.parse(widget.species.gradientColors[0])),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    loc.translate('processing_evaluation'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: BianTheme.darkGray,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('please_wait'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: BianTheme.mediumGray,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      );
+
+      try {
+        final results = _calculateResults();
+        final translatedRecommendations = _translateRecommendations(results['recommendations']);
+        
+        final structuredJson = await _evaluation.generateStructuredJSON(
+          _filteredSpecies,
+          results,
+          translatedRecommendations,
+          isOfflineMode: widget.isOfflineMode,
         );
+
+        _logEvaluationResults(structuredJson);
+
+        final completedEvaluation = _evaluation.copyWith(
+          status: 'completed',
+          overallScore: results['overall_score'],
+          categoryScores: Map<String, double>.from(results['category_scores']),
+          updatedAt: DateTime.now(),
+        );
+
+        // Eliminar borrador
+        await DraftsStorage.deleteDraft(_evaluation.id);
+
+        if (widget.isOfflineMode) {
+          // Modo offline: guardar como pendiente de sincronización
+          print('🔍 DEBUG: Guardando evaluación en modo offline...');
+          print('🔍 DEBUG: Evaluation ID: ${completedEvaluation.id}');
+          print('🔍 DEBUG: Farm Name: ${completedEvaluation.farmName}');
+
+          final saveResult = await LocalReportsStorage.saveLocalReport(completedEvaluation);
+          print('📴 Modo offline: Evaluación guardada como pendiente - Result: $saveResult');
+
+          // Verificar que se guardó correctamente
+          final allReports = await LocalReportsStorage.getAllLocalReports();
+          print('🔍 DEBUG: Total reportes locales después de guardar: ${allReports.length}');
+          final justSaved = await LocalReportsStorage.getLocalReportById(completedEvaluation.id);
+          print('🔍 DEBUG: Reporte recién guardado encontrado: ${justSaved != null}');
+        } else {
+          // Modo online: intentar sincronizar INMEDIATAMENTE
+          print('🌐 Modo online: Sincronizando evaluación al servidor...');
+          final syncSuccess = await _syncEvaluationToServer(completedEvaluation, structuredJson);
+
+          if (syncSuccess) {
+            print('✅ Evaluación sincronizada exitosamente con el servidor');
+            // Guardar también localmente para acceso offline
+            await ReportsStorage.saveReport(completedEvaluation);
+          } else {
+            print('⚠️ Error al sincronizar, guardando como pendiente');
+            // Si falla, guardar como pendiente para reintento posterior
+            await LocalReportsStorage.saveLocalReport(completedEvaluation);
+          }
+        }
+
+        setState(() => _hasUnsavedChanges = false);
+
+        // Cerrar loading dialog
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+
+        // Pequeña pausa para que se vea el cierre del dialog
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        if (mounted) {
+          // Mostrar feedback según el resultado
+          if (!widget.isOfflineMode) {
+            // Ya se mostró el feedback en el bloque anterior
+          }
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResultsScreen(
+                evaluation: completedEvaluation,
+                species: _filteredSpecies,
+                results: results,
+                structuredJson: structuredJson,
+                isLocal: widget.isOfflineMode,
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        // Cerrar loading dialog en caso de error
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        
+        print('❌ Error al completar evaluación: $e');
+        
+        if (mounted) {
+          CustomSnackbar.showError(
+            context,
+            loc.translate('error_completing_evaluation'),
+          );
+        }
       }
     }
   }
@@ -961,6 +1766,9 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     print('   Fecha: ${json['evaluation_date']}');
     print('   Idioma: ${json['language']}');
     print('   Especie: ${json['species']}');
+    if (json['production_type'] != null) {
+      print('   Tipo Producción: ${json['production_type']}');
+    }
     print('   Granja: ${json['farm_name']}');
     print('   Ubicación: ${json['farm_location']}');
     print('   Evaluador: ${json['evaluator_name']}');
@@ -986,7 +1794,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('⚠️  PUNTOS CRÍTICOS:');
-    final criticalPoints = json['critical_points'] as List;
+    final criticalPoints = json['critical_points'] as List? ?? [];
     if (criticalPoints.isEmpty) {
       print('   ✓ Ninguno');
     } else {
@@ -997,7 +1805,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('✨ PUNTOS FUERTES:');
-    final strongPoints = json['strong_points'] as List;
+    final strongPoints = json['strong_points'] as List? ?? [];
     if (strongPoints.isEmpty) {
       print('   - Ninguno destacable');
     } else {
@@ -1008,7 +1816,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
     
     print('');
     print('💡 RECOMENDACIONES:');
-    final recommendations = json['recommendations'] as List;
+    final recommendations = json['recommendations'] as List? ?? [];
     for (int i = 0; i < recommendations.length; i++) {
       print('   ${i + 1}. ${recommendations[i]}');
     }
@@ -1021,8 +1829,8 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
   @override
 Widget build(BuildContext context) {
   final loc = AppLocalizations.of(context);
-  final currentCategory = widget.species.categories[_currentCategoryIndex];
-  final progress = _evaluation.getProgress(widget.species);
+  final currentCategory = _filteredSpecies.categories[_currentCategoryIndex];
+  final progress = _evaluation.getProgress(_filteredSpecies);
 
   return WillPopScope(
     onWillPop: () async {
@@ -1182,7 +1990,7 @@ Widget build(BuildContext context) {
         body: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: Colors.white,
               child: Column(
                 children: [
@@ -1190,10 +1998,10 @@ Widget build(BuildContext context) {
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: progress,
-                            minHeight: 8,
+                            minHeight: 5,
                             backgroundColor: BianTheme.lightGray,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               Color(int.parse(widget.species.gradientColors[0])),
@@ -1201,43 +2009,44 @@ Widget build(BuildContext context) {
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
+                      SizedBox(width: 10),
                       Text(
                         '${(progress * 100).toInt()}%',
                         style: TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: Color(int.parse(widget.species.gradientColors[0])),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${widget.species.categories.length}',
+                        '${loc.translate('category')} ${_currentCategoryIndex + 1} ${loc.translate('of')} ${_filteredSpecies.categories.length}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: BianTheme.mediumGray,
                         ),
                       ),
                       if (widget.draftToEdit != null)
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: BianTheme.infoBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_note, size: 14, color: BianTheme.infoBlue),
-                              SizedBox(width: 4),
+                              Icon(Icons.edit_note, size: 12, color: BianTheme.infoBlue),
+                              SizedBox(width: 3),
                               Text(
                                 'Borrador',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   color: BianTheme.infoBlue,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1252,7 +2061,7 @@ Widget build(BuildContext context) {
             ),
 
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -1265,36 +2074,59 @@ Widget build(BuildContext context) {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      _getIconData(currentCategory.icon),
+                      _getCategoryIcon(currentCategory.id),
                       color: Colors.white,
-                      size: 28,
+                      size: 22,
                     ),
                   ),
-                  SizedBox(width: 16),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          loc.translate(currentCategory.id),
+                          _getCategoryName(currentCategory, loc),
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          '${currentCategory.fields.length} ${loc.translate('indicators')}',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '${currentCategory.fields.length} ${loc.translate('indicators')}',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            // Mostrar peso si existe (metodología ICA)
+                            if (currentCategory.weight < 1.0) ...[
+                              SizedBox(width: 8),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Peso: ${(currentCategory.weight * 100).toInt()}%',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -1339,7 +2171,7 @@ Widget build(BuildContext context) {
                 children: [
                   if (_currentCategoryIndex > 0)
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: ElevatedButton.icon(
                         onPressed: () {
                           setState(() {
                             _currentCategoryIndex--;
@@ -1352,12 +2184,18 @@ Widget build(BuildContext context) {
                         },
                         icon: Icon(Icons.arrow_back),
                         label: Text(loc.translate('previous')),
-                        style: OutlinedButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
                           foregroundColor: Color(int.parse(widget.species.gradientColors[0])),
+                          elevation: 0,
                           side: BorderSide(
                             color: Color(int.parse(widget.species.gradientColors[0])),
+                            width: 1.5,
                           ),
                           minimumSize: Size(0, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                          ),
                         ),
                       ),
                     ),
@@ -1366,7 +2204,7 @@ Widget build(BuildContext context) {
                     flex: _currentCategoryIndex == 0 ? 1 : 1,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (_currentCategoryIndex < widget.species.categories.length - 1) {
+                        if (_currentCategoryIndex < _filteredSpecies.categories.length - 1) {
                           if (_validateCurrentCategory()) {
                             setState(() {
                               _currentCategoryIndex++;
@@ -1382,18 +2220,22 @@ Widget build(BuildContext context) {
                         }
                       },
                       icon: Icon(
-                        _currentCategoryIndex < widget.species.categories.length - 1
+                        _currentCategoryIndex < _filteredSpecies.categories.length - 1
                             ? Icons.arrow_forward
                             : Icons.check_circle,
                       ),
                       label: Text(
-                        _currentCategoryIndex < widget.species.categories.length - 1
+                        _currentCategoryIndex < _filteredSpecies.categories.length - 1
                             ? loc.translate('next')
                             : loc.translate('finish'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(int.parse(widget.species.gradientColors[0])),
+                        foregroundColor: Colors.white,
                         minimumSize: Size(0, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
                       ),
                     ),
                   ),
@@ -1406,6 +2248,53 @@ Widget build(BuildContext context) {
     );
   }
 
+  /// Widget colapsable para la descripción del indicador
+  Widget _buildCollapsibleDescription(String descriptionText) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        collapsedBackgroundColor: BianTheme.backgroundGray,
+        backgroundColor: BianTheme.backgroundGray,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        collapsedShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        visualDensity: VisualDensity.compact,
+        minTileHeight: 32,
+        leading: Icon(
+          Icons.info_outline,
+          size: 14,
+          color: BianTheme.mediumGray,
+        ),
+        title: Text(
+          'Ver indicaciones',
+          style: TextStyle(
+            fontSize: 11,
+            color: BianTheme.mediumGray,
+          ),
+        ),
+        trailing: Icon(
+          Icons.keyboard_arrow_down,
+          size: 18,
+          color: BianTheme.mediumGray,
+        ),
+        children: [
+          Text(
+            descriptionText,
+            style: TextStyle(
+              fontSize: 11,
+              color: BianTheme.darkGray.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFieldWidget(
     EvaluationField field,
     String key,
@@ -1413,6 +2302,83 @@ Widget build(BuildContext context) {
     String categoryId,
   ) {
     final loc = AppLocalizations.of(context);
+    final bool isICAScale = field.type == FieldType.scale0to2;
+    final bool isEBAScale = field.type == FieldType.scale0to4;
+    final bool showMethodologyInfo = isICAScale || isEBAScale;
+    
+    // Obtener la pregunta del indicador
+    String questionText = '';
+    if (field.question != null) {
+      questionText = loc.translate(field.question!);
+      // Si no hay traducción, usar el ID como fallback
+      if (questionText == field.question) {
+        questionText = loc.translate(field.id);
+      }
+    } else {
+      questionText = loc.translate(field.id);
+    }
+    
+    // Obtener descripción del indicador (para ICA y EBA)
+    String? descriptionText;
+    if (showMethodologyInfo && field.description != null) {
+      descriptionText = loc.translate(field.description!);
+      if (descriptionText == field.description) {
+        descriptionText = null; // No mostrar si no hay traducción
+      }
+    }
+    
+    // Obtener rangos de calificación (para EBA)
+    String? rangesText;
+    if (isEBAScale) {
+      // El ID del campo tiene formato "eba_XX_something", necesitamos "eba_XX_ranges"
+      final fieldIdParts = field.id.split('_');
+      if (fieldIdParts.length >= 2) {
+        final rangesKey = '${fieldIdParts[0]}_${fieldIdParts[1]}_ranges';
+        rangesText = loc.translate(rangesKey);
+        if (rangesText == rangesKey) {
+          rangesText = null;
+        }
+      }
+    }
+    
+    // Obtener método de evaluación (para ICA y EBA)
+    String? methodText;
+    if (showMethodologyInfo && field.evaluationMethod != null) {
+      switch (field.evaluationMethod!) {
+        case EvaluationMethod.visualInspectionWithSampling:
+          methodText = loc.translate('method_visual_sampling');
+          if (methodText == 'method_visual_sampling') {
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual con muestreo' 
+                : 'Visual inspection with sampling';
+          }
+          break;
+        case EvaluationMethod.visualInspectionNoSampling:
+          methodText = loc.translate('method_visual_no_sampling');
+          if (methodText == 'method_visual_no_sampling') {
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual sin muestreo' 
+                : 'Visual inspection without sampling';
+          }
+          break;
+        case EvaluationMethod.documentInspection:
+          methodText = loc.translate('method_document');
+          if (methodText == 'method_document') {
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección documental' 
+                : 'Documentary inspection';
+          }
+          break;
+        case EvaluationMethod.visualAndDocumental:
+          methodText = loc.translate('method_visual_document');
+          if (methodText == 'method_visual_document') {
+            methodText = widget.currentLanguage == 'es' 
+                ? 'Inspección visual y documental' 
+                : 'Visual and documentary inspection';
+          }
+          break;
+      }
+    }
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1439,37 +2405,144 @@ Widget build(BuildContext context) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Encabezado con label y badge de requerido
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  loc.translate(field.id),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: BianTheme.darkGray,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Label del indicador
+                    Text(
+                      loc.translate(field.label),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: BianTheme.darkGray,
+                      ),
+                    ),
+                    // Método de evaluación (ICA y EBA)
+                    if (methodText != null) ...[
+                      SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: BianTheme.mediumGray,
+                          ),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              methodText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: BianTheme.mediumGray,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (field.required)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: BianTheme.errorRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    loc.translate('required'),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: BianTheme.errorRed,
-                      fontWeight: FontWeight.bold,
+              // Badges
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Badge de puntaje máximo (ICA y EBA)
+                  if (isICAScale || isEBAScale) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Max: ${field.maxScore}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color(int.parse(widget.species.gradientColors[0])),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                    SizedBox(width: 8),
+                  ],
+                  if (field.required)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: BianTheme.errorRed.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        loc.translate('required'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: BianTheme.errorRed,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-          SizedBox(height: 12),
+          
+          // Descripción del indicador (colapsable)
+          if (descriptionText != null) ...[
+            SizedBox(height: 8),
+            _buildCollapsibleDescription(descriptionText),
+          ],
+          
+          // Pregunta de evaluación
+          if (questionText.isNotEmpty) ...[
+            SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Color(int.parse(widget.species.gradientColors[0])).withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.help_outline,
+                    size: 18,
+                    color: Color(int.parse(widget.species.gradientColors[0])),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      questionText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: BianTheme.darkGray,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          // Rangos de calificación (solo para EBA)
+          if (rangesText != null) ...[
+            SizedBox(height: 8),
+            _buildRangesCard(rangesText),
+          ],
+          
+          SizedBox(height: 16),
           _buildInputWidget(field, key, value, categoryId),
         ],
       ),
@@ -1485,6 +2558,27 @@ Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     
     switch (field.type) {
+      // ═══════════════════════════════════════════════════════════════
+      // ESCALA ICA 0-2 (Nueva para metodología ICA)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.scale0to2:
+        return _buildScale0to2Widget(field, key, value, categoryId);
+      
+      case FieldType.scale0to4:
+        return _buildScale0to4Widget(field, key, value, categoryId);
+
+      // ═══════════════════════════════════════════════════════════════
+      // ESCALA EVA 4.0 (0, 20, 55, 80, 100)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.scaleEVA:
+        return _buildScaleEVAWidget(field, key, value, categoryId);
+
+      // ═══════════════════════════════════════════════════════════════
+      // SÍ/NO CON VALOR 100/0 (EVA 4.0)
+      // ═══════════════════════════════════════════════════════════════
+      case FieldType.yesNo100:
+        return _buildYesNo100Widget(field, key, value, categoryId);
+
       case FieldType.yesNo:
         return Row(
           children: [
@@ -1580,9 +2674,849 @@ Widget build(BuildContext context) {
           },
         );
 
+      case FieldType.select:
+        // TODO: Implementar si se necesita
+        return SizedBox();
+
       default:
         return SizedBox();
     }
+  }
+
+  /// Widget para escala ICA 0-2
+  /// 0 = No cumple (rojo)
+  /// 1 = Cumple parcialmente (amarillo)
+  /// 2 = Cumple totalmente (verde)
+  Widget _buildScale0to2Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Colores para cada nivel
+    final colors = [
+      BianTheme.errorRed,      // 0 - No cumple
+      Colors.amber.shade700,   // 1 - Cumple parcialmente  
+      BianTheme.successGreen,  // 2 - Cumple totalmente
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.cancel,           // 0
+      Icons.remove_circle,    // 1
+      Icons.check_circle,     // 2
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Botones de selección 0, 1, 2
+        Row(
+          children: List.generate(3, (index) {
+            final isSelected = currentValue == index;
+            final color = colors[index];
+            
+            // Obtener etiqueta traducida para cada nivel
+            String label;
+            switch (index) {
+              case 0:
+                label = loc.translate('${field.id}_0');
+                // Si no hay traducción específica, usar genérica
+                if (label == '${field.id}_0') {
+                  label = loc.translate('scale_0');
+                  if (label == 'scale_0') label = 'No cumple (0)';
+                }
+                break;
+              case 1:
+                label = loc.translate('${field.id}_1');
+                if (label == '${field.id}_1') {
+                  label = loc.translate('scale_1');
+                  if (label == 'scale_1') label = 'Parcial (1)';
+                }
+                break;
+              case 2:
+                label = loc.translate('${field.id}_2');
+                if (label == '${field.id}_2') {
+                  label = loc.translate('scale_2');
+                  if (label == 'scale_2') label = 'Cumple (2)';
+                }
+                break;
+              default:
+                label = index.toString();
+            }
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 4,
+                  right: index == 2 ? 0 : 4,
+                ),
+                child: InkWell(
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? color : BianTheme.lightGray,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Número grande
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              index.toString(),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : BianTheme.mediumGray,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        // Icono
+                        Icon(
+                          icons[index],
+                          color: isSelected ? color : BianTheme.mediumGray,
+                          size: 24,
+                        ),
+                        SizedBox(height: 4),
+                        // Label corto
+                        Text(
+                          _getShortScaleLabel(index, loc),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? color : BianTheme.mediumGray,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[currentValue].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[currentValue].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[currentValue],
+                  color: colors[currentValue],
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getScaleDescription(field.id, currentValue, loc),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Obtiene etiqueta corta para la escala
+  String _getShortScaleLabel(int value, AppLocalizations loc) {
+    switch (value) {
+      case 0:
+        return 'No cumple';
+      case 1:
+        return 'Parcial';
+      case 2:
+        return 'Cumple';
+      default:
+        return value.toString();
+    }
+  }
+
+  /// Obtiene etiqueta corta para la escala 0-4 (EBA Porcinos)
+  String _getShortScaleLabel0to4(int value, AppLocalizations loc) {
+    switch (value) {
+      case 0:
+        return 'Crítico';
+      case 1:
+        return 'Deficiente';
+      case 2:
+        return 'Aceptable';
+      case 3:
+        return 'Bueno';
+      case 4:
+        return 'Excelente';
+      default:
+        return value.toString();
+    }
+  }
+
+  /// Obtiene la descripción del nivel seleccionado
+  String _getScaleDescription(String fieldId, int value, AppLocalizations loc) {
+    // Intentar obtener traducción específica del indicador
+    final specificKey = '${fieldId}_$value';
+    final specificTranslation = loc.translate(specificKey);
+    
+    if (specificTranslation != specificKey) {
+      return specificTranslation;
+    }
+    
+    // Usar descripciones genéricas
+    switch (value) {
+      case 0:
+        return loc.translate('scale_0_desc') != 'scale_0_desc' 
+            ? loc.translate('scale_0_desc')
+            : 'No cumple con el criterio evaluado. Requiere intervención inmediata.';
+      case 1:
+        return loc.translate('scale_1_desc') != 'scale_1_desc'
+            ? loc.translate('scale_1_desc')
+            : 'Cumple parcialmente con el criterio. Se recomienda mejorar.';
+      case 2:
+        return loc.translate('scale_2_desc') != 'scale_2_desc'
+            ? loc.translate('scale_2_desc')
+            : 'Cumple totalmente con el criterio evaluado.';
+      default:
+        return '';
+    }
+  }
+
+  /// Obtiene la descripción del nivel seleccionado para escala 0-4 (EBA Porcinos)
+  String _getScaleDescription0to4(String fieldId, int value, AppLocalizations loc) {
+    // Intentar obtener traducción específica del indicador
+    final specificKey = '${fieldId}_$value';
+    final specificTranslation = loc.translate(specificKey);
+    
+    if (specificTranslation != specificKey) {
+      return specificTranslation;
+    }
+    
+    // Usar descripciones genéricas para EBA
+    switch (value) {
+      case 0:
+        return 'No cumple con el criterio. Situación crítica que requiere acción inmediata.';
+      case 1:
+        return 'Deficiente. Incumplimiento significativo que requiere mejoras urgentes.';
+      case 2:
+        return 'Aceptable. Cumple mínimamente pero hay espacio para mejorar.';
+      case 3:
+        return 'Bueno. Cumple satisfactoriamente con el criterio evaluado.';
+      case 4:
+        return 'Excelente. Cumplimiento óptimo del criterio según estándares EBA.';
+      default:
+        return '';
+    }
+  }
+
+  /// Widget para escala 0-4 (EBA Porcinos)
+  Widget _buildScale0to4Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Colores para cada nivel (0-4)
+    final colors = [
+      const Color(0xFFD32F2F),  // 0 - Crítico (rojo oscuro)
+      const Color(0xFFFF5722),  // 1 - Deficiente (naranja rojizo)
+      const Color(0xFFFF9800),  // 2 - Aceptable (naranja)
+      const Color(0xFF4CAF50),  // 3 - Bueno (verde)
+      const Color(0xFF1B5E20),  // 4 - Excelente (verde oscuro)
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.dangerous,           // 0
+      Icons.warning_amber,       // 1
+      Icons.info_outline,        // 2
+      Icons.thumb_up,            // 3
+      Icons.workspace_premium,   // 4
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Primera fila: 0, 1, 2
+        Row(
+          children: List.generate(3, (index) {
+            final isSelected = currentValue == index;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 3,
+                  right: index == 2 ? 0 : 3,
+                ),
+                child: _buildScaleButton(
+                  index: index,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: _getShortScaleLabel0to4(index, loc),
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // Segunda fila: 3, 4
+        Row(
+          children: List.generate(2, (i) {
+            final index = i + 3;
+            final isSelected = currentValue == index;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 4,
+                  right: i == 1 ? 0 : 4,
+                ),
+                child: _buildScaleButton(
+                  index: index,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: _getShortScaleLabel0to4(index, loc),
+                  onTap: () => _updateResponse(categoryId, field.id, index),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[currentValue].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[currentValue].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[currentValue],
+                  color: colors[currentValue],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getScaleDescription0to4(field.id, currentValue, loc),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Widget para escala EVA 4.0 (0, 20, 55, 80, 100)
+  /// Usado en metodología EVA 4.0 para porcinos
+  Widget _buildScaleEVAWidget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    // Valores EVA: 0, 20, 55, 80, 100
+    final evaValues = [0, 20, 55, 80, 100];
+    
+    // Colores para cada nivel
+    final colors = [
+      const Color(0xFFD32F2F),  // 0 - Bajo (<50%)
+      const Color(0xFFFF5722),  // 20 - Bajo (≥50% y <60%)
+      const Color(0xFFFF9800),  // 55 - Medio (≥60% y <80%)
+      const Color(0xFF4CAF50),  // 80 - Alto (≥80% y <100%)
+      const Color(0xFF1B5E20),  // 100 - Excelente (100%)
+    ];
+    
+    // Iconos para cada nivel
+    final icons = [
+      Icons.dangerous,           // 0
+      Icons.warning_amber,       // 20
+      Icons.info_outline,        // 55
+      Icons.thumb_up,            // 80
+      Icons.workspace_premium,   // 100
+    ];
+    
+    // Labels cortos
+    final labels = [
+      '<50%',
+      '≥50%',
+      '≥60%',
+      '≥80%',
+      '100%',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Primera fila: 0, 20, 55
+        Row(
+          children: List.generate(3, (index) {
+            final evaValue = evaValues[index];
+            final isSelected = currentValue == evaValue;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : 3,
+                  right: index == 2 ? 0 : 3,
+                ),
+                child: _buildEVAScaleButton(
+                  value: evaValue,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: labels[index],
+                  onTap: () => _updateResponse(categoryId, field.id, evaValue),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // Segunda fila: 80, 100
+        Row(
+          children: List.generate(2, (i) {
+            final index = i + 3;
+            final evaValue = evaValues[index];
+            final isSelected = currentValue == evaValue;
+            final color = colors[index];
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 4,
+                  right: i == 1 ? 0 : 4,
+                ),
+                child: _buildEVAScaleButton(
+                  value: evaValue,
+                  isSelected: isSelected,
+                  color: color,
+                  icon: icons[index],
+                  label: labels[index],
+                  onTap: () => _updateResponse(categoryId, field.id, evaValue),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        // Mostrar descripción del nivel seleccionado
+        if (currentValue != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors[evaValues.indexOf(currentValue)].withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors[evaValues.indexOf(currentValue)].withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icons[evaValues.indexOf(currentValue)],
+                  color: colors[evaValues.indexOf(currentValue)],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    loc.translate('scale_eva_$currentValue'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BianTheme.darkGray,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Botón para escala EVA
+  Widget _buildEVAScaleButton({
+    required int value,
+    required bool isSelected,
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : BianTheme.lightGray,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Número (valor EVA)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : BianTheme.mediumGray,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Icono
+            Icon(
+              icon,
+              color: isSelected ? color : BianTheme.mediumGray,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            // Label
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : BianTheme.mediumGray,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget para Sí/No con valor 100/0 (EVA 4.0)
+  Widget _buildYesNo100Widget(
+    EvaluationField field,
+    String key,
+    dynamic value,
+    String categoryId,
+  ) {
+    final loc = AppLocalizations.of(context);
+    final int? currentValue = value is int ? value : (value is double ? value.toInt() : null);
+    
+    return Row(
+      children: [
+        // Botón SÍ = 100
+        Expanded(
+          child: InkWell(
+            onTap: () => _updateResponse(categoryId, field.id, 100),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: currentValue == 100 
+                    ? BianTheme.successGreen.withOpacity(0.15) 
+                    : BianTheme.backgroundGray,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: currentValue == 100 ? BianTheme.successGreen : BianTheme.lightGray,
+                  width: currentValue == 100 ? 2 : 1,
+                ),
+                boxShadow: currentValue == 100
+                    ? [
+                        BoxShadow(
+                          color: BianTheme.successGreen.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen 
+                          : BianTheme.mediumGray.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: currentValue == 100 ? Colors.white : BianTheme.mediumGray,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('yes'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen 
+                          : BianTheme.mediumGray,
+                    ),
+                  ),
+                  Text(
+                    '100 pts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: currentValue == 100 
+                          ? BianTheme.successGreen.withOpacity(0.8) 
+                          : BianTheme.mediumGray.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Botón NO = 0
+        Expanded(
+          child: InkWell(
+            onTap: () => _updateResponse(categoryId, field.id, 0),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: currentValue == 0 
+                    ? BianTheme.errorRed.withOpacity(0.15) 
+                    : BianTheme.backgroundGray,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: currentValue == 0 ? BianTheme.errorRed : BianTheme.lightGray,
+                  width: currentValue == 0 ? 2 : 1,
+                ),
+                boxShadow: currentValue == 0
+                    ? [
+                        BoxShadow(
+                          color: BianTheme.errorRed.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed 
+                          : BianTheme.mediumGray.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.cancel,
+                      color: currentValue == 0 ? Colors.white : BianTheme.mediumGray,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.translate('no'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed 
+                          : BianTheme.mediumGray,
+                    ),
+                  ),
+                  Text(
+                    '0 pts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: currentValue == 0 
+                          ? BianTheme.errorRed.withOpacity(0.8) 
+                          : BianTheme.mediumGray.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Botón reutilizable para escalas
+  Widget _buildScaleButton({
+    required int index,
+    required bool isSelected,
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : BianTheme.backgroundGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : BianTheme.lightGray,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Número
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isSelected ? color : BianTheme.mediumGray.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  index.toString(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : BianTheme.mediumGray,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Icono
+            Icon(
+              icon,
+              color: isSelected ? color : BianTheme.mediumGray,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            // Label
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : BianTheme.mediumGray,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildYesNoButton({
@@ -1619,6 +3553,92 @@ Widget build(BuildContext context) {
                 fontWeight: FontWeight.bold,
                 color: isSelected ? color : BianTheme.mediumGray,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Construye la tarjeta expandible de rangos de calificación
+  Widget _buildRangesCard(String rangesText) {
+    // Colores para cada nivel de puntuación
+    final rangeColors = [
+      const Color(0xFFD32F2F),  // 0 - Crítico
+      const Color(0xFFFF5722),  // 1 - Deficiente
+      const Color(0xFFFF9800),  // 2 - Aceptable
+      const Color(0xFF4CAF50),  // 3 - Bueno
+      const Color(0xFF1B5E20),  // 4 - Excelente
+    ];
+
+    // Parsear las líneas de rangos
+    final lines = rangesText.split('\n');
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          initiallyExpanded: false,
+          leading: Icon(
+            Icons.format_list_numbered,
+            size: 20,
+            color: Color(int.parse(widget.species.gradientColors[0])),
+          ),
+          title: Text(
+            widget.currentLanguage == 'es' 
+                ? 'Ver rangos de calificación' 
+                : 'View scoring ranges',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: BianTheme.darkGray,
+            ),
+          ),
+          children: [
+            Column(
+              children: lines.asMap().entries.map((entry) {
+                final index = entry.key;
+                final line = entry.value;
+                final colorIndex = 4 - index; // 4 pts = index 0, 0 pts = index 4
+                final color = colorIndex >= 0 && colorIndex < 5 
+                    ? rangeColors[colorIndex] 
+                    : BianTheme.mediumGray;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(top: 5, right: 8),
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          line,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.darkGray.withOpacity(0.9),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),

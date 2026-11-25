@@ -20,6 +20,7 @@ import '../evaluation/results_screen.dart';
 import 'local_reports_screen.dart';
 import 'my_evaluations_screen.dart';
 import 'admin_reports_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 import '../../core/widgets/connectivity_wrapper.dart';
 import '../../core/widgets/custom_snackbar.dart';
 import '../../core/services/session_manager.dart';
@@ -213,17 +214,175 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _navigateToEvaluation(Species species) async {
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     
+    // Para aves, usar directamente ponedoras_piso (único tipo soportado)
+    final String? productionType = species.id == 'birds' ? 'ponedoras_piso' : null;
+    
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EvaluationScreen(
           species: species,
           currentLanguage: languageProvider.locale.languageCode,
+          productionType: productionType,
         ),
       ),
     );
     
     _loadAllData();
+  }
+
+  /// Selector de tipo de producción avícola (DEPRECATED - solo ponedoras_piso)
+  /// Se mantiene por compatibilidad pero ya no se usa
+  @Deprecated('Solo se soporta ponedoras_piso. Este método ya no se utiliza.')
+  Future<String?> _showProductionTypeSelector() async {
+    final loc = AppLocalizations.of(context);
+    
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Título
+            Text(
+              loc.translate('select_production_type'),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              loc.translate('production_type_description'),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Opciones
+            _buildProductionTypeOption(
+              context,
+              'pollo_engorde',
+              loc.translate('pollo_engorde'),
+              loc.translate('pollo_engorde_desc'),
+              Icons.egg_outlined,
+              const Color(0xFFFF9800),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'ponedoras_piso',
+              loc.translate('ponedoras_piso'),
+              loc.translate('ponedoras_piso_desc'),
+              Icons.home_outlined,
+              const Color(0xFF4CAF50),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'ponedoras_jaula',
+              loc.translate('ponedoras_jaula'),
+              loc.translate('ponedoras_jaula_desc'),
+              Icons.grid_view_outlined,
+              const Color(0xFF2196F3),
+            ),
+            const SizedBox(height: 12),
+            _buildProductionTypeOption(
+              context,
+              'pastoreo',
+              loc.translate('pastoreo'),
+              loc.translate('pastoreo_desc'),
+              Icons.grass_outlined,
+              const Color(0xFF8BC34A),
+            ),
+            
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductionTypeOption(
+    BuildContext context,
+    String value,
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(12),
+          color: color.withOpacity(0.05),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: color),
+          ],
+        ),
+      ),
+    );
   }
 
   void _continueDraft(Evaluation draft) async {
@@ -443,14 +602,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Scaffold(
         appBar: AppBar(
           title: Text(loc.translate('home')),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                CustomSnackbar.showInfo(context, loc.translate('no_notifications'));
-              },
-            ),
-          ],
         ),
         drawer: _buildDrawer(context),
         body: Column(
@@ -1107,75 +1258,125 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 16),
 
-        // Cards en fila
-        Row(
-          children: [
-            // Reportes Locales (solo si hay pendientes)
-            if (_pendingSyncCount > 0) ...[
-              Expanded(
-                child: _buildSimpleCard(
-                  title: loc.translate('local_reports_action'),
-                  count: _pendingSyncCount,
-                  icon: Icons.cloud_upload,
-                  color: BianTheme.warningYellow,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
-                    ).then((_) => _loadAllData());
-                  },
-                ),
+        // Botón Dashboard - Estadísticas
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF667eea),
+                  const Color(0xFF764ba2),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 16),
-            ],
-
-            // Mis Evaluaciones
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF667eea).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: BianTheme.successGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: BianTheme.successGreen.withOpacity(0.3),
-                      width: 2,
-                    ),
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: const Icon(Icons.dashboard_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.assessment_outlined, color: BianTheme.successGreen, size: 32),
-                      const SizedBox(height: 12),
                       Text(
-                        loc.translate('my_evaluations_action'),
-                        style: TextStyle(
+                        loc.translate('dashboard') != 'dashboard' 
+                            ? loc.translate('dashboard') 
+                            : 'Dashboard',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: BianTheme.successGreen,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        loc.translate('view_full_history'),
-                        style: TextStyle(
+                        loc.translate('view_statistics') != 'view_statistics'
+                            ? loc.translate('view_statistics')
+                            : 'Ver estadísticas y gráficas',
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: BianTheme.successGreen.withOpacity(0.8),
+                          color: Colors.white70,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+                const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 18),
+              ],
             ),
-          ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Cards en fila - mismo tamaño usando IntrinsicHeight
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Reportes Locales (solo si hay pendientes)
+              if (_pendingSyncCount > 0) ...[
+                Expanded(
+                  flex: 1,
+                  child: _buildUnifiedCard(
+                    title: loc.translate('local_reports_action'),
+                    subtitle: '$_pendingSyncCount',
+                    icon: Icons.cloud_upload,
+                    color: BianTheme.warningYellow,
+                    isCountCard: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LocalReportsScreen()),
+                      ).then((_) => _loadAllData());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+
+              // Mis Evaluaciones
+              Expanded(
+                flex: 1,
+                child: _buildUnifiedCard(
+                  title: loc.translate('my_evaluations_action'),
+                  subtitle: loc.translate('view_full_history'),
+                  icon: Icons.assessment_outlined,
+                  color: BianTheme.successGreen,
+                  isCountCard: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyEvaluationsScreen()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
 
         // Admin Card (solo para administradores)
@@ -1298,6 +1499,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Card unificado para Reportes Locales y Mis Evaluaciones
+  /// Garantiza mismo tamaño en ambos cards
+  Widget _buildUnifiedCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isCountCard,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            if (isCountCard) ...[
+              // Para Reportes Locales: mostrar número grande
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ] else ...[
+              // Para Mis Evaluaciones: mostrar título y subtítulo
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: color.withOpacity(0.8),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showSpeciesSelectionDialog(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final birds = Species.birds();
@@ -1326,96 +1612,112 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  // AVES - Color azul
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _navigateToEvaluation(birds);
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: birdsColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: birdsColor.withOpacity(0.4),
-                            width: 2,
+              // Usar IntrinsicHeight para que ambos botones tengan la misma altura
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // AVES - Color azul
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToEvaluation(birds);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: birdsColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: birdsColor.withOpacity(0.4),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/ave.svg',
-                              width: 56,
-                              height: 56,
-                              colorFilter: ColorFilter.mode(
-                                birdsColor,
-                                BlendMode.srcIn,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icons/ave.svg',
+                                width: 52,
+                                height: 52,
+                                colorFilter: ColorFilter.mode(
+                                  birdsColor,
+                                  BlendMode.srcIn,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              loc.translate('birds_label'),
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: birdsColor,
+                              const SizedBox(height: 12),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  loc.translate('birds_label'),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: birdsColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  // CERDOS - Color rosa/rojo
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _navigateToEvaluation(pigs);
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: pigsColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: pigsColor.withOpacity(0.4),
-                            width: 2,
+                    const SizedBox(width: 16),
+                    // CERDOS - Color rosa/rojo
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToEvaluation(pigs);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: pigsColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: pigsColor.withOpacity(0.4),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/cerdo.svg',
-                              width: 56,
-                              height: 56,
-                              colorFilter: ColorFilter.mode(
-                                pigsColor,
-                                BlendMode.srcIn,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icons/cerdo.svg',
+                                width: 52,
+                                height: 52,
+                                colorFilter: ColorFilter.mode(
+                                  pigsColor,
+                                  BlendMode.srcIn,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              loc.translate('pigs_label'),
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: pigsColor,
+                              const SizedBox(height: 12),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  loc.translate('pigs_label'),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: pigsColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               TextButton(

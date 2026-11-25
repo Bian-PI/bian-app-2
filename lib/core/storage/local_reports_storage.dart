@@ -38,6 +38,13 @@ class LocalReportsStorage {
       final prefs = await SharedPreferences.getInstance();
       final existingReports = await getAllLocalReports();
 
+      // Debug: verificar qué se está guardando
+      print('📝 Guardando reporte local:');
+      print('   - ID: ${evaluation.id}');
+      print('   - overallScore: ${evaluation.overallScore}');
+      print('   - categoryScores: ${evaluation.categoryScores}');
+      print('   - responses keys: ${evaluation.responses.keys.take(5).toList()}...');
+
       final existingIndex = existingReports.indexWhere((r) => r.id == evaluation.id);
 
       if (existingIndex != -1) {
@@ -52,6 +59,10 @@ class LocalReportsStorage {
 
       final reportsJson = existingReports.map((r) => r.toJson()).toList();
       final encoded = jsonEncode(reportsJson);
+      
+      // Debug: verificar JSON
+      print('📝 JSON a guardar (primeros 500 chars): ${encoded.substring(0, encoded.length > 500 ? 500 : encoded.length)}');
+      
       await prefs.setString(key, encoded);
 
       await _markAsPendingSync(evaluation.id);
@@ -77,9 +88,27 @@ class LocalReportsStorage {
       }
 
       final List<dynamic> reportsJson = jsonDecode(reportsString);
+      
+      // Debug: ver estructura del JSON
+      if (reportsJson.isNotEmpty) {
+        final firstReport = reportsJson.first as Map<String, dynamic>;
+        print('📖 Cargando reportes locales:');
+        print('   - Total: ${reportsJson.length}');
+        print('   - Primer reporte keys: ${firstReport.keys.toList()}');
+        print('   - overallScore en JSON: ${firstReport['overallScore']}');
+        print('   - categoryScores en JSON: ${firstReport['categoryScores']}');
+      }
+      
       final reports = reportsJson
           .map((json) => Evaluation.fromJson(json as Map<String, dynamic>))
           .toList();
+      
+      // Debug: verificar qué se parseó
+      if (reports.isNotEmpty) {
+        print('📖 Primer reporte parseado:');
+        print('   - overallScore: ${reports.first.overallScore}');
+        print('   - categoryScores: ${reports.first.categoryScores}');
+      }
 
       reports.sort((a, b) => b.evaluationDate.compareTo(a.evaluationDate));
 

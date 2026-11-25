@@ -191,6 +191,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   Future<void> _sendMessage() async {
+    // Prevenir doble envío si ya está procesando
+    if (_isLoading) return;
+    
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
@@ -203,12 +206,20 @@ class _AIChatScreenState extends State<AIChatScreen> {
       return;
     }
 
+    // Marcar como cargando ANTES de cualquier operación async
+    setState(() {
+      _isLoading = true;
+    });
+
     final connectivityService =
         Provider.of<ConnectivityService>(context, listen: false);
     final hasConnection = await connectivityService.checkConnection();
 
     if (!hasConnection) {
       if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       final loc = AppLocalizations(Locale(widget.language));
       CustomSnackbar.showError(
         context,
@@ -223,7 +234,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
         isUser: true,
         timestamp: DateTime.now(),
       ));
-      _isLoading = true;
       _questionCount++;
     });
 
@@ -476,7 +486,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
                         vertical: 12,
                       ),
                     ),
-                    onSubmitted: (_) => _sendMessage(),
+                    onSubmitted: (_) {
+                      if (!_isLoading && _canSendMessage()) {
+                        _sendMessage();
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),

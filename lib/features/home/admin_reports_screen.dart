@@ -168,7 +168,14 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
       if (result['success'] == true) {
         final fullEvaluation = Evaluation.fromJson(result['evaluation']);
-        final species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
+        
+        // Obtener Species base
+        Species species = fullEvaluation.speciesId == 'birds' ? Species.birds() : Species.pigs();
+        
+        // Filtrar Species según el tipo de producción si aplica
+        if (fullEvaluation.speciesId == 'birds' && fullEvaluation.productionType != null) {
+          species = _filterSpeciesByProductionType(species, fullEvaluation.productionType!);
+        }
 
         Map<String, dynamic> results;
 
@@ -323,7 +330,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           children: [
             Icon(Icons.admin_panel_settings, color: Colors.white),
             const SizedBox(width: 8),
-            Text(loc.translate('admin_all_reports')),
+            Expanded(
+              child: Text(
+                loc.translate('admin_all_reports'),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         backgroundColor: BianTheme.primaryRed,
@@ -705,6 +717,36 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Filtra los campos del Species según el tipo de producción
+  Species _filterSpeciesByProductionType(Species species, String productionType) {
+    final filteredCategories = species.categories.map((category) {
+      final filteredFields = category.fields.where((field) {
+        if (field.applicableTo == null || field.applicableTo!.isEmpty) {
+          return true;
+        }
+        return field.applicableTo!.contains(productionType);
+      }).toList();
+
+      return EvaluationCategory(
+        id: category.id,
+        name: category.name,
+        nameKey: category.nameKey,
+        icon: category.icon,
+        weight: category.weight,
+        fields: filteredFields,
+      );
+    }).where((category) => category.fields.isNotEmpty).toList();
+
+    return Species(
+      id: species.id,
+      name: species.name,
+      namePlural: species.namePlural,
+      iconPath: species.iconPath,
+      gradientColors: species.gradientColors,
+      categories: filteredCategories,
     );
   }
 }

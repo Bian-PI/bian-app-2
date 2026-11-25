@@ -53,35 +53,61 @@ class ResultsScreen extends StatelessWidget {
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final categoryScores = results['category_scores'] as Map<String, double>;
+    
+    // Helper local para buscar score
+    double getScore(String catId) {
+      if (categoryScores.containsKey(catId)) return categoryScores[catId]!;
+      if (categoryScores.containsKey('${catId}s')) return categoryScores['${catId}s']!;
+      if (catId.endsWith('s') && categoryScores.containsKey(catId.substring(0, catId.length - 1))) {
+        return categoryScores[catId.substring(0, catId.length - 1)]!;
+      }
+      return 0.0;
+    }
 
     for (var category in species.categories) {
-      final score = categoryScores[category.id] ?? 0.0;
-      categories[category.id] = {
-        'score': score.toString(), // String
-        'fields': evaluation.responses.entries
-            .where((e) => e.key.startsWith('${category.id}_'))
-            .map((e) {
-          // Convertir booleanos y números a strings
+      final score = getScore(category.id);
+      
+      // Buscar responses con variantes de prefijo
+      final fields = <Map<String, String>>[];
+      for (var field in category.fields) {
+        final key1 = '${category.id}_${field.id}';
+        final key2 = '${category.id}s_${field.id}';
+        final key3 = category.id.endsWith('s') 
+            ? '${category.id.substring(0, category.id.length - 1)}_${field.id}' 
+            : null;
+        
+        dynamic value = evaluation.responses[key1] ?? 
+                        evaluation.responses[key2] ?? 
+                        (key3 != null ? evaluation.responses[key3] : null);
+        
+        if (value != null) {
           String valueStr;
-          final value = e.value;
           if (value is bool) {
-            valueStr = value.toString(); // "true" o "false"
+            valueStr = value.toString();
           } else if (value is num) {
-            valueStr = value.toString(); // "1.0", "2", etc.
+            valueStr = value.toString();
           } else {
             valueStr = value.toString();
           }
-
-          return {
-            'field_id': e.key.toString(), // String
-            'value': valueStr, // String
-          };
-        }).toList(),
+          fields.add({
+            'field_id': field.id,
+            'value': valueStr,
+          });
+        }
+      }
+      
+      categories[category.id] = {
+        'score': score.toString(),
+        'fields': fields,
       };
     }
 
-    // Preparar critical_points
-    final criticalPoints = (results['critical_points'] as List)
+    // Preparar critical_points - extraer si está vacío
+    List rawCriticalPoints = (results['critical_points'] as List?) ?? [];
+    if (rawCriticalPoints.isEmpty) {
+      rawCriticalPoints = _extractCriticalPointsFromResponses();
+    }
+    final criticalPoints = rawCriticalPoints
         .map((point) => {
               'category': point.toString().split('_')[0],
               'field': point.toString(),
@@ -822,9 +848,27 @@ class ResultsScreen extends StatelessWidget {
         double.tryParse(results['overall_score']?.toString() ?? '0') ?? 0.0;
     final complianceLevel = results['compliance_level'] as String;
     final categoryScores = results['category_scores'] as Map<String, double>;
-    final criticalPoints = results['critical_points'] as List;
-    final strongPoints = results['strong_points'] as List;
-    final recommendations = structuredJson['recommendations'] as List;
+    
+    // Obtener puntos críticos, o extraerlos si está vacío
+    List criticalPoints = results['critical_points'] as List? ?? [];
+    if (criticalPoints.isEmpty) {
+      criticalPoints = _extractCriticalPointsFromResponses();
+    }
+    
+    final strongPoints = results['strong_points'] as List? ?? [];
+    final recommendations = structuredJson['recommendations'] as List? ?? [];
+    
+    // Helper para buscar score con variantes singular/plural
+    double getScoreForCategory(String categoryId) {
+      if (categoryScores.containsKey(categoryId)) {
+        return categoryScores[categoryId]!;
+      } else if (categoryScores.containsKey('${categoryId}s')) {
+        return categoryScores['${categoryId}s']!;
+      } else if (categoryId.endsWith('s') && categoryScores.containsKey(categoryId.substring(0, categoryId.length - 1))) {
+        return categoryScores[categoryId.substring(0, categoryId.length - 1)]!;
+      }
+      return 0.0;
+    }
 
     print('📊 Datos cargados - Score: $overallScore');
 
@@ -897,7 +941,7 @@ class ResultsScreen extends StatelessWidget {
                           style: pw.TextStyle(
                             fontSize: 32,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColor.fromInt(0xFFDB7093),
+                            color: scoreColor, // Usar color según nivel
                           ),
                         ),
                         pw.Text(
@@ -905,7 +949,7 @@ class ResultsScreen extends StatelessWidget {
                           style: pw.TextStyle(
                             fontSize: 20,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColor.fromInt(0xFFDB7093),
+                            color: scoreColor, // Usar color según nivel
                           ),
                         ),
                       ],
@@ -1008,10 +1052,18 @@ class ResultsScreen extends StatelessWidget {
             ),
             pw.SizedBox(height: 16),
             ...species.categories.map((category) {
-              final score = categoryScores[category.id] ?? 0.0;
+              final score = getScoreForCategory(category.id);
+              // Traducir nombre de categoría correctamente
+              String categoryName = loc.translate(category.nameKey ?? '');
+              if (categoryName == (category.nameKey ?? '')) {
+                categoryName = loc.translate('category_${category.id}');
+                if (categoryName == 'category_${category.id}') {
+                  categoryName = loc.translate(category.id);
+                }
+              }
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 12),
-                child: _buildCategoryScore(loc.translate(category.id), score),
+                child: _buildCategoryScore(categoryName, score),
               );
             }),
             pw.SizedBox(height: 24),
@@ -1043,10 +1095,10 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       child: pw.Center(
                         child: pw.Text(
-                          '✓',
+                          'OK',
                           style: pw.TextStyle(
                             color: PdfColors.white,
-                            fontSize: 14,
+                            fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
@@ -1070,6 +1122,22 @@ class ResultsScreen extends StatelessWidget {
                 final parts = point.toString().split('_');
                 final categoryId = parts[0];
                 final fieldId = parts.sublist(1).join('_');
+                
+                // Traducir categoría
+                String categoryName = loc.translate('category_${categoryId}_pigs');
+                if (categoryName == 'category_${categoryId}_pigs') {
+                  categoryName = loc.translate('category_$categoryId');
+                  if (categoryName == 'category_$categoryId') {
+                    categoryName = loc.translate(categoryId);
+                  }
+                }
+                
+                // Traducir indicador - intentar con _label primero
+                String fieldName = loc.translate('${fieldId}_label');
+                if (fieldName == '${fieldId}_label') {
+                  fieldName = loc.translate(fieldId);
+                }
+                
                 return pw.Container(
                   margin: const pw.EdgeInsets.only(bottom: 10),
                   padding: const pw.EdgeInsets.all(14),
@@ -1108,7 +1176,7 @@ class ResultsScreen extends StatelessWidget {
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
                             pw.Text(
-                              loc.translate(categoryId),
+                              categoryName,
                               style: pw.TextStyle(
                                 fontSize: 12,
                                 fontWeight: pw.FontWeight.bold,
@@ -1117,7 +1185,7 @@ class ResultsScreen extends StatelessWidget {
                             ),
                             pw.SizedBox(height: 4),
                             pw.Text(
-                              loc.translate(fieldId),
+                              fieldName,
                               style: pw.TextStyle(
                                 fontSize: 11,
                                 color: PdfColor.fromInt(0xFF2D2D2D),
@@ -1158,6 +1226,14 @@ class ResultsScreen extends StatelessWidget {
               )
             else
               ...strongPoints.map((point) {
+                // Traducir nombre de categoría
+                String pointName = loc.translate('category_${point}_pigs');
+                if (pointName == 'category_${point}_pigs') {
+                  pointName = loc.translate('category_$point');
+                  if (pointName == 'category_$point') {
+                    pointName = loc.translate(point.toString());
+                  }
+                }
                 return pw.Container(
                   margin: const pw.EdgeInsets.only(bottom: 10),
                   padding: const pw.EdgeInsets.all(14),
@@ -1181,10 +1257,10 @@ class ResultsScreen extends StatelessWidget {
                         ),
                         child: pw.Center(
                           child: pw.Text(
-                            '✓',
+                            'OK',
                             style: pw.TextStyle(
                               color: PdfColors.white,
-                              fontSize: 13,
+                              fontSize: 9,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -1193,7 +1269,7 @@ class ResultsScreen extends StatelessWidget {
                       pw.SizedBox(width: 12),
                       pw.Expanded(
                         child: pw.Text(
-                          loc.translate(point.toString()),
+                          pointName,
                           style: pw.TextStyle(
                             fontSize: 12,
                             color: PdfColor.fromInt(0xFF2D2D2D),
@@ -1262,6 +1338,227 @@ class ResultsScreen extends StatelessWidget {
                 ),
               );
             }),
+            
+            // ════════════════════════════════════════════════════════════════
+            // ANÁLISIS DETALLADO POR INDICADOR (Nueva página)
+            // ════════════════════════════════════════════════════════════════
+            pw.NewPage(), // Nueva página para el análisis detallado
+            pw.Text(
+              loc.translate('detailed_analysis') != 'detailed_analysis'
+                  ? loc.translate('detailed_analysis')
+                  : 'Análisis Detallado por Indicador',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromInt(0xFF2D2D2D),
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            
+            // Tablas por categoría - página nueva a partir de la segunda
+            ...species.categories.asMap().entries.expand((entry) {
+              final index = entry.key;
+              final category = entry.value;
+              final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+              final details = categoryDetails?[category.id] as Map<String, dynamic>?;
+              
+              // Obtener porcentaje con fallback a categoryScores
+              double percentage = details?['percentage'] as double? ?? 0.0;
+              if (percentage == 0.0) {
+                percentage = getScoreForCategory(category.id);
+              }
+              
+              // Traducir nombre de categoría
+              String categoryName = loc.translate(category.nameKey ?? '');
+              if (categoryName == (category.nameKey ?? '')) {
+                categoryName = loc.translate('category_${category.id}');
+                if (categoryName == 'category_${category.id}') {
+                  categoryName = loc.translate(category.id);
+                }
+              }
+              
+              // Color según porcentaje
+              PdfColor catColor;
+              if (percentage >= 90) catColor = PdfColor.fromInt(0xFF1B5E20);
+              else if (percentage >= 75) catColor = PdfColor.fromInt(0xFF4CAF50);
+              else if (percentage >= 50) catColor = PdfColor.fromInt(0xFFFF9800);
+              else if (percentage >= 25) catColor = PdfColor.fromInt(0xFFFF5722);
+              else catColor = PdfColor.fromInt(0xFFD32F2F);
+              
+              // Lista de widgets para esta categoría
+              final List<pw.Widget> widgets = [];
+              
+              // Las tablas van seguidas una tras otra (sin saltos de página)
+              
+              // Agregar la tabla de la categoría
+              widgets.add(
+                pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 20),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      // Header de categoría
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(12),
+                        decoration: pw.BoxDecoration(
+                          color: catColor,
+                          borderRadius: const pw.BorderRadius.only(
+                            topLeft: pw.Radius.circular(8),
+                            topRight: pw.Radius.circular(8),
+                          ),
+                        ),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Expanded(
+                              child: pw.Text(
+                                categoryName,
+                                style: pw.TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColors.white,
+                                ),
+                              ),
+                            ),
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: pw.BoxDecoration(
+                                color: PdfColors.white,
+                                borderRadius: pw.BorderRadius.circular(12),
+                              ),
+                              child: pw.Text(
+                                '${percentage.toStringAsFixed(1)}%',
+                                style: pw.TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: catColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Tabla de indicadores
+                      pw.Table(
+                        border: pw.TableBorder.all(color: PdfColor.fromInt(0xFFE0E0E0)),
+                        columnWidths: {
+                          0: const pw.FlexColumnWidth(3),
+                          1: const pw.FlexColumnWidth(2),
+                          2: const pw.FlexColumnWidth(1),
+                        },
+                        tableWidth: pw.TableWidth.max,
+                        children: [
+                          // Header de tabla
+                          pw.TableRow(
+                            repeat: true,
+                            decoration: pw.BoxDecoration(
+                              color: PdfColor.fromInt(0xFFF5F5F5),
+                            ),
+                            children: [
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Indicador', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Respuesta', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Pts', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                              ),
+                            ],
+                          ),
+                          // Filas de indicadores
+                          ...category.fields.map((field) {
+                            final key = '${category.id}_${field.id}';
+                            // Buscar valor con variantes
+                            var value = evaluation.responses[key];
+                            if (value == null) {
+                              value = evaluation.responses['${category.id}s_${field.id}'];
+                            }
+                            if (value == null && category.id.endsWith('s')) {
+                              value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+                            }
+                            
+                            // Traducir label del indicador
+                            String fieldLabel = loc.translate(field.label);
+                            if (fieldLabel == field.label) {
+                              fieldLabel = loc.translate('${field.id}_label');
+                              if (fieldLabel == '${field.id}_label') {
+                                fieldLabel = field.id;
+                              }
+                            }
+                            
+                            // Helper para parsear valor a int
+                            int? parseToInt(dynamic val) {
+                              if (val == null) return null;
+                              if (val is int) return val;
+                              if (val is double) return val.toInt();
+                              if (val is String) return int.tryParse(val);
+                              return null;
+                            }
+                            
+                            // Determinar respuesta y puntuación
+                            String displayValue = 'Sin respuesta';
+                            int? score;
+                            PdfColor valueColor = PdfColor.fromInt(0xFF757575);
+                            
+                            if (field.type.toString().contains('scale0to2')) {
+                              score = parseToInt(value);
+                              if (score == 0) { displayValue = 'No cumple'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 1) { displayValue = 'Parcial'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 2) { displayValue = 'Cumple'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                            } else if (field.type.toString().contains('scaleEVA')) {
+                              score = parseToInt(value);
+                              if (score == 0) { displayValue = 'Bajo (<50%)'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 20) { displayValue = 'Bajo (≥50%)'; valueColor = PdfColor.fromInt(0xFFFF5722); }
+                              else if (score == 55) { displayValue = 'Medio (≥60%)'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 80) { displayValue = 'Alto (≥80%)'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 100) { displayValue = 'Excelente (100%)'; valueColor = PdfColor.fromInt(0xFF1B5E20); }
+                            } else if (field.type.toString().contains('yesNo100')) {
+                              score = parseToInt(value);
+                              if (score == 100) { displayValue = 'Sí (100)'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 0) { displayValue = 'No (0)'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                            } else if (field.type.toString().contains('scale0to4')) {
+                              score = parseToInt(value);
+                              if (score == 0) { displayValue = 'Crítico'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                              else if (score == 1) { displayValue = 'Deficiente'; valueColor = PdfColor.fromInt(0xFFFF5722); }
+                              else if (score == 2) { displayValue = 'Aceptable'; valueColor = PdfColor.fromInt(0xFFFF9800); }
+                              else if (score == 3) { displayValue = 'Bueno'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (score == 4) { displayValue = 'Excelente'; valueColor = PdfColor.fromInt(0xFF1B5E20); }
+                            } else if (field.type.toString().contains('yesNo')) {
+                              if (value == true) { displayValue = 'Sí'; valueColor = PdfColor.fromInt(0xFF4CAF50); }
+                              else if (value == false) { displayValue = 'No'; valueColor = PdfColor.fromInt(0xFFD32F2F); }
+                            }
+                            
+                            return pw.TableRow(
+                              children: [
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(fieldLabel, style: const pw.TextStyle(fontSize: 9)),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(displayValue, style: pw.TextStyle(fontSize: 9, color: valueColor, fontWeight: pw.FontWeight.bold)),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(6),
+                                  child: pw.Text(score?.toString() ?? '-', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+              
+              return widgets;
+            }),
+            
             pw.SizedBox(height: 32),
             pw.Divider(color: PdfColor.fromInt(0xFFE0E0E0)),
             pw.SizedBox(height: 12),
@@ -1387,11 +1684,26 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    
+    // DEBUG: Ver qué hay en results
+    print('🔴 ResultsScreen.build() - results keys: ${results.keys.toList()}');
+    print('🔴 ResultsScreen.build() - results[overall_score]: ${results['overall_score']} (tipo: ${results['overall_score']?.runtimeType})');
+    print('🔴 ResultsScreen.build() - results[category_scores]: ${results['category_scores']}');
+    
     final overallScore =
         double.tryParse(results['overall_score']?.toString() ?? '0.0') ?? 0.0;
+    print('🔴 ResultsScreen.build() - overallScore PARSEADO: $overallScore');
+    
     final complianceLevel = (results['compliance_level'] as String?) ?? '';
     final categoryScores = (results['category_scores'] as Map<String, double>?) ?? {};
-    final criticalPoints = (results['critical_points'] as List?) ?? [];
+    print('🔴 ResultsScreen.build() - categoryScores: $categoryScores');
+    
+    // Obtener puntos críticos, o extraerlos de responses si está vacío
+    List criticalPoints = (results['critical_points'] as List?) ?? [];
+    if (criticalPoints.isEmpty) {
+      criticalPoints = _extractCriticalPointsFromResponses();
+    }
+    
     final strongPoints = (results['strong_points'] as List?) ?? [];
     final recommendations = (structuredJson['recommendations'] as List?) ?? [];
 
@@ -1426,7 +1738,15 @@ class ResultsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ...species.categories.map((category) {
-              final score = categoryScores[category.id] ?? 0.0;
+              // Buscar score con variantes singular/plural
+              double score = 0.0;
+              if (categoryScores.containsKey(category.id)) {
+                score = categoryScores[category.id]!;
+              } else if (categoryScores.containsKey('${category.id}s')) {
+                score = categoryScores['${category.id}s']!;
+              } else if (category.id.endsWith('s') && categoryScores.containsKey(category.id.substring(0, category.id.length - 1))) {
+                score = categoryScores[category.id.substring(0, category.id.length - 1)]!;
+              }
               return _buildCategoryScoreCard(context, loc, category.id, score);
             }),
             const SizedBox(height: 24),
@@ -1461,19 +1781,36 @@ class ResultsScreen extends StatelessWidget {
                   BianTheme.mediumGray)
             else
               ...strongPoints.map((point) {
+                // Intentar traducir con category_POINT_pigs, luego category_POINT, luego el ID
+                final categoryKey = 'category_${point}_pigs';
+                final categoryKey2 = 'category_$point';
+                String translatedPoint = loc.translate(categoryKey);
+                if (translatedPoint == categoryKey) {
+                  translatedPoint = loc.translate(categoryKey2);
+                  if (translatedPoint == categoryKey2) {
+                    translatedPoint = loc.translate(point.toString());
+                  }
+                }
                 return _buildStrongPointCard(
                   context,
-                  loc.translate(point.toString()),
+                  translatedPoint,
                 );
               }),
+            
+            // ═══════════════════════════════════════════════════════════════
+            // TABLA DE ANÁLISIS DETALLADO (NUEVA SECCIÓN)
+            // ═══════════════════════════════════════════════════════════════
+            const SizedBox(height: 24),
+            _buildDetailedAnalysisSection(context, loc),
+            
             const SizedBox(height: 24),
             Text(
               loc.translate('recommendations'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
-            ...recommendations.map(
-                (rec) => _buildRecommendationCard(context, rec.toString())),
+            // Usar recomendaciones mejoradas basadas en resultados
+            ..._buildSmartRecommendations(context, loc, overallScore, categoryScores, criticalPoints),
             const SizedBox(height: 32),
 
             _buildAIAnalysisButton(context, loc, overallScore, categoryScores,
@@ -1599,22 +1936,66 @@ class ResultsScreen extends StatelessWidget {
 
   Widget _buildScoreHeader(BuildContext context, double score, String level) {
     final loc = AppLocalizations.of(context);
+    
+    // Verificar tipo de evaluación
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
+    final String welfareClassification = results['welfare_classification']?.toString() ?? '';
 
     Color scoreColor;
     IconData scoreIcon;
+    String methodologyBadge = '';
 
-    if (score >= 90) {
-      scoreColor = BianTheme.successGreen;
-      scoreIcon = Icons.celebration;
-    } else if (score >= 75) {
-      scoreColor = const Color(0xFF4CAF50);
-      scoreIcon = Icons.thumb_up;
-    } else if (score >= 60) {
-      scoreColor = BianTheme.warningYellow;
-      scoreIcon = Icons.warning_amber;
+    if (isEBAEvaluation) {
+      // Colores según clasificación EBA (Porcinos) - 5 niveles
+      methodologyBadge = 'Metodología EBA 3.0';
+      if (score >= 90) {
+        scoreColor = const Color(0xFF1B5E20); // Verde oscuro - Excelente
+        scoreIcon = Icons.workspace_premium;
+      } else if (score >= 75) {
+        scoreColor = const Color(0xFF4CAF50); // Verde - Bueno
+        scoreIcon = Icons.verified;
+      } else if (score >= 50) {
+        scoreColor = const Color(0xFFFF9800); // Naranja - Aceptable
+        scoreIcon = Icons.info_outline;
+      } else if (score >= 25) {
+        scoreColor = const Color(0xFFFF5722); // Naranja rojizo - Deficiente
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = const Color(0xFFD32F2F); // Rojo - Crítico
+        scoreIcon = Icons.dangerous;
+      }
+    } else if (isICAEvaluation) {
+      // Colores según clasificación ICA (Aves) - 4 niveles
+      methodologyBadge = 'Metodología ICA';
+      if (score >= 90) {
+        scoreColor = const Color(0xFF1B5E20); // Verde oscuro - Excelente
+        scoreIcon = Icons.workspace_premium;
+      } else if (score >= 76) {
+        scoreColor = const Color(0xFF4CAF50); // Verde - Alto
+        scoreIcon = Icons.verified;
+      } else if (score >= 50) {
+        scoreColor = const Color(0xFFFF9800); // Naranja - Medio
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = const Color(0xFFD32F2F); // Rojo - Bajo
+        scoreIcon = Icons.dangerous;
+      }
     } else {
-      scoreColor = BianTheme.errorRed;
-      scoreIcon = Icons.error_outline;
+      // Colores legacy
+      if (score >= 90) {
+        scoreColor = BianTheme.successGreen;
+        scoreIcon = Icons.celebration;
+      } else if (score >= 75) {
+        scoreColor = const Color(0xFF4CAF50);
+        scoreIcon = Icons.thumb_up;
+      } else if (score >= 60) {
+        scoreColor = BianTheme.warningYellow;
+        scoreIcon = Icons.warning_amber;
+      } else {
+        scoreColor = BianTheme.errorRed;
+        scoreIcon = Icons.error_outline;
+      }
     }
 
     return Container(
@@ -1628,6 +2009,25 @@ class ResultsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Badge de metodología si aplica
+          if (isICAEvaluation || isEBAEvaluation) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                methodologyBadge,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Icon(scoreIcon, size: 64, color: Colors.white),
           const SizedBox(height: 16),
           Text(
@@ -1646,16 +2046,85 @@ class ResultsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              loc.translate(level),
+              (isICAEvaluation || isEBAEvaluation) && welfareClassification.isNotEmpty
+                  ? welfareClassification
+                  : loc.translate(level),
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
+          // Mostrar rangos ICA
+          if (isICAEvaluation) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    loc.translate('ica_classification_ranges') != 'ica_classification_ranges'
+                        ? loc.translate('ica_classification_ranges')
+                        : 'Rangos de clasificación:',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildRangeBadge('≥90%', 'Excelente', const Color(0xFF1B5E20)),
+                      _buildRangeBadge('76-90%', 'Alto', const Color(0xFF4CAF50)),
+                      _buildRangeBadge('50-75%', 'Medio', const Color(0xFFFF9800)),
+                      _buildRangeBadge('<50%', 'Bajo', const Color(0xFFD32F2F)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildRangeBadge(String range, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 1),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          range,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: Colors.white70,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1758,15 +2227,117 @@ class ResultsScreen extends StatelessWidget {
     );
   }
 
+  /// Extrae puntos críticos de las respuestas cuando la lista está vacía
+  List<String> _extractCriticalPointsFromResponses() {
+    final criticalPoints = <String>[];
+    
+    for (var category in species.categories) {
+      for (var field in category.fields) {
+        // Buscar valor con variantes de clave
+        final key = '${category.id}_${field.id}';
+        var value = evaluation.responses[key];
+        if (value == null) {
+          value = evaluation.responses['${category.id}s_${field.id}'];
+        }
+        if (value == null && category.id.endsWith('s')) {
+          value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+        }
+        
+        if (value == null) continue;
+        
+        // Parsear valor
+        int? score;
+        if (value is int) score = value;
+        else if (value is double) score = value.toInt();
+        else if (value is String) score = int.tryParse(value);
+        
+        if (score == null) continue;
+        
+        // Determinar si es crítico según tipo de campo
+        bool isCritical = false;
+        final fieldType = field.type.toString();
+        
+        if (fieldType.contains('scale0to2') && score == 0) {
+          isCritical = true;
+        } else if (fieldType.contains('scaleEVA') && score <= 20) {
+          isCritical = true;
+        } else if (fieldType.contains('yesNo100') && score == 0) {
+          isCritical = true;
+        } else if (fieldType.contains('scale0to4') && score <= 1) {
+          isCritical = true;
+        }
+        
+        if (isCritical) {
+          criticalPoints.add('${category.id}_${field.id}');
+        }
+      }
+    }
+    
+    return criticalPoints.take(15).toList();
+  }
+
   Widget _buildCategoryScoreCard(BuildContext context, AppLocalizations loc,
       String categoryId, double score) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+    
+    // Obtener peso y detalles de la categoría
+    double? weight;
+    int? obtained;
+    int? maxPossible;
+    
+    if (categoryDetails != null && categoryDetails[categoryId] != null) {
+      final details = categoryDetails[categoryId] as Map<String, dynamic>;
+      weight = details['weight'] as double?;
+      obtained = details['obtained'] as int?;
+      maxPossible = details['max_possible'] as int?;
+    }
+    
+    // Intentar obtener peso del species model si no está en details
+    if (weight == null) {
+      final category = species.categories.where((c) => c.id == categoryId).firstOrNull;
+      if (category != null && category.weight < 1.0) {
+        weight = category.weight;
+      }
+    }
+
+    // Verificar si es EBA
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
+
     Color barColor;
-    if (score >= 80) {
-      barColor = BianTheme.successGreen;
-    } else if (score >= 60) {
-      barColor = BianTheme.warningYellow;
+    if (isEBAEvaluation) {
+      // Colores EBA (5 niveles)
+      if (score >= 90) {
+        barColor = const Color(0xFF1B5E20);
+      } else if (score >= 75) {
+        barColor = const Color(0xFF4CAF50);
+      } else if (score >= 50) {
+        barColor = const Color(0xFFFF9800);
+      } else if (score >= 25) {
+        barColor = const Color(0xFFFF5722);
+      } else {
+        barColor = const Color(0xFFD32F2F);
+      }
+    } else if (isICAEvaluation) {
+      // Colores ICA (4 niveles)
+      if (score >= 90) {
+        barColor = const Color(0xFF1B5E20);
+      } else if (score >= 76) {
+        barColor = const Color(0xFF4CAF50);
+      } else if (score >= 50) {
+        barColor = const Color(0xFFFF9800);
+      } else {
+        barColor = const Color(0xFFD32F2F);
+      }
     } else {
-      barColor = BianTheme.errorRed;
+      // Colores legacy
+      if (score >= 80) {
+        barColor = BianTheme.successGreen;
+      } else if (score >= 60) {
+        barColor = BianTheme.warningYellow;
+      } else {
+        barColor = BianTheme.errorRed;
+      }
     }
 
     return Container(
@@ -1775,7 +2346,14 @@ class ResultsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BianTheme.lightGray),
+        border: Border.all(color: barColor.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: barColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1783,20 +2361,64 @@ class ResultsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                loc.translate(categoryId),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Intentar traducir con nameKey primero
+                    Text(
+                      loc.translate('category_$categoryId') != 'category_$categoryId'
+                          ? loc.translate('category_$categoryId')
+                          : loc.translate(categoryId),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    // Mostrar peso si es ICA o EBA
+                    if ((isICAEvaluation || isEBAEvaluation) && weight != null && weight < 1.0 && weight > 0) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: BianTheme.backgroundGray,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Peso: ${(weight * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: BianTheme.mediumGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              Text(
-                '${score.toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: barColor,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${score.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: barColor,
+                    ),
+                  ),
+                  // Mostrar puntos obtenidos/máximos si es ICA o EBA
+                  if ((isICAEvaluation || isEBAEvaluation) && obtained != null && maxPossible != null) ...[
+                    Text(
+                      '$obtained / $maxPossible pts',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BianTheme.mediumGray,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -1805,11 +2427,23 @@ class ResultsScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: score / 100,
-              minHeight: 10,
+              minHeight: 12,
               backgroundColor: BianTheme.lightGray,
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),
+          // Contribución ponderada al total
+          if ((isICAEvaluation || isEBAEvaluation) && weight != null && weight < 1.0 && weight > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Contribución al total: ${(score * weight).toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 11,
+                color: BianTheme.mediumGray,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1817,6 +2451,16 @@ class ResultsScreen extends StatelessWidget {
 
   Widget _buildCriticalPointCard(BuildContext context, AppLocalizations loc,
       String categoryId, String fieldId) {
+    
+    // Traducir nombre de categoría correctamente
+    String categoryName = loc.translate('category_${categoryId}_pigs');
+    if (categoryName == 'category_${categoryId}_pigs') {
+      categoryName = loc.translate('category_$categoryId');
+      if (categoryName == 'category_$categoryId') {
+        categoryName = loc.translate(categoryId);
+      }
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1839,7 +2483,7 @@ class ResultsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc.translate(categoryId),
+                  categoryName,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -1866,6 +2510,98 @@ class ResultsScreen extends StatelessWidget {
     final language = evaluation.language;
 
     final labelsEs = {
+      // ICA - Aves - Recursos
+      'air_particles': 'Partículas suspendidas en el aire',
+      'bedding_quality': 'Calidad de la cama',
+      'drinker_quality': 'Calidad de los bebederos',
+      'water_supply': 'Suministro de agua',
+      'animals_per_drinker': 'Animales por bebedero',
+      'water_treatment': 'Tratamiento del agua',
+      'feeder_quality': 'Calidad de los comederos',
+      'animals_per_feeder': 'Animales por comedero',
+      'thermal_comfort': 'Confort térmico',
+      'nest_quality': 'Calidad del nidal',
+      'available_space': 'Espacio disponible',
+      // ICA - Aves - Animal
+      'panting': 'Jadeo',
+      'huddling': 'Amontonamiento',
+      'keel_bone_integrity': 'Integridad del hueso de la quilla',
+      'pododermatitis': 'Pododermatitis',
+      'toe_damage': 'Daño en los dedos',
+      'skin_lesions': 'Lesiones en piel',
+      'plumage_condition': 'Condición del plumaje',
+      'ocular_nasal_integrity': 'Integridad óculo-nasal',
+      'beak_condition': 'Condición del pico',
+      'mortality': 'Mortalidad',
+      // ICA - Aves - Manejo
+      'water_quality': 'Calidad del agua',
+      'balanced_feeding': 'Alimentación balanceada',
+      'health_surveillance': 'Vigilancia sanitaria',
+      'poe_animal_welfare': 'POE Bienestar Animal',
+      'thermal_emergency': 'Plan emergencia térmica',
+      'backup_systems': 'Sistemas de respaldo',
+      'biosecurity_records': 'Registros de bioseguridad',
+      'capacity_records': 'Registros de capacidad',
+      'responsible_medication': 'Medicación responsable',
+      'lighting_program': 'Programa de iluminación',
+      'welfare_training': 'Capacitación en bienestar',
+      'euthanasia_protocol': 'Protocolo de eutanasia',
+      'euthanasia_training': 'Capacitación en eutanasia',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EBA 3.0 - Cerdos - INDICADORES DE RECURSO
+      // ═══════════════════════════════════════════════════════════════
+      'eba_a1_water_per_animal': 'Relación animales por bebedero',
+      'eba_a2_drinker_flow': 'Caudal del bebedero',
+      'eba_a3_water_quality': 'Calidad microbiológica del agua',
+      'eba_f1_feeder_spaces': 'Espacios de comedero suficientes',
+      'eba_f2_body_condition': 'Condición corporal',
+      'eba_f3_access_time': 'Tiempo de acceso tras reparto',
+      'eba_e1_thi': 'Índice temperatura-humedad (THI)',
+      'eba_e2_ammonia': 'Nivel de amoníaco (NH₃)',
+      'eba_e3_co2': 'Nivel de CO₂',
+      'eba_e4_light_intensity': 'Intensidad lumínica',
+      'eba_e5_noise': 'Nivel de ruido',
+      'eba_e6_space_allowance': 'Espacio disponible por animal',
+      'eba_e7_floor_condition': 'Condición del piso',
+      'eba_e8_enrichment': 'Material de enriquecimiento',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DEL ANIMAL
+      'eba_h1_lameness': 'Cojeras',
+      'eba_h2_body_lesions': 'Lesiones corporales',
+      'eba_h3_tail_lesions': 'Lesiones en cola',
+      'eba_h4_respiratory': 'Signos respiratorios',
+      'eba_h5_diarrhea': 'Diarrea',
+      'eba_h6_pain_management': 'Analgesia en procedimientos',
+      'eba_h7_mortality': 'Mortalidad',
+      'eba_h8_tail_scars': 'Cicatrices de cola',
+      'eba_b1_social_behavior': 'Comportamiento social',
+      'eba_b2_exploratory': 'Comportamiento exploratorio',
+      'eba_b3_stereotypies': 'Estereotipias',
+      'eba_b4_human_approach': 'Respuesta al acercamiento humano',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE GESTIÓN
+      'eba_m1_welfare_plan': 'Plan de bienestar documentado',
+      'eba_m2_staff_training': 'Capacitación del personal',
+      'eba_m3_health_records': 'Registros sanitarios',
+      'eba_m4_emergency_plan': 'Plan de emergencias',
+      'eba_m5_euthanasia': 'Protocolo de eutanasia',
+      'eba_m6_castration': 'Procedimiento de castración',
+      'eba_m7_tail_docking': 'Corte de cola',
+      'eba_m8_teeth_reduction': 'Reducción de colmillos',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE TRANSPORTE
+      'eba_t1_fitness': 'Aptitud para transporte',
+      'eba_t2_loading': 'Procedimiento de carga',
+      'eba_t3_transport_conditions': 'Condiciones del vehículo',
+      'eba_t4_pre_transport': 'Ayuno pre-transporte',
+      
+      // EBA 3.0 - Cerdos - INDICADORES DE SACRIFICIO
+      'eba_s1_lairage': 'Condiciones de espera',
+      'eba_s2_stunning_efficacy': 'Aturdimiento efectivo',
+      'eba_s3_bleed_time': 'Tiempo de sangrado',
+      'eba_s4_consciousness': 'Verificación de inconsciencia',
+      // Legacy fields
       'water_access': 'Acceso al agua',
       'feed_quality': 'Calidad del alimento',
       'feeders_sufficient': 'Comederos suficientes',
@@ -1895,9 +2631,148 @@ class ResultsScreen extends StatelessWidget {
       'biosecurity': 'Bioseguridad',
       'handling': 'Manejo',
       'castration': 'Castración',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EVA 4.0 - Porcinos - INDICADORES DE RECURSO (R1-R18)
+      // ═══════════════════════════════════════════════════════════════
+      'eva_r1_feeder_condition': 'Estado de los comederos',
+      'eva_r2_feeder_cleanliness': 'Limpieza de comederos',
+      'eva_r3_water_access': 'Acceso a agua',
+      'eva_r4_drinker_cleanliness': 'Limpieza de bebederos',
+      'eva_r5_drinker_height': 'Altura de los bebederos',
+      'eva_r6_drinker_availability': 'Disponibilidad de bebederos',
+      'eva_r7_environmental_protection': 'Protección contra condiciones ambientales',
+      'eva_r8_ventilation': 'Ventilación',
+      'eva_r9_resting_surface': 'Superficie de descanso',
+      'eva_r10_piglet_shelter': 'Refugio para lechones',
+      'eva_r11_floor_condition': 'Condición del piso',
+      'eva_r12_space_allowance': 'Espacio disponible',
+      'eva_r13_free_access_cages': 'Jaulas de libre acceso',
+      'eva_r14_boar_housing': 'Alojamiento de verracos',
+      'eva_r15_gestation_housing': 'Alojamiento en gestación',
+      'eva_r16_farrowing_crates': 'Jaulas de parto',
+      'eva_r17_enrichment_material': 'Material de enriquecimiento',
+      'eva_r18_handling_facilities': 'Instalaciones de manejo',
+      
+      // EVA 4.0 - Porcinos - INDICADORES DEL ANIMAL (A1-A14)
+      'eva_a1_body_condition': 'Condición corporal',
+      'eva_a2_body_condition_growing': 'Condición corporal (crecimiento)',
+      'eva_a3_lameness': 'Cojeras',
+      'eva_a4_skin_condition': 'Condición de la piel',
+      'eva_a5_shivering_huddling': 'Temblor/Amontonamiento',
+      'eva_a6_panting': 'Jadeo',
+      'eva_a7_manure_on_body': 'Suciedad en el cuerpo',
+      'eva_a8_vulva_lesions': 'Lesiones en vulva',
+      'eva_a9_shoulder_lesions': 'Lesiones en hombros',
+      'eva_a10_identification': 'Identificación',
+      'eva_a11_teeth_clipping': 'Corte de dientes',
+      'eva_a12_tail_docking': 'Corte de cola',
+      'eva_a13_castration': 'Castración',
+      'eva_a14_mortality': 'Mortalidad',
+      
+      // EVA 4.0 - Porcinos - INDICADORES DE GESTIÓN (G1-G7)
+      'eva_g1_contingency_plan': 'Plan de contingencia',
+      'eva_g2_health_plan': 'Plan sanitario',
+      'eva_g3_records': 'Registros',
+      'eva_g4_mixing_procedures': 'Procedimientos de mezcla',
+      'eva_g5_weaning_age': 'Edad al destete',
+      'eva_g6_tail_docking_justification': 'Justificación corte de cola',
+      'eva_g7_staff_training': 'Capacitación del personal',
     };
 
     final labelsEn = {
+      // ICA - Birds - Resources
+      'air_particles': 'Airborne particles',
+      'bedding_quality': 'Bedding quality',
+      'drinker_quality': 'Drinker quality',
+      'water_supply': 'Water supply',
+      'animals_per_drinker': 'Animals per drinker',
+      'water_treatment': 'Water treatment',
+      'feeder_quality': 'Feeder quality',
+      'animals_per_feeder': 'Animals per feeder',
+      'thermal_comfort': 'Thermal comfort',
+      'nest_quality': 'Nest quality',
+      'available_space': 'Available space',
+      // ICA - Birds - Animal
+      'panting': 'Panting',
+      'huddling': 'Huddling',
+      'keel_bone_integrity': 'Keel bone integrity',
+      'pododermatitis': 'Pododermatitis',
+      'toe_damage': 'Toe damage',
+      'skin_lesions': 'Skin lesions',
+      'plumage_condition': 'Plumage condition',
+      'ocular_nasal_integrity': 'Ocular-nasal integrity',
+      'beak_condition': 'Beak condition',
+      'mortality': 'Mortality',
+      // ICA - Birds - Management
+      'water_quality': 'Water quality',
+      'balanced_feeding': 'Balanced feeding',
+      'health_surveillance': 'Health surveillance',
+      'poe_animal_welfare': 'Animal Welfare SOP',
+      'thermal_emergency': 'Thermal emergency plan',
+      'backup_systems': 'Backup systems',
+      'biosecurity_records': 'Biosecurity records',
+      'capacity_records': 'Capacity records',
+      'responsible_medication': 'Responsible medication',
+      'lighting_program': 'Lighting program',
+      'welfare_training': 'Welfare training',
+      'euthanasia_protocol': 'Euthanasia protocol',
+      'euthanasia_training': 'Euthanasia training',
+      
+      // ═══════════════════════════════════════════════════════════════
+      // EBA 3.0 - Pigs - RESOURCE INDICATORS
+      // ═══════════════════════════════════════════════════════════════
+      'eba_a1_water_per_animal': 'Animals per drinker ratio',
+      'eba_a2_drinker_flow': 'Drinker flow rate',
+      'eba_a3_water_quality': 'Water microbiological quality',
+      'eba_f1_feeder_spaces': 'Sufficient feeder spaces',
+      'eba_f2_body_condition': 'Body condition score',
+      'eba_f3_access_time': 'Access time after feeding',
+      'eba_e1_thi': 'Temperature-Humidity Index (THI)',
+      'eba_e2_ammonia': 'Ammonia level (NH₃)',
+      'eba_e3_co2': 'CO₂ level',
+      'eba_e4_light_intensity': 'Light intensity',
+      'eba_e5_noise': 'Noise level',
+      'eba_e6_space_allowance': 'Space allowance per animal',
+      'eba_e7_floor_condition': 'Floor condition',
+      'eba_e8_enrichment': 'Enrichment material',
+      
+      // EBA 3.0 - Pigs - ANIMAL INDICATORS
+      'eba_h1_lameness': 'Lameness',
+      'eba_h2_body_lesions': 'Body lesions',
+      'eba_h3_tail_lesions': 'Tail lesions',
+      'eba_h4_respiratory': 'Respiratory signs',
+      'eba_h5_diarrhea': 'Diarrhea',
+      'eba_h6_pain_management': 'Analgesia in procedures',
+      'eba_h7_mortality': 'Mortality',
+      'eba_h8_tail_scars': 'Tail scars',
+      'eba_b1_social_behavior': 'Social behavior',
+      'eba_b2_exploratory': 'Exploratory behavior',
+      'eba_b3_stereotypies': 'Stereotypies',
+      'eba_b4_human_approach': 'Human approach response',
+      
+      // EBA 3.0 - Pigs - MANAGEMENT INDICATORS
+      'eba_m1_welfare_plan': 'Documented welfare plan',
+      'eba_m2_staff_training': 'Staff training',
+      'eba_m3_health_records': 'Health records',
+      'eba_m4_emergency_plan': 'Emergency plan',
+      'eba_m5_euthanasia': 'Euthanasia protocol',
+      'eba_m6_castration': 'Castration procedure',
+      'eba_m7_tail_docking': 'Tail docking',
+      'eba_m8_teeth_reduction': 'Teeth reduction',
+      
+      // EBA 3.0 - Pigs - TRANSPORT INDICATORS
+      'eba_t1_fitness': 'Fitness for transport',
+      'eba_t2_loading': 'Loading procedure',
+      'eba_t3_transport_conditions': 'Vehicle conditions',
+      'eba_t4_pre_transport': 'Pre-transport fasting',
+      
+      // EBA 3.0 - Pigs - SLAUGHTER INDICATORS
+      'eba_s1_lairage': 'Lairage conditions',
+      'eba_s2_stunning_efficacy': 'Stunning efficacy',
+      'eba_s3_bleed_time': 'Bleeding time',
+      'eba_s4_consciousness': 'Consciousness check',
+      // Legacy fields
       'water_access': 'Water access',
       'feed_quality': 'Feed quality',
       'feeders_sufficient': 'Sufficient feeders',
@@ -1930,7 +2805,27 @@ class ResultsScreen extends StatelessWidget {
     };
 
     final labels = language == 'en' ? labelsEn : labelsEs;
-    return labels[fieldId] ?? fieldId;
+    
+    // Primero buscar en el mapa local
+    if (labels.containsKey(fieldId)) {
+      return labels[fieldId]!;
+    }
+    
+    // Si no está, intentar traducir con loc.translate
+    String translated = loc.translate('${fieldId}_label');
+    if (translated != '${fieldId}_label') {
+      return translated;
+    }
+    
+    translated = loc.translate(fieldId);
+    if (translated != fieldId) {
+      return translated;
+    }
+    
+    // Fallback: devolver el fieldId formateado
+    return fieldId.replaceAll('_', ' ').split(' ').map((word) => 
+      word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : ''
+    ).join(' ');
   }
 
   Widget _buildStrongPointCard(BuildContext context, String text) {
@@ -2152,6 +3047,623 @@ class ResultsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// ═══════════════════════════════════════════════════════════════════════════
+  /// SECCIÓN DE ANÁLISIS DETALLADO - Tabla con todas las preguntas y respuestas
+  /// ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildDetailedAnalysisSection(BuildContext context, AppLocalizations loc) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final bool isEBAEvaluation = results['is_eba_evaluation'] == true;
+    
+    // DEBUG: Ver qué hay en evaluation.responses
+    print('🔵 _buildDetailedAnalysisSection');
+    print('🔵 evaluation.responses tiene ${evaluation.responses.length} entradas');
+    print('🔵 Primeras 10 claves: ${evaluation.responses.keys.take(10).toList()}');
+    if (evaluation.responses.isNotEmpty) {
+      final firstKey = evaluation.responses.keys.first;
+      print('🔵 Primera clave: $firstKey = ${evaluation.responses[firstKey]}');
+    }
+    print('🔵 species.categories: ${species.categories.map((c) => c.id).toList()}');
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.table_chart, color: BianTheme.primaryRed),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                loc.translate('detailed_analysis') != 'detailed_analysis'
+                    ? loc.translate('detailed_analysis')
+                    : 'Análisis Detallado por Indicador',
+                style: Theme.of(context).textTheme.headlineMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Iterar por cada categoría
+        ...species.categories.map((category) {
+          return _buildCategoryDetailTable(context, loc, category, isICAEvaluation, isEBAEvaluation);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCategoryDetailTable(
+    BuildContext context, 
+    AppLocalizations loc, 
+    dynamic category,
+    bool isICAEvaluation,
+    bool isEBAEvaluation,
+  ) {
+    final categoryDetails = results['category_details'] as Map<String, dynamic>?;
+    final categoryScores = results['category_scores'] as Map<String, double>?;
+    final details = categoryDetails?[category.id] as Map<String, dynamic>?;
+    
+    // Variable para determinar si mostrar columnas de puntuación
+    final bool showScoreColumns = isICAEvaluation || isEBAEvaluation;
+    
+    // Obtener peso de la categoría
+    double weight = category.weight ?? 1.0;
+    int obtained = details?['obtained'] as int? ?? 0;
+    int maxPossible = details?['max_possible'] as int? ?? 0;
+    
+    // Obtener porcentaje: buscar con ID exacto y variantes singular/plural
+    double percentage = 0.0;
+    if (details?['percentage'] != null) {
+      percentage = details!['percentage'] as double;
+    } else if (categoryScores != null) {
+      // Buscar con ID exacto
+      if (categoryScores.containsKey(category.id)) {
+        percentage = categoryScores[category.id]!;
+      }
+      // Buscar con plural (resource -> resources)
+      else if (categoryScores.containsKey('${category.id}s')) {
+        percentage = categoryScores['${category.id}s']!;
+      }
+      // Buscar con singular (resources -> resource)
+      else if (category.id.endsWith('s') && categoryScores.containsKey(category.id.substring(0, category.id.length - 1))) {
+        percentage = categoryScores[category.id.substring(0, category.id.length - 1)]!;
+      }
+    }
+    
+    // DEBUG
+    print('🟣 Categoría ${category.id}: percentage=$percentage (scores keys: ${categoryScores?.keys.toList()})');
+    
+    // Color según resultado
+    Color headerColor;
+    if (isEBAEvaluation) {
+      if (percentage >= 90) headerColor = const Color(0xFF1B5E20);
+      else if (percentage >= 75) headerColor = const Color(0xFF4CAF50);
+      else if (percentage >= 50) headerColor = const Color(0xFFFF9800);
+      else if (percentage >= 25) headerColor = const Color(0xFFFF5722);
+      else headerColor = const Color(0xFFD32F2F);
+    } else if (isICAEvaluation) {
+      if (percentage >= 90) headerColor = const Color(0xFF1B5E20);
+      else if (percentage >= 76) headerColor = const Color(0xFF4CAF50);
+      else if (percentage >= 50) headerColor = const Color(0xFFFF9800);
+      else headerColor = const Color(0xFFD32F2F);
+    } else {
+      if (percentage >= 80) headerColor = BianTheme.successGreen;
+      else if (percentage >= 60) headerColor = BianTheme.warningYellow;
+      else headerColor = BianTheme.errorRed;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: headerColor.withOpacity(0.3), width: 2),
+        boxShadow: BianTheme.cardShadow,
+      ),
+      child: Column(
+        children: [
+          // Header de la categoría
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: headerColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        // Intentar traducir con nameKey primero, luego category_id, luego id
+                        loc.translate(category.nameKey ?? '') != (category.nameKey ?? '')
+                            ? loc.translate(category.nameKey ?? '')
+                            : (loc.translate('category_${category.id}') != 'category_${category.id}'
+                                ? loc.translate('category_${category.id}')
+                                : loc.translate(category.id)),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: headerColor,
+                        ),
+                      ),
+                      if ((isICAEvaluation || isEBAEvaluation) && weight < 1.0 && weight > 0)
+                        Text(
+                          'Peso: ${(weight * 100).toInt()}% | Contribución: ${(percentage * weight).toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: BianTheme.mediumGray,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: headerColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${percentage.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Tabla de indicadores
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Builder(
+              builder: (context) {
+                // DEBUG: Ver campos de la categoría
+                print('🟠 Categoría ${category.id} tiene ${category.fields.length} campos');
+                if (category.fields.isNotEmpty) {
+                  print('🟠 Primer campo: ${category.fields.first.id}');
+                }
+                
+                return DataTable(
+              columnSpacing: 20,
+              headingRowColor: WidgetStateProperty.all(BianTheme.backgroundGray),
+              columns: [
+                DataColumn(label: Text('Indicador', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Respuesta', style: TextStyle(fontWeight: FontWeight.bold))),
+                if (showScoreColumns) ...[
+                  DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Max', style: TextStyle(fontWeight: FontWeight.bold))),
+                ],
+              ],
+              rows: category.fields.map<DataRow>((field) {
+                final key = '${category.id}_${field.id}';
+                // Buscar valor con clave exacta o con variante singular/plural
+                var value = evaluation.responses[key];
+                if (value == null) {
+                  // Intentar con plural (resource -> resources)
+                  value = evaluation.responses['${category.id}s_${field.id}'];
+                }
+                if (value == null && category.id.endsWith('s')) {
+                  // Intentar con singular (resources -> resource)
+                  value = evaluation.responses['${category.id.substring(0, category.id.length - 1)}_${field.id}'];
+                }
+                
+                // DEBUG
+                print('🟡 Campo: $key, value: $value (tipo: ${value?.runtimeType}), fieldType: ${field.type}');
+                
+                // Formatear valor de respuesta
+                String displayValue;
+                int? score;
+                Color valueColor = BianTheme.darkGray;
+                
+                // Helper para parsear valor a int (soporta int, double, String)
+                int? parseToInt(dynamic val) {
+                  if (val == null) return null;
+                  if (val is int) return val;
+                  if (val is double) return val.toInt();
+                  if (val is String) return int.tryParse(val);
+                  return null;
+                }
+                
+                if (field.type.toString().contains('scale0to2')) {
+                  // Escala ICA (Aves): 0-2
+                  score = parseToInt(value);
+                  if (score == 0) {
+                    displayValue = 'No cumple (0)';
+                    valueColor = BianTheme.errorRed;
+                  } else if (score == 1) {
+                    displayValue = 'Parcial (1)';
+                    valueColor = Colors.amber.shade700;
+                  } else if (score == 2) {
+                    displayValue = 'Cumple (2)';
+                    valueColor = BianTheme.successGreen;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('scaleEVA')) {
+                  // Escala EVA 4.0 (Porcinos): 0, 20, 55, 80, 100
+                  score = parseToInt(value);
+                  if (score == 0) {
+                    displayValue = 'Bajo <50% (0)';
+                    valueColor = const Color(0xFFD32F2F);
+                  } else if (score == 20) {
+                    displayValue = 'Bajo ≥50% (20)';
+                    valueColor = const Color(0xFFFF5722);
+                  } else if (score == 55) {
+                    displayValue = 'Medio ≥60% (55)';
+                    valueColor = const Color(0xFFFF9800);
+                  } else if (score == 80) {
+                    displayValue = 'Alto ≥80% (80)';
+                    valueColor = const Color(0xFF4CAF50);
+                  } else if (score == 100) {
+                    displayValue = 'Excelente (100)';
+                    valueColor = const Color(0xFF1B5E20);
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('yesNo100')) {
+                  // Sí/No EVA 4.0: 100/0
+                  score = parseToInt(value);
+                  if (score == 100) {
+                    displayValue = 'Sí (100)';
+                    valueColor = BianTheme.successGreen;
+                  } else if (score == 0) {
+                    displayValue = 'No (0)';
+                    valueColor = BianTheme.errorRed;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('scale0to4')) {
+                  // Escala EBA (Porcinos): 0-4
+                  score = parseToInt(value);
+                  if (score == 0) {
+                    displayValue = 'Crítico (0)';
+                    valueColor = const Color(0xFFD32F2F);
+                  } else if (score == 1) {
+                    displayValue = 'Deficiente (1)';
+                    valueColor = const Color(0xFFFF5722);
+                  } else if (score == 2) {
+                    displayValue = 'Aceptable (2)';
+                    valueColor = const Color(0xFFFF9800);
+                  } else if (score == 3) {
+                    displayValue = 'Bueno (3)';
+                    valueColor = const Color(0xFF4CAF50);
+                  } else if (score == 4) {
+                    displayValue = 'Excelente (4)';
+                    valueColor = const Color(0xFF1B5E20);
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else if (field.type.toString().contains('yesNo')) {
+                  if (value == true) {
+                    displayValue = 'Sí';
+                    valueColor = BianTheme.successGreen;
+                  } else if (value == false) {
+                    displayValue = 'No';
+                    valueColor = BianTheme.errorRed;
+                  } else {
+                    displayValue = 'Sin respuesta';
+                    valueColor = BianTheme.mediumGray;
+                  }
+                } else {
+                  displayValue = value?.toString() ?? 'Sin respuesta';
+                }
+                
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Container(
+                        constraints: BoxConstraints(maxWidth: 180),
+                        child: Text(
+                          // Intentar traducir con field.label primero, luego field.id
+                          loc.translate(field.label) != field.label
+                              ? loc.translate(field.label)
+                              : (loc.translate('${field.id}_label') != '${field.id}_label'
+                                  ? loc.translate('${field.id}_label')
+                                  : loc.translate(field.id)),
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        displayValue,
+                        style: TextStyle(
+                          color: valueColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    if (showScoreColumns) ...[
+                      DataCell(
+                        Text(
+                          score?.toString() ?? '-',
+                          style: TextStyle(
+                            color: valueColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          field.maxScore?.toString() ?? (isEBAEvaluation ? '4' : '2'),
+                          style: const TextStyle(color: BianTheme.mediumGray),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }).toList(),
+            );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ═══════════════════════════════════════════════════════════════════════════
+  /// RECOMENDACIONES INTELIGENTES basadas en los resultados específicos
+  /// ═══════════════════════════════════════════════════════════════════════════
+  List<Widget> _buildSmartRecommendations(
+    BuildContext context,
+    AppLocalizations loc,
+    double overallScore,
+    Map<String, double> categoryScores,
+    List criticalPoints,
+  ) {
+    final bool isICAEvaluation = results['is_ica_evaluation'] == true;
+    final recommendations = <Map<String, dynamic>>[];
+    final isSpanish = evaluation.language == 'es';
+    
+    // 1. Recomendación general basada en el score total
+    if (overallScore < 50) {
+      recommendations.add({
+        'priority': 'CRÍTICA',
+        'color': BianTheme.errorRed,
+        'icon': Icons.error,
+        'title': isSpanish ? 'Atención Urgente Requerida' : 'Urgent Attention Required',
+        'description': isSpanish 
+            ? 'La granja presenta un nivel de bienestar animal bajo. Se requiere intervención inmediata para mejorar las condiciones. Contacte a un profesional veterinario especializado en bienestar animal.'
+            : 'The farm shows a low animal welfare level. Immediate intervention is required to improve conditions. Contact a veterinary professional specialized in animal welfare.',
+      });
+    } else if (overallScore < 76) {
+      recommendations.add({
+        'priority': 'IMPORTANTE',
+        'color': Colors.orange,
+        'icon': Icons.warning_amber,
+        'title': isSpanish ? 'Plan de Mejora Necesario' : 'Improvement Plan Needed',
+        'description': isSpanish 
+            ? 'La granja tiene un nivel de bienestar medio. Se recomienda implementar un plan de mejora progresivo enfocado en las áreas críticas identificadas.'
+            : 'The farm has a medium welfare level. It is recommended to implement a progressive improvement plan focused on the identified critical areas.',
+      });
+    } else if (overallScore < 90) {
+      recommendations.add({
+        'priority': 'SUGERENCIA',
+        'color': BianTheme.successGreen,
+        'icon': Icons.thumb_up,
+        'title': isSpanish ? 'Buen Desempeño - Optimización Posible' : 'Good Performance - Optimization Possible',
+        'description': isSpanish 
+            ? 'La granja presenta un alto nivel de bienestar. Para alcanzar la excelencia, enfóquese en los puntos críticos restantes.'
+            : 'The farm shows a high welfare level. To achieve excellence, focus on the remaining critical points.',
+      });
+    } else {
+      recommendations.add({
+        'priority': 'EXCELENTE',
+        'color': const Color(0xFF1B5E20),
+        'icon': Icons.workspace_premium,
+        'title': isSpanish ? '¡Felicitaciones! Excelente Bienestar' : 'Congratulations! Excellent Welfare',
+        'description': isSpanish 
+            ? 'La granja cumple con los más altos estándares de bienestar animal según la metodología ICA. Mantenga las buenas prácticas y continúe monitoreando.'
+            : 'The farm meets the highest animal welfare standards according to ICA methodology. Maintain good practices and continue monitoring.',
+      });
+    }
+    
+    // 2. Recomendaciones específicas por categoría (ICA)
+    if (isICAEvaluation) {
+      // Recursos
+      if (categoryScores['resources'] != null && categoryScores['resources']! < 70) {
+        recommendations.add({
+          'priority': 'RECURSOS',
+          'color': const Color(0xFF1565C0),
+          'icon': Icons.home_work,
+          'title': isSpanish ? 'Mejorar Infraestructura y Recursos' : 'Improve Infrastructure and Resources',
+          'description': isSpanish 
+              ? 'Revisar calidad de cama, bebederos, comederos y condiciones térmicas. Verificar que los espacios cumplan con la normativa vigente.'
+              : 'Review bedding quality, drinkers, feeders and thermal conditions. Verify that spaces comply with current regulations.',
+        });
+      }
+      
+      // Animal
+      if (categoryScores['animal'] != null && categoryScores['animal']! < 70) {
+        recommendations.add({
+          'priority': 'ANIMAL',
+          'color': const Color(0xFF7B1FA2),
+          'icon': Icons.pets,
+          'title': isSpanish ? 'Atención a Indicadores del Animal' : 'Attention to Animal Indicators',
+          'description': isSpanish 
+              ? 'Verificar signos de estrés térmico, lesiones, condición del plumaje y salud podal. Implementar programa de monitoreo continuo.'
+              : 'Check for thermal stress signs, injuries, plumage condition and foot health. Implement continuous monitoring program.',
+        });
+      }
+      
+      // Gestión
+      if (categoryScores['management'] != null && categoryScores['management']! < 70) {
+        recommendations.add({
+          'priority': 'GESTIÓN',
+          'color': const Color(0xFF00796B),
+          'icon': Icons.assignment,
+          'title': isSpanish ? 'Fortalecer Documentación y Protocolos' : 'Strengthen Documentation and Protocols',
+          'description': isSpanish 
+              ? 'Implementar POE de bienestar animal, programa de iluminación, protocolos de emergencia térmica y capacitación del personal según requerimientos ICA.'
+              : 'Implement animal welfare SOP, lighting program, thermal emergency protocols and staff training according to ICA requirements.',
+        });
+      }
+    }
+    
+    // 3. Recomendaciones específicas por puntos críticos
+    final criticalSet = criticalPoints.map((p) => p.toString()).toSet();
+    
+    if (criticalSet.any((p) => p.contains('poe_animal_welfare'))) {
+      recommendations.add({
+        'priority': 'DOCUMENTACIÓN',
+        'color': Colors.indigo,
+        'icon': Icons.description,
+        'title': isSpanish ? 'Implementar POE de Bienestar Animal' : 'Implement Animal Welfare SOP',
+        'description': isSpanish 
+            ? 'Crear un Procedimiento Operativo Estandarizado que incluya: plan de vacunación, densidades, manejo de aves, y todos los procesos relacionados con bienestar animal.'
+            : 'Create a Standard Operating Procedure that includes: vaccination plan, densities, bird handling, and all animal welfare-related processes.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('training') || p.contains('capacitacion'))) {
+      recommendations.add({
+        'priority': 'CAPACITACIÓN',
+        'color': Colors.teal,
+        'icon': Icons.school,
+        'title': isSpanish ? 'Capacitar al Personal' : 'Train Staff',
+        'description': isSpanish 
+            ? 'Asegurar que todo el personal que maneja aves cuente con certificación en bienestar animal y técnicas de sacrificio humanitario según normativa ICA.'
+            : 'Ensure all bird-handling staff has certification in animal welfare and humane slaughter techniques according to ICA regulations.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('thermal') || p.contains('termic'))) {
+      recommendations.add({
+        'priority': 'AMBIENTE',
+        'color': Colors.deepOrange,
+        'icon': Icons.thermostat,
+        'title': isSpanish ? 'Control de Temperatura' : 'Temperature Control',
+        'description': isSpanish 
+            ? 'Implementar monitoreo térmico diario y protocolo de emergencias para cambios abruptos de temperatura. Verificar funcionamiento de ventiladores y cortinas.'
+            : 'Implement daily thermal monitoring and emergency protocol for abrupt temperature changes. Verify fans and curtains operation.',
+      });
+    }
+    
+    if (criticalSet.any((p) => p.contains('water') || p.contains('agua'))) {
+      recommendations.add({
+        'priority': 'AGUA',
+        'color': Colors.blue,
+        'icon': Icons.water_drop,
+        'title': isSpanish ? 'Mejorar Suministro de Agua' : 'Improve Water Supply',
+        'description': isSpanish 
+            ? 'Verificar calidad del agua con análisis periódicos, revisar funcionamiento de bebederos y asegurar relación adecuada de animales por bebedero.'
+            : 'Verify water quality with periodic analysis, check drinker operation and ensure adequate animal-to-drinker ratio.',
+      });
+    }
+
+    // Construir widgets
+    return recommendations.map((rec) => _buildSmartRecommendationCard(
+      context,
+      priority: rec['priority'] as String,
+      color: rec['color'] as Color,
+      icon: rec['icon'] as IconData,
+      title: rec['title'] as String,
+      description: rec['description'] as String,
+    )).toList();
+  }
+
+  Widget _buildSmartRecommendationCard(
+    BuildContext context, {
+    required String priority,
+    required Color color,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header con prioridad
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    priority,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Descripción
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                color: BianTheme.darkGray,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

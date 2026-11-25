@@ -27,7 +27,8 @@ class Species {
   });
 
   /// Aves de Corral - Metodología ICA
-  /// Aplica para: Pollo de engorde, Ponedoras en piso, Ponedoras en jaula, Pastoreo
+  /// Sistema de producción: Ponedoras en piso
+  /// 30 indicadores según Resolución 253 de 2020
   static Species birds() {
     return Species(
       id: 'birds',
@@ -56,7 +57,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.3. Calidad de la cama
             EvaluationField(
@@ -68,7 +68,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'pastoreo'],
             ),
             // 7.5. Calidad de los bebederos
             EvaluationField(
@@ -80,7 +79,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.6. Suministro de agua en los bebederos
             EvaluationField(
@@ -92,7 +90,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.7. Animales por bebedero
             EvaluationField(
@@ -104,7 +101,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.8. Tratamiento del agua
             EvaluationField(
@@ -116,7 +112,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualAndDocumental,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.9. Calidad de los comederos
             EvaluationField(
@@ -128,7 +123,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.10. Animales por comedero
             EvaluationField(
@@ -140,7 +134,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.11. Medios para contribuir al confort térmico
             EvaluationField(
@@ -152,7 +145,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualAndDocumental,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 7.12. Calidad, integridad y funcionalidad del nidal
             EvaluationField(
@@ -164,7 +156,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'pastoreo'],
             ),
             // 7.14. Espacio disponible en ponedoras en piso y pastoreo
             EvaluationField(
@@ -176,7 +167,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
@@ -201,7 +191,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionNoSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.2. Acurrucarse en grupos (amontonamiento)
             EvaluationField(
@@ -213,7 +202,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionNoSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.3. Integridad del hueso de la quilla
             EvaluationField(
@@ -225,7 +213,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.4. Pododermatitis
             EvaluationField(
@@ -237,7 +224,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.5. Daño en los dedos
             EvaluationField(
@@ -249,7 +235,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.7. Lesiones en piel y/o otros tegumentos
             EvaluationField(
@@ -261,19 +246,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
-            ),
-            // 8.8. Suciedad y apariencia del plumaje
-            EvaluationField(
-              id: 'plumage_condition',
-              label: 'plumage_condition_label',
-              description: 'plumage_condition_description',
-              question: 'plumage_condition_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
-              maxScore: 2,
-              required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.9. Integridad óculo-nasal
             EvaluationField(
@@ -285,7 +257,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
             // 8.10. Condición del pico
             EvaluationField(
@@ -297,19 +268,6 @@ class Species {
               evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
               maxScore: 2,
               required: true,
-              applicableTo: ['ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
-            ),
-            // 8.11. Mortalidad
-            EvaluationField(
-              id: 'mortality',
-              label: 'mortality_label',
-              description: 'mortality_description',
-              question: 'mortality_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.documentInspection,
-              maxScore: 2,
-              required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
@@ -324,7 +282,18 @@ class Species {
           icon: 'assignment',
           weight: 0.30, // 30%
           fields: [
-            // 9.1. Calidad del agua
+            // 9.1. Mortalidad
+            EvaluationField(
+              id: 'mortality',
+              label: 'mortality_label',
+              description: 'mortality_description',
+              question: 'mortality_question',
+              type: FieldType.scale0to2,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 2,
+              required: true,
+            ),
+            // 9.2. Calidad del agua
             EvaluationField(
               id: 'water_quality',
               label: 'water_quality_label',
@@ -334,9 +303,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.2. Alimentación equilibrada
+            // 9.3. Alimentación equilibrada
             EvaluationField(
               id: 'balanced_feeding',
               label: 'balanced_feeding_label',
@@ -346,9 +314,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.3. Programas de vigilancia y gestión sanitaria
+            // 9.4. Programas de vigilancia y gestión sanitaria
             EvaluationField(
               id: 'health_surveillance',
               label: 'health_surveillance_label',
@@ -358,9 +325,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.4. Procedimiento Operativo Estandarizado (POE-Bienestar animal)
+            // 9.5. Procedimiento Operativo Estandarizado (POE-Bienestar animal)
             EvaluationField(
               id: 'poe_animal_welfare',
               label: 'poe_animal_welfare_label',
@@ -370,9 +336,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.5. Condiciones térmicas diarias y manejo de emergencias
+            // 9.6. Condiciones térmicas diarias y manejo de emergencias
             EvaluationField(
               id: 'thermal_emergency',
               label: 'thermal_emergency_label',
@@ -382,9 +347,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.6. Programa de iluminación
+            // 9.7. Programa de iluminación
             EvaluationField(
               id: 'lighting_program',
               label: 'lighting_program_label',
@@ -394,9 +358,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.7. Capacitación básica en bienestar animal
+            // 9.8. Capacitación básica en bienestar animal
             EvaluationField(
               id: 'welfare_training',
               label: 'welfare_training_label',
@@ -406,33 +369,8 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
-            // 9.8. Protocolo de sacrificio humanitario o eutanasia
-            EvaluationField(
-              id: 'euthanasia_protocol',
-              label: 'euthanasia_protocol_label',
-              description: 'euthanasia_protocol_description',
-              question: 'euthanasia_protocol_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.documentInspection,
-              maxScore: 2,
-              required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
-            ),
-            // 9.9. Capacitación en técnicas de sacrificio humanitario o eutanasia
-            EvaluationField(
-              id: 'euthanasia_training',
-              label: 'euthanasia_training_label',
-              description: 'euthanasia_training_description',
-              question: 'euthanasia_training_question',
-              type: FieldType.scale0to2,
-              evaluationMethod: EvaluationMethod.documentInspection,
-              maxScore: 2,
-              required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
-            ),
-            // 9.10. Uso responsable de medicamentos e insumos veterinarios
+            // 9.9. Uso responsable de medicamentos e insumos veterinarios
             EvaluationField(
               id: 'responsible_medication',
               label: 'responsible_medication_label',
@@ -442,7 +380,6 @@ class Species {
               evaluationMethod: EvaluationMethod.documentInspection,
               maxScore: 2,
               required: true,
-              applicableTo: ['pollo_engorde', 'ponedoras_piso', 'ponedoras_jaula', 'pastoreo'],
             ),
           ],
         ),
@@ -450,7 +387,22 @@ class Species {
     );
   }
 
-  /// Cerdos - Mantener estructura anterior por ahora
+
+  /// Cerdos - Metodología EVA 4.0 (Evaluación de Bienestar Animal - ICA Colombia)
+  /// 39 indicadores organizados en 3 categorías:
+  /// - Medidas Basadas en los Recursos: 35% (18 indicadores)
+  /// - Medidas Basadas en el Animal: 50% (14 indicadores)
+  /// - Medidas Basadas en la Gestión: 15% (7 indicadores)
+  /// 
+  /// Escalas de calificación:
+  /// - scaleEVA: 0, 20, 55, 80, 100 (según rangos porcentuales)
+  /// - yesNo100: Sí=100, No=0
+  /// 
+  /// Clasificación del predio:
+  /// - Excelente: ≥90%
+  /// - Alto: 76%-89%
+  /// - Medio: 50%-75%
+  /// - Bajo: <50%
   static Species pigs() {
     return Species(
       id: 'pigs',
@@ -459,232 +411,469 @@ class Species {
       iconPath: 'assets/icons/cerdo.svg',
       gradientColors: ['0xFFE85D75', '0xFFD84A64'],
       categories: [
+        // ═══════════════════════════════════════════════════════════════
+        // MEDIDAS BASADAS EN LOS RECURSOS - 35% (18 indicadores)
+        // ═══════════════════════════════════════════════════════════════
         EvaluationCategory(
-          id: 'feeding',
-          name: 'Alimentación',
-          nameKey: 'category_feeding',
-          icon: 'restaurant',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'water_access_pigs',
-              label: 'water_access_pigs',
-              question: 'water_access_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feed_quality_pigs',
-              label: 'feed_quality_pigs',
-              question: 'feed_quality_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feeders_sufficient_pigs',
-              label: 'feeders_sufficient_pigs',
-              question: 'feeders_sufficient_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'feed_frequency',
-              label: 'feed_frequency',
-              question: 'feed_frequency',
-              type: FieldType.number,
-              unit: 'times_per_day',
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'health',
-          name: 'Sanidad',
-          nameKey: 'category_health',
-          icon: 'medical_services',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'general_health_pigs',
-              label: 'general_health_pigs',
-              question: 'general_health_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'mortality_rate',
-              label: 'mortality_rate',
-              question: 'mortality_rate',
-              type: FieldType.percentage,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'injuries_pigs',
-              label: 'injuries_pigs',
-              question: 'injuries_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'vaccination',
-              label: 'vaccination',
-              question: 'vaccination',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'diseases',
-              label: 'diseases',
-              question: 'diseases',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'tail_biting',
-              label: 'tail_biting',
-              question: 'tail_biting',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'behavior',
-          name: 'Comportamiento',
-          nameKey: 'category_behavior',
-          icon: 'psychology',
-          weight: 0.20,
-          fields: [
-            EvaluationField(
-              id: 'natural_behavior_pigs',
-              label: 'natural_behavior_pigs',
-              question: 'natural_behavior_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'aggression_pigs',
-              label: 'aggression_pigs',
-              question: 'aggression_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'stress_signs_pigs',
-              label: 'stress_signs_pigs',
-              question: 'stress_signs_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'movement_pigs',
-              label: 'movement_pigs',
-              question: 'movement_pigs',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-            EvaluationField(
-              id: 'enrichment',
-              label: 'enrichment',
-              question: 'enrichment',
-              type: FieldType.yesNo,
-              required: true,
-            ),
-          ],
-        ),
-        EvaluationCategory(
-          id: 'infrastructure',
-          name: 'Infraestructura',
-          nameKey: 'category_infrastructure',
+          id: 'resource',
+          name: 'Medidas Basadas en los Recursos',
+          nameKey: 'category_resource_pigs',
           icon: 'home_work',
-          weight: 0.20,
+          weight: 0.35,
           fields: [
+            // R1: Estado de los comederos
             EvaluationField(
-              id: 'space_per_pig',
-              label: 'space_per_pig',
-              question: 'space_per_pig',
-              type: FieldType.number,
-              unit: 'm2_per_pig',
+              id: 'eva_r1_feeder_condition',
+              label: 'eva_r1_label',
+              description: 'eva_r1_description',
+              question: 'eva_r1_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
+            // R2: Limpieza de comederos
             EvaluationField(
-              id: 'ventilation',
-              label: 'ventilation',
-              question: 'ventilation',
-              type: FieldType.yesNo,
+              id: 'eva_r2_feeder_cleanliness',
+              label: 'eva_r2_label',
+              description: 'eva_r2_description',
+              question: 'eva_r2_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
+            // R3: Acceso a agua
             EvaluationField(
-              id: 'temperature_facility',
-              label: 'temperature_facility',
-              question: 'temperature_facility',
-              type: FieldType.number,
-              unit: 'celsius',
+              id: 'eva_r3_water_access',
+              label: 'eva_r3_label',
+              description: 'eva_r3_description',
+              question: 'eva_r3_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
+            // R4: Estado de limpieza de bebederos
             EvaluationField(
-              id: 'floor_quality',
-              label: 'floor_quality',
-              question: 'floor_quality',
-              type: FieldType.yesNo,
+              id: 'eva_r4_drinker_cleanliness',
+              label: 'eva_r4_label',
+              description: 'eva_r4_description',
+              question: 'eva_r4_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
+            // R5: Altura de los bebederos
             EvaluationField(
-              id: 'lighting',
-              label: 'lighting',
-              question: 'lighting',
-              type: FieldType.yesNo,
+              id: 'eva_r5_drinker_height',
+              label: 'eva_r5_label',
+              description: 'eva_r5_description',
+              question: 'eva_r5_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
+            // R6: Disponibilidad de bebederos
             EvaluationField(
-              id: 'resting_area',
-              label: 'resting_area',
-              question: 'resting_area',
-              type: FieldType.yesNo,
+              id: 'eva_r6_drinker_availability',
+              label: 'eva_r6_label',
+              description: 'eva_r6_description',
+              question: 'eva_r6_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R7: Protección contra condiciones ambientales
+            EvaluationField(
+              id: 'eva_r7_environmental_protection',
+              label: 'eva_r7_label',
+              description: 'eva_r7_description',
+              question: 'eva_r7_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionNoSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R8: Ventilación
+            EvaluationField(
+              id: 'eva_r8_ventilation',
+              label: 'eva_r8_label',
+              description: 'eva_r8_description',
+              question: 'eva_r8_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R9: Superficie de descanso
+            EvaluationField(
+              id: 'eva_r9_resting_surface',
+              label: 'eva_r9_label',
+              description: 'eva_r9_description',
+              question: 'eva_r9_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R10: Instalaciones para resguardo de lechones
+            EvaluationField(
+              id: 'eva_r10_piglet_shelter',
+              label: 'eva_r10_label',
+              description: 'eva_r10_description',
+              question: 'eva_r10_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R11: Espacio disponible para cerdas en corral
+            EvaluationField(
+              id: 'eva_r11_sow_pen_space',
+              label: 'eva_r11_label',
+              description: 'eva_r11_description',
+              question: 'eva_r11_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R12: Espacio disponible para cerdas en jaula
+            EvaluationField(
+              id: 'eva_r12_sow_cage_space',
+              label: 'eva_r12_label',
+              description: 'eva_r12_description',
+              question: 'eva_r12_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R13: Jaulas de libre acceso para cerdas en grupos >40
+            EvaluationField(
+              id: 'eva_r13_free_access_cages',
+              label: 'eva_r13_label',
+              description: 'eva_r13_description',
+              question: 'eva_r13_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R14: Jaulas adecuadas al tamaño de la cerda
+            EvaluationField(
+              id: 'eva_r14_cage_size',
+              label: 'eva_r14_label',
+              description: 'eva_r14_description',
+              question: 'eva_r14_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R15: Espacio para machos reproductores
+            EvaluationField(
+              id: 'eva_r15_boar_space',
+              label: 'eva_r15_label',
+              description: 'eva_r15_description',
+              question: 'eva_r15_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R16: Espacio disponible para precebo
+            EvaluationField(
+              id: 'eva_r16_nursery_space',
+              label: 'eva_r16_label',
+              description: 'eva_r16_description',
+              question: 'eva_r16_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R17: Espacio disponible para levante y ceba
+            EvaluationField(
+              id: 'eva_r17_finishing_space',
+              label: 'eva_r17_label',
+              description: 'eva_r17_description',
+              question: 'eva_r17_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // R18: Instalaciones para movilización y arreo
+            EvaluationField(
+              id: 'eva_r18_handling_facilities',
+              label: 'eva_r18_label',
+              description: 'eva_r18_description',
+              question: 'eva_r18_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
               required: true,
             ),
           ],
         ),
+
+        // ═══════════════════════════════════════════════════════════════
+        // MEDIDAS BASADAS EN EL ANIMAL - 50% (14 indicadores)
+        // ═══════════════════════════════════════════════════════════════
+        EvaluationCategory(
+          id: 'animal',
+          name: 'Medidas Basadas en el Animal',
+          nameKey: 'category_animal_pigs',
+          icon: 'pets',
+          weight: 0.50,
+          fields: [
+            // A1: Condición corporal en hembras y machos
+            EvaluationField(
+              id: 'eva_a1_body_condition_adults',
+              label: 'eva_a1_label',
+              description: 'eva_a1_description',
+              question: 'eva_a1_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A2: Condición corporal en precebo, levante y ceba
+            EvaluationField(
+              id: 'eva_a2_body_condition_growing',
+              label: 'eva_a2_label',
+              description: 'eva_a2_description',
+              question: 'eva_a2_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A3: Cojeras
+            EvaluationField(
+              id: 'eva_a3_lameness',
+              label: 'eva_a3_label',
+              description: 'eva_a3_description',
+              question: 'eva_a3_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A4: Jadeos
+            EvaluationField(
+              id: 'eva_a4_panting',
+              label: 'eva_a4_label',
+              description: 'eva_a4_description',
+              question: 'eva_a4_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A5: Temblores y/o amontonamiento
+            EvaluationField(
+              id: 'eva_a5_shivering_huddling',
+              label: 'eva_a5_label',
+              description: 'eva_a5_description',
+              question: 'eva_a5_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A6: Heridas graves en el cuerpo
+            EvaluationField(
+              id: 'eva_a6_severe_wounds',
+              label: 'eva_a6_label',
+              description: 'eva_a6_description',
+              question: 'eva_a6_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A7: Enriquecimiento ambiental e interacción
+            EvaluationField(
+              id: 'eva_a7_enrichment',
+              label: 'eva_a7_label',
+              description: 'eva_a7_description',
+              question: 'eva_a7_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A8: Relación humano-animal en hembras y machos
+            EvaluationField(
+              id: 'eva_a8_human_animal_adults',
+              label: 'eva_a8_label',
+              description: 'eva_a8_description',
+              question: 'eva_a8_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A9: Relación humano-animal en levante y ceba
+            EvaluationField(
+              id: 'eva_a9_human_animal_growing',
+              label: 'eva_a9_label',
+              description: 'eva_a9_description',
+              question: 'eva_a9_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A10: Identificación de animales
+            EvaluationField(
+              id: 'eva_a10_identification',
+              label: 'eva_a10_label',
+              description: 'eva_a10_description',
+              question: 'eva_a10_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualInspectionWithSampling,
+              maxScore: 100,
+              required: true,
+            ),
+            // A11: Prácticas dolorosas - Descolmille
+            EvaluationField(
+              id: 'eva_a11_teeth_clipping',
+              label: 'eva_a11_label',
+              description: 'eva_a11_description',
+              question: 'eva_a11_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+            // A12: Prácticas dolorosas - Descole
+            EvaluationField(
+              id: 'eva_a12_tail_docking',
+              label: 'eva_a12_label',
+              description: 'eva_a12_description',
+              question: 'eva_a12_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+            // A13: Castración
+            EvaluationField(
+              id: 'eva_a13_castration',
+              label: 'eva_a13_label',
+              description: 'eva_a13_description',
+              question: 'eva_a13_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+            // A14: Atención de animales enfermos
+            EvaluationField(
+              id: 'eva_a14_sick_animal_care',
+              label: 'eva_a14_label',
+              description: 'eva_a14_description',
+              question: 'eva_a14_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+          ],
+        ),
+
+        // ═══════════════════════════════════════════════════════════════
+        // MEDIDAS BASADAS EN LA GESTIÓN - 15% (7 indicadores)
+        // ═══════════════════════════════════════════════════════════════
         EvaluationCategory(
           id: 'management',
-          name: 'Manejo',
+          name: 'Medidas Basadas en la Gestión',
           nameKey: 'category_management_pigs',
-          icon: 'agriculture',
-          weight: 0.20,
+          icon: 'assignment',
+          weight: 0.15,
           fields: [
+            // G1: Plan de contingencia para falta de agua y alimento
             EvaluationField(
-              id: 'staff_training',
-              label: 'staff_training',
-              question: 'staff_training',
-              type: FieldType.yesNo,
+              id: 'eva_g1_contingency_plan',
+              label: 'eva_g1_label',
+              description: 'eva_g1_description',
+              question: 'eva_g1_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 100,
               required: true,
             ),
+            // G2: Plan Sanitario
             EvaluationField(
-              id: 'records',
-              label: 'records',
-              question: 'records',
-              type: FieldType.yesNo,
+              id: 'eva_g2_health_plan',
+              label: 'eva_g2_label',
+              description: 'eva_g2_description',
+              question: 'eva_g2_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 100,
               required: true,
             ),
+            // G3: Uso de medicamentos veterinarios
             EvaluationField(
-              id: 'biosecurity',
-              label: 'biosecurity',
-              question: 'biosecurity',
-              type: FieldType.yesNo,
+              id: 'eva_g3_veterinary_medicines',
+              label: 'eva_g3_label',
+              description: 'eva_g3_description',
+              question: 'eva_g3_question',
+              type: FieldType.scaleEVA,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
               required: true,
             ),
+            // G4: Registro de mortalidad
             EvaluationField(
-              id: 'handling_pigs',
-              label: 'handling_pigs',
-              question: 'handling_pigs',
-              type: FieldType.yesNo,
+              id: 'eva_g4_mortality_records',
+              label: 'eva_g4_label',
+              description: 'eva_g4_description',
+              question: 'eva_g4_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 100,
               required: true,
             ),
+            // G5: Intervenciones quirúrgicas
             EvaluationField(
-              id: 'castration',
-              label: 'castration',
-              question: 'castration',
-              type: FieldType.yesNo,
+              id: 'eva_g5_surgical_procedures',
+              label: 'eva_g5_label',
+              description: 'eva_g5_description',
+              question: 'eva_g5_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+            // G6: Sacrificio humanitario
+            EvaluationField(
+              id: 'eva_g6_humane_slaughter',
+              label: 'eva_g6_label',
+              description: 'eva_g6_description',
+              question: 'eva_g6_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.visualAndDocumental,
+              maxScore: 100,
+              required: true,
+            ),
+            // G7: Capacitación del personal
+            EvaluationField(
+              id: 'eva_g7_staff_training',
+              label: 'eva_g7_label',
+              description: 'eva_g7_description',
+              question: 'eva_g7_question',
+              type: FieldType.yesNo100,
+              evaluationMethod: EvaluationMethod.documentInspection,
+              maxScore: 100,
               required: true,
             ),
           ],
@@ -752,7 +941,10 @@ enum FieldType {
   percentage,      // Porcentaje
   text,            // Texto libre
   select,          // Selección de opciones
-  scale0to2,       // Escala ICA: 0, 1, 2
+  scale0to2,       // Escala ICA Aves: 0, 1, 2
+  scale0to4,       // Escala EBA antigua: 0, 1, 2, 3, 4
+  scaleEVA,        // Escala EVA 4.0: 0, 20, 55, 80, 100
+  yesNo100,        // Sí=100, No=0 (EVA 4.0)
 }
 
 /// Métodos de evaluación según ICA
